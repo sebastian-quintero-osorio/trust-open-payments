@@ -1,0 +1,110 @@
+Interfaces
+
+- Creación de cuentas, creación de wallet, definir si prestamista o prestatario
+
+- Sección Wallet, 
+
+- Portal de prestamos; ofrecer prestamo, solitar prestamo (segun si prestamista o prestatario). Aceptar prestamo.
+(Esto son varias vistas, crear oferta, crear solicitud, ver ofertas de prestamo, ver solicitudes de prestamo) 
+
+- Historial dentro del portal de préstamos, accesible como subvista del módulo.
+  Prestatario: filtrar por préstamos firmados y solicitados. No ofrece préstamos.
+  Prestamista: filtrar por préstamos firmados y ofrecidos. No solicita préstamos.
+  Para los firmados, filtrar y mostrar su estado: Al día, En retraso, Pagado.
+
+- Metricas para el administrador
+- Panel de admin con todos los prestamos de la aplicación, ofrecido, solicitado, realizado.
+
+Tres usuarios; Prestamista (ofrece prestamo), prestatario (solicita prestamo), administrador
+
+Estado de los prestamos firmados (firmado cuando es aceptado por ambas partes), estados posibles: Al día, en retraso, pagado.
+
+
+
+
+
+Flujo de detalle y acuerdo:
+- Prestatario: ver oferta y solicitar préstamo al prestamista.
+- Prestamista: ver solicitud y ofertar préstamo al prestatario.
+- Enviar registra la aceptación de condiciones del remitente; queda pendiente de la contraparte.
+- La contraparte puede aprobar las mismas condiciones o rechazar la propuesta.
+- Al aprobar ambas partes: préstamo firmado, débito del capital al prestamista,
+  abono al prestatario y registro en el historial con estado inicial Al día.
+- Antes de ambas aceptaciones no se desembolsa ni se muestra estado de pago.
+- En los mockups, firma, movimientos y persistencia son una simulación local.
+
+
+Recepción y respuesta de propuestas (mockup 06):
+- Acceso Pendientes en la barra superior del portal, formularios y detalle.
+- El contador incluye únicamente propuestas recibidas que esperan mi respuesta.
+- Pendientes: ofertas para prestatarios y solicitudes para prestamistas.
+- Filtros Por responder y Respondidas; detalle de monto, tasa E.A., plazo y porcentaje de ventas.
+- Nueva indica que aún no abrí la propuesta; leerla no reduce los pendientes.
+- Aceptar y firmar o rechazar desde el detalle, con confirmación y regreso a Pendientes.
+- Después de responder, acceso al siguiente pendiente y aviso para el remitente.
+- Las propuestas enviadas muestran a quién se está esperando en el historial.
+- Ejemplos ficticios al abrir por primera vez; el alcance permite cargar los faltantes
+  sin reemplazar los acuerdos existentes. Persistencia únicamente local.
+
+- El detalle pendiente muestra Ver en mis pendientes. Las propuestas enviadas abren
+  el filtro Esperando respuesta; las recibidas abren Por responder.
+- Los acuerdos firmados o rechazados mantienen Ver en mi historial.
+
+Wallet (mockup 07):
+- Acceso Wallet desde portal, formularios y detalle; conserva la cuenta activa,
+  incluida la contraparte que recibe una propuesta.
+- Datos de wallet Puntored: titular, identificador, estado y saldo disponible en COP.
+- Ocultar/mostrar saldo, copiar identificador y filtrar movimientos por entradas/salidas.
+- Prestatario: score ilustrativo, cupo calculado por Trust, ventas recibidas,
+  aportes al crédito y dinero para el negocio. Ejemplo del reparto de una venta.
+- Prestamista: capital desembolsado, recaudos y número de préstamos activos.
+- QR Bre-B/Puntored por cuenta, imprimible en A4 o como PDF desde el navegador.
+  Contiene texto de demostración; no es un QR de pago emitido por Puntored.
+- Botón destacado «ver test wallet» en turquesa y con icono de enlace externo.
+  URL aún inexistente: abre un aviso; quedará en nueva pestaña cuando se configure.
+- Saldos, cupo y nuevos desembolsos se sincronizan con los acuerdos locales firmados.
+  Ventas, recaudos, score y cartera inicial son datos ficticios de presentación.
+
+Ajuste del mockup Wallet:
+- «ver test wallet» se ubica como botón compacto a la derecha del título
+  Mi wallet, con fondo tenue, borde turquesa e icono de enlace externo.
+- Prestamista: ganancias acumuladas históricas por intereses cobrados en la
+  divisa de la wallet (COP) e interés promedio E.A. de sus préstamos firmados,
+  incluidos los pagados. Disponibles en wallet y en historial de préstamos.
+- El interés promedio es una media simple de tasas pactadas, no el rendimiento
+  obtenido. Las ganancias excluyen capital recuperado y no aumentan al firmar.
+
+Panel del administrador (mockup 08, propuesta en revisión):
+- Acceso independiente: mockups/administrador/index.html.
+- Resumen de préstamos desembolsados, capital desembolsado, préstamos activos
+  y tasa promedio E.A. ponderada por capital pendiente de la cartera activa.
+- Flujo de ventas: recaudo confirmado, pagado a negocios, pagado a prestamistas
+  (capital e intereses separados).
+- Tendencia comparativa, capital pendiente, PAR30 y préstamos pagados del período.
+- Conversión de la misma cohorte de propuestas hasta desembolso, inventario abierto,
+  negocios con ventas, prestamistas con pagos y primer crédito dentro de Trust.
+- Alertas de falta de ventas en 7 días y retraso contractual >30 días;
+  umbrales propuestos. Falta de ventas no equivale automáticamente a mora.
+- Dos períodos históricos, definiciones, navegación móvil y exportación CSV.
+- COP y datos ficticios independientes de la simulación de cuentas locales.
+- Criterios, fórmulas y decisiones de producto en mockups/administrador/LEEME.txt.
+
+Ajuste del mockup 08:
+- Flujo de ventas con dos destinos: negocios y prestamistas.
+- Sin indicador ni alerta de pendientes de distribución.
+- Sidebar: Métricas y Panel de administrador (registro de préstamos).
+  Se eliminan los enlaces a secciones internas de la vista.
+
+
+Registro administrativo de préstamos (mockup 09):
+- Acceso desde Métricas: Panel de administrador, o administrador/prestamos.html.
+- Listado global de ofrecidos, solicitados y realizados; búsqueda por ID y partes,
+  filtros por etapa/estado, ordenamiento, paginación y CSV de resultados filtrados.
+- Realizado requiere acuerdo y desembolso confirmados; estados Al día, En retraso,
+  Pagado. Acuerdos por desembolsar permanecen como ofrecidos o solicitados.
+- Detalle independiente: administrador/prestamo.html?id=<ID>; partes, condiciones,
+  cupo al publicar cuando aplica, desembolso, pagos, reparto de ventas e hitos.
+- Retorno al listado conserva filtros y página. Identificadores inválidos muestran
+  un mensaje de recuperación. Adaptación a móvil y navegación por teclado.
+- Solo consulta, 12 registros de demostración en COP al 30 sep 2026, independientes
+  de las métricas agregadas y de los acuerdos guardados en otras cuentas locales.

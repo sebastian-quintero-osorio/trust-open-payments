@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Trust — Mi wallet · Mockup 07</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="../shared/pendientes.css">
+  <link rel="stylesheet" href="../portal-prestamos/portal.css">
+  <link rel="stylesheet" href="wallet.css">
+  <link rel="stylesheet" href="../shared/lender-performance.css">
+  
+  
+  
+  
+  
+  
+<link rel="stylesheet" href="/lib/app.css"><script src="/config.js"></script><script type="module" src="/app.js"></script></head>
+<body data-profile="prestatario">
+  <a class="skip-link" href="#contenido">Ir al contenido</a>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.7 7.4M3 4v7h7M12 7v5l3 2"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M20 8V5a2 2 0 0 0-2-2H6a3 3 0 0 0 0 6h14v11H6a3 3 0 0 1-3-3V6"/><path d="M20 12h-5v5h5M16.5 14.5h.1"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-shop" viewBox="0 0 24 24"><path d="m4 3-2 6a3 3 0 0 0 5 2 3 3 0 0 0 5 0 3 3 0 0 0 5 0 3 3 0 0 0 5-2l-2-6ZM4 12v9h16v-9M9 21v-6h6v6M8 3 7 9m9-6 1 6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.2"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 3h7v7M21 3 10 14M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 17H3V9h18v8h-3M6 14h12v7H6zM17 12h1"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  </svg>
+
+  <div class="review-bar" aria-label="Información de la propuesta">
+    <span><strong>Mockup 07</strong><span class="review-separator">/</span>Wallet <span class="route-tag">Órbita</span></span>
+    <div><span class="review-state">Wallet en revisión</span><button id="scope-button" class="review-link" type="button">Alcance de esta vista</button></div>
+  </div>
+
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Navegación de la aplicación">
+      <div class="sidebar-brand"><a href="#contenido" aria-label="Trust, mi wallet"><img src="/assets/trust-logo.svg" alt="Trust" width="110" height="35"></a><button type="button" class="icon-button mobile-close" id="close-menu" aria-label="Cerrar menú"><svg class="icon"><use href="#i-close"/></svg></button></div>
+      <div class="workspace-label">Mi espacio</div>
+      <nav class="main-nav" aria-label="Principal">
+        <a class="nav-item" data-portal href="../portal-prestamos/index.html"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span>Portal de préstamos</span></a>
+        <a class="nav-item active" href="#contenido" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-wallet"/></svg><span>Wallet</span></a>
+      </nav>
+      <div class="sidebar-bottom"><div class="sidebar-rule"></div><div class="account"><div class="avatar">LE</div><div><strong>La Esquina</strong><span>Prestatario</span></div></div><span class="account-note">Cuenta de comercio</span></div>
+    </aside>
+    <button type="button" id="menu-overlay" class="menu-overlay" aria-label="Cerrar menú" hidden></button>
+
+    <div class="workspace">
+      <header class="topbar"><div class="topbar-location"><button type="button" class="icon-button menu-toggle" id="open-menu" aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button><span>Mi espacio</span><span class="breadcrumb-slash">/</span><strong>Wallet</strong></div><div class="currency"><span class="currency-dot" aria-hidden="true"></span>COP <span class="currency-name">· Peso colombiano</span></div></header>
+
+      <main hidden id="contenido" tabindex="-1">
+        <div class="page-heading"><div><div class="wallet-title-row"><h1>Mi wallet</h1><a class="test-wallet" id="test-wallet" href="#test-wallet-dialog" aria-haspopup="dialog" aria-describedby="test-wallet-caption"><span>ver test wallet</span><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span class="sr-only" id="test-wallet-caption">Acceso externo · entorno de pruebas</span></a></div><p id="wallet-intro">Tu dinero, tus ventas y el progreso de tu negocio.</p></div></div>
+        <p id="wallet-error" role="alert" hidden></p>
+        <div class="wallet-layout" id="wallet-content">
+          <div class="wallet-overview">
+            <section class="balance-panel" aria-labelledby="balance-title">
+              <div class="balance-heading"><h2 id="balance-title">Saldo disponible</h2><button class="icon-button" id="toggle-balance" type="button" aria-label="Ocultar saldo" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-eye"/></svg></button></div>
+              <p class="wallet-balance"><span id="wallet-balance">—</span><small>COP</small></p>
+              <p class="balance-caption" id="balance-caption">Dinero disponible en tu wallet Puntored.</p>
+              <div class="wallet-identity"><div><span>Titular</span><strong data-account-name>La Esquina</strong></div><span class="wallet-state"><span aria-hidden="true"></span>Activa · demo</span></div>
+              <div class="wallet-id-row"><span>ID de wallet <strong id="wallet-id">—</strong></span><button class="icon-button" id="copy-wallet" type="button" aria-label="Copiar ID de wallet"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button></div>
+            </section>
+            <section class="score-panel" id="borrower-score" aria-labelledby="score-title" hidden>
+              <div class="score-ring"><span><strong id="score-value">742</strong><small>/ 1.000</small></span></div>
+              <div class="score-copy"><div class="score-heading"><h2 id="score-title">Tu score Trust</h2><span>Buen perfil</span></div><p>Una referencia de la salud de tu negocio.</p><div class="credit-line"><span>Cupo disponible</span><strong id="wallet-credit">—</strong></div><small>Score ilustrativo; escala propuesta para el mockup.</small></div>
+            </section>
+            <section class="lender-performance" id="lender-summary" data-lender-performance aria-labelledby="lender-title" hidden><div class="lender-performance-heading"><h2 id="lender-title">Lo que has ganado</h2><span>Histórico · demo</span></div>
+              <div class="performance-metrics"><div><p>Ganancias acumuladas</p><strong data-earned>—</strong><small>Intereses cobrados en la divisa de tu wallet</small></div><div><p>Interés promedio</p><strong data-average-rate>—</strong><small>Tasa pactada de tus préstamos</small></div></div>
+              <p class="performance-note" data-performance-note></p>
+              <a data-history href="../portal-prestamos/prestamista.html#historial">Ver mi historial de préstamos</a></section>
+          </div>
+          <section class="qr-section" aria-labelledby="qr-title">
+            <div class="section-heading"><h2 id="qr-title">Tu QR para cobrar</h2><span>Bre-B Colombia</span></div>
+            <div class="qr-poster" id="qr-poster">
+              <div class="qr-brand"><img src="assets/bre-b.jpg" alt="Bre-B" width="652" height="244"><img class="puntored-logo" src="assets/puntored.png" alt="Puntored" width="128" height="40"></div>
+              <p class="qr-instruction">Aquí puedes pagar con Bre-B</p><h3 data-account-name>La Esquina</h3>
+              <img class="payment-qr" id="payment-qr" src="assets/qr-esquina.svg" width="224" height="224" alt="QR de demostración de La Esquina; no permite pagos reales">
+              <p class="qr-reference" id="qr-reference">TRUST-DEMO-ESQUINA</p>
+              <p class="qr-demo">Demostración · no válido para pagos</p>
+              <p class="print-copy">Representación del QR de recaudo de Puntored.<br>Este código contiene únicamente texto de prueba.</p>
+            </div>
+            <button class="button button-detail print-qr" id="print-qr" type="button"><svg class="icon" aria-hidden="true"><use href="#i-print"/></svg>Imprimir mi QR</button>
+            <p class="qr-help">Listo para imprimir o guardar como PDF.<br>QR simulado de Puntored para esta vista.</p>
+          </section>
+        </div>
+        <section class="wallet-activity" aria-labelledby="metrics-title">
+          <div class="section-heading"><div><h2 id="metrics-title">Así se mueve tu negocio</h2><p id="metrics-caption">Actividad ilustrativa · 17 de octubre de 2026</p></div><span class="period-tag">Hoy · demo</span></div>
+          <div class="wallet-metrics" id="wallet-metrics"></div>
+          <div class="sales-distribution" id="sales-distribution" hidden><div><h3>Una venta, dos destinos</h3><p>Ejemplo del acuerdo TR-1048: de una venta de $100.000, el 10 % paga tu crédito.</p></div><div class="distribution-visual"><div class="distribution-labels"><span><i></i>Tu negocio <strong>$90.000</strong></span><span><i></i>Tu crédito <strong>$10.000</strong></span></div><div class="distribution-track" role="img" aria-label="90 por ciento para tu negocio; 10 por ciento para el crédito"><span></span></div><small>El porcentaje depende de cada acuerdo firmado.</small></div></div>
+        </section>
+        <section class="movements-section" aria-labelledby="movements-title">
+          <div class="section-heading"><div><h2 id="movements-title">Movimientos de tu wallet</h2><p>Entradas y salidas de dinero en un solo lugar.</p></div><a data-history href="../portal-prestamos/index.html#historial">Historial de préstamos</a></div>
+          <div class="movement-toolbar"><div class="filter-group" role="group" aria-label="Filtrar movimientos"><button type="button" data-movement-filter="all" aria-pressed="true">Todos</button><button type="button" data-movement-filter="in" aria-pressed="false">Entradas</button><button type="button" data-movement-filter="out" aria-pressed="false">Salidas</button></div><p id="movement-count" role="status"></p></div>
+          <div class="movement-table-wrap"><table class="movement-table"><caption class="sr-only">Movimientos de demostración, valores en pesos colombianos</caption><thead><tr><th scope="col">Movimiento</th><th scope="col">Fecha</th><th scope="col">Estado</th><th scope="col">Monto · COP</th></tr></thead><tbody id="movement-rows"></tbody></table></div>
+          <div class="movement-empty" id="movement-empty" hidden><h3>No hay movimientos en este filtro</h3><p>Las operaciones que correspondan aparecerán aquí.</p><button class="button button-detail" type="button" id="reset-movements">Ver todos</button></div>
+          <p class="ledger-note">El saldo inicial ya incluye los movimientos de ejemplo. Los desembolsos de acuerdos firmados se suman automáticamente.</p>
+        </section>
+        <footer class="workspace-footer"><span>Trust</span><p>Más claridad para mover tu dinero.</p></footer>
+      </main>
+    </div>
+  </div>
+  <div class="review-footer"><span>Datos y QR de demostración. No se realizan pagos.</span><p>Mockup 07 · Wallet</p></div>
+  <div class="preview-notice" id="preview-notice" hidden><div><strong>Nota del mockup</strong><p id="preview-message" role="status"></p></div><button type="button" class="icon-button" id="dismiss-notice" aria-label="Cerrar nota"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <dialog id="test-wallet-dialog" aria-labelledby="test-wallet-title"><div class="dialog-heading"><span>Enlace externo</span><button class="icon-button" id="close-test-wallet" type="button" aria-label="Cerrar aviso">×</button></div><h2 id="test-wallet-title">La test wallet estará aquí.</h2><p>La dirección del entorno de pruebas aún no está disponible. Cuando esté configurada, este botón abrirá la test wallet en una pestaña nueva.</p><button class="button button-primary" id="dismiss-test-wallet" type="button">Entendido</button></dialog>
+  <dialog id="scope-dialog" aria-labelledby="scope-title"><div class="dialog-heading"><span>Mockup 07 · Órbita</span><button type="button" class="icon-button" id="close-scope" aria-label="Cerrar alcance">×</button></div><h2 id="scope-title">Tu wallet, en contexto.</h2><p>Información de la cuenta, saldo, movimientos y métricas según el perfil. El score y el cupo aparecen únicamente para prestatarios.</p><ul><li>El saldo y el cupo usan la misma simulación local que el portal y los acuerdos.</li><li>Ventas, recaudos y score son ejemplos de presentación; no se consultan servicios financieros.</li><li>El QR contiene texto de demostración, no datos de cobro. La impresión conserva esta indicación.</li><li>El enlace externo está pendiente de URL.</li></ul><p>Referencias de marca: <a href="https://www.banrep.gov.co/es/bre-b/manual-identidad-visual" target="_blank" rel="noopener noreferrer">Bre-B / Banco de la República</a> y <a href="https://puntored.co/" target="_blank" rel="noopener noreferrer">Puntored</a>.</p><p class="font-note">Paleta y logotipo de Trust. Arial/Helvetica como sustitución temporal de Qontra.</p><button type="button" class="button button-primary" id="back-to-mockup">Volver al mockup</button></dialog>
+  <noscript><p class="noscript-note">Activa JavaScript para consultar la wallet y sus movimientos de demostración.</p></noscript>
+</body>
+</html>

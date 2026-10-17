@@ -1,0 +1,12 @@
+{
+  "name": "trust-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "python3 scripts/serve.py",
+    "dev:full": "python3 scripts/dev.py",
+    "build": "python3 scripts/build.py",
+    "test:unit": "node --test tests/*.test.js",
+    "test:e2e": "uv run --project ../backend --with-requirements tests/requirements.txt python -m unittest discover -s tests -p 'test_real_backend.py' -v"
+  }
+}

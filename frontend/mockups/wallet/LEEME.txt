@@ -1,0 +1,89 @@
+TRUST — Mockup 07: Wallet · Órbita
+
+Abrir index.html (prestatario) o prestamista.html (prestamista).
+Sin dependencias de ejecución ni servicios externos; todos los assets son locales.
+Para compartir la simulación entre vistas y pestañas, servir frontend por HTTP:
+  python -m http.server 8765
+  http://localhost:8765/mockups/wallet/index.html
+
+Vistas:
+- index.html: La Esquina por defecto; ?account=taller abre Taller Central.
+- prestamista.html: Aliado Capital por defecto; ?account=camila o
+  ?account=horizonte abre las otras cuentas. Los roles son fijos por archivo.
+- vistas/: capturas de escritorio/móvil y PDFs imprimibles de ambos perfiles.
+
+Interacciones:
+- Navegación conectada desde portal, formularios y detalle de acuerdos.
+- Saldo ocultable, copia de ID con alternativa si el navegador bloquea el portapapeles.
+- Filtros Todos / Entradas / Salidas y estado vacío.
+- Pendientes y respuestas compartidos con los mockups anteriores.
+- QR único por cuenta, imprimible con el botón Imprimir mi QR.
+- Imprimir genera únicamente el afiche en A4; conserva el aviso de demostración.
+- «ver test wallet» muestra el aviso de URL pendiente. El usuario confirmó que
+  todavía no existe. Configurar testWalletUrl en config.js con una URL HTTPS
+  absoluta para abrir una pestaña nueva con noopener/noreferrer.
+
+Datos y consistencia:
+- TrustLoans.balance y TrustLoans.credit son la fuente de saldo y cupo.
+- Firmar desde otra pestaña actualiza dinero, cupo y movimientos sin recargar.
+- Solo los acuerdos firmados generan nuevos desembolsos. Pendientes y rechazos
+  no cambian el dinero. Un desembolso enlaza al detalle con la cuenta correcta.
+- El estado compartido conserva su clave trust.mockup.agreements.v1.
+- No se modifica el cálculo ni se agregan pagos al motor de préstamos.
+- Ejemplos históricos de La Esquina: 3 ventas por $500.000, abonos al crédito
+  por $50.000 y neto de $450.000. Ese neto ya está incluido en el saldo inicial
+  compartido de $1.200.000; no se suma otra vez al abrir la wallet.
+- Aliado Capital muestra $50.000 recaudados, ya incluidos en sus $12.000.000
+  iniciales. Cartera base ilustrativa: $8.000.000 en 2 préstamos activos,
+  consistente con los dos firmados no pagados del historial estático del portal.
+- El aporte del 10 % ilustra TR-1048; no se aplica universalmente a nuevos acuerdos.
+- Otras cuentas arrancan sin ventas/recaudos históricos de ejemplo.
+- Score 742 (La Esquina) / 685 (Taller): datos ilustrativos, escala propuesta
+  de 0 a 1.000, sin fórmula de scoring ni consulta crediticia real.
+- El almacenamiento inválido muestra un error y oculta valores financieros.
+
+Diseño:
+- Se conserva Órbita: #191919 base, #6930F9 acción, #9D67FB acento,
+  #B499FE foco y #F1E9FD texto; #7CE0D3 identifica el entorno externo de pruebas.
+- Arial/Helvetica, como el resto de mockups, mientras se dispone de Qontra.
+- Saldo e identidad a la izquierda; QR blanco imprimible a la derecha.
+- Métricas en una franja; movimientos debajo. En móvil se apila el contenido.
+- Reutiliza base.css, portal.css, shell.js, loan-demo.js y pendientes.js/css.
+
+Marcas y QR:
+- Se usan los archivos de marca publicados por sus titulares, sin redibujarlos.
+  Bre-B: https://www.banrep.gov.co/es/bre-b/manual-identidad-visual
+  Archivo: https://d1b4gd4m8561gs.cloudfront.net/sites/default/files/inline-images/bre-b-minisite.jpg
+  Puntored: https://puntored.co/
+  Archivo: https://puntored.co/wp-content/uploads/2022/07/Logo-Puntored.png
+- Los archivos SVG de QR se generaron con python-qrcode, corrección M y zona
+  de silencio de 4 módulos. Contenido: TRUST DEMO | [CUENTA] |
+  NO VALIDO PARA PAGOS | PUNTORED / BRE-B MOCKUP.
+- Es una composición de demostración con las marcas originales, no una plantilla
+  oficial certificada ni un QR emitido por Puntored. No procesa pagos.
+- No requiere instalar Python ni librerías para abrir o imprimir los mockups.
+
+Verificación:
+- Chromium/Playwright: ambos roles a 1440, 820, 390 y 320 px, sin desbordamiento.
+- Saldo, score por rol, filtros, estado vacío, portapapeles y menú móvil.
+- Aviso de URL pendiente y configuración de enlace externo en nueva pestaña.
+- Firma de un acuerdo, saldo/cupo, sincronización entre pestañas y navegación
+  de la contraparte; cuenta conservada desde formularios y portal.
+- Error de almacenamiento, PDFs A4 y recursos locales.
+
+Ajuste: encabezado y ganancias históricas
+- «ver test wallet» conserva su estilo turquesa y aparece como un botón compacto
+  junto al título «Mi wallet», también en móvil. Fondo tenue y borde turquesa;
+  conserva el icono externo y la descripción accesible del entorno de pruebas.
+- «Lo que has ganado» aparece en la wallet y en el historial del prestamista.
+- Ganancias acumuladas: intereses ya cobrados, expresados en COP, la divisa
+  actual de la wallet. No son el capital devuelto ni los recaudos totales.
+- Aliado Capital: ejemplos TR-1048 ($18.000), TR-1031 ($42.000) y TR-0982
+  ($160.000), total $220.000 COP ya incluido en su saldo inicial.
+- Interés promedio: media aritmética de tasas E.A. de todos los firmados,
+  incluidos los pagados: (18 + 16 + 15) / 3 = 16,33 % E.A. inicialmente.
+  No se pondera por monto y no representa una rentabilidad efectivamente obtenida.
+- Los nuevos firmados entran al promedio, con ganancias cobradas en cero hasta
+  tener pagos; firmar no aumenta las ganancias. Sin firmados se muestra «—».
+- Los filtros del historial no cambian estos indicadores históricos globales.
+- Datos y presentación compartidos en ../shared/lender-performance.js y .css.

@@ -1,0 +1,50 @@
+Actualización verificada: 2026-10-17 15:16 UTC
+Servidor: 54.210.198.244
+Directorio remoto: /opt/trust/deploy/aws
+Release: 20261017-151049-87f154a
+Commit: 87f154a8651bce1ab4b6554f930d178e800bd459
+Rama: frontend, con main integrado y cambios locales conservados.
+
+Landing: https://trustservices.com.co/
+Frontend: https://app.trustservices.com.co/
+API: https://api.trustservices.com.co/api/v1/health
+Open Payments: https://pay.trustservices.com.co/v1/health
+
+Cinco contenedores saludables: db, backend, frontend, landing y op-service.
+Las cuatro imágenes de aplicación usan el release indicado. PostgreSQL conserva
+el volumen existente y no publica puertos. HTTPS verificado en los cuatro dominios.
+Backend: status=ok, db=ok, op=ok, op_client=http, warnings=[].
+Administración de Open Payments: 401 sin clave interna.
+Los hashes públicos de app.js, lib/app.css y portal-prestamos/portal.css coinciden
+con las fuentes locales. Retorno /op/return accesible.
+
+Migraciones de Open Payments: 001 a 005 aplicadas, incluida
+005_financial_receipts.sql. Un comprobante existente conservado en
+financial_receipts. No se iniciaron transferencias durante este despliegue.
+
+Pruebas aprobadas antes de activar:
+- go mod verify y go test -p 1 -count=1 ./... con REQUIRE_INTEGRATION=1,
+  PostgreSQL temporal y receptor FastAPI de prueba.
+- Cinco pruebas JavaScript de formato y cálculos del frontend.
+- Dos pruebas Python del servidor del frontend.
+- Cuatro pruebas Python de herramientas de Open Payments.
+Los contenedores y la red temporales de pruebas fueron eliminados.
+Logs remotos: /opt/trust-backups/validation-87f154a/.
+
+Respaldo de fuentes y configuración anterior:
+/opt/trust-backups/pre-release-87f154a/.
+Backups previos de bases: deploy/aws/backups/trust-20261017T151119Z.dump
+y deploy/aws/backups/op_service-20261017T151119Z.dump.
+Configuración privada y dumps con permisos 600; backups en la misma instancia.
+Las imágenes anteriores se conservan. Revertir código no revierte migraciones.
+
+Open Payments usa las credenciales existentes, sin rotar claves ni cambiar
+contraseñas de bases. PUBLIC_BASE_URL=https://pay.trustservices.com.co.
+COMPOSE_PROFILES=payments; SIM_ENABLED=true; OP_CLIENT=http.
+SIM_MAX_AMOUNT=10000000, equivalente a $100.000 COP por pago.
+La wallet trust_us usa Interledger Test Wallet, asset COP/2.
+La wallet de recaudo trust_us está autorizada y asignada al comercio_trust.
+El QR del comercio muestra el formulario del simulador. El pagador comprador_trust
+requiere su propio consentimiento vigente y saldo de prueba; consultar el pool
+para verificar su estado antes de pagar. Health=ok no certifica autorización.
+El comercio necesita un crédito active para repartir ventas al prestamista.

@@ -1,0 +1,1 @@
+Siguiendo totalemnte el estilo de Trace, crea un mockup de un nuevo modulo llamado "Credito" . Crea una vista que contenga un botón llamado, generar QR. y que además en este modulo aparezca info relacionada con el credito, monto pagado, interes, plazo. Esto simula una integracion de trace con trust @home/david/proyectos/trust-open-payments.

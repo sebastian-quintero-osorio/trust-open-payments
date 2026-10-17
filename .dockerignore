@@ -1,0 +1,13 @@
+.git
+**/.env
+**/.env.*
+**/op-service.env
+**/node_modules
+**/.venv
+**/__pycache__
+**/dist
+**/test-results
+**/.astro
+.internal
+prompts
+deploy/aws/backups

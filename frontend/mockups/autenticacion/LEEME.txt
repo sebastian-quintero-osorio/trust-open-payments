@@ -1,0 +1,36 @@
+TRUST — Mockup 09: acceso y registro
+
+Abrir index.html directamente en el navegador, sin instalar dependencias.
+Vistas independientes, conectadas mediante enlaces:
+- index.html: iniciar sesión.
+- registro.html: crear cuenta como prestamista o prestatario.
+- olvide-contrasena.html: solicitar recuperación y visualizar la confirmación.
+
+Identidad: tokens y controles de ../shared/base.css, logotipo existente,
+paleta Órbita y Arial/Helvetica provisional, igual que los demás mockups.
+Panel orbital de contexto en escritorio; formulario en una columna en móvil.
+
+Interacciones:
+- Selección obligatoria del rol mediante controles radio accesibles por teclado.
+- Nombre del negocio visible y obligatorio únicamente para prestatarios.
+- Nombre completo, correo, contraseña y confirmación en el registro.
+- Validación de campos vacíos, formato de correo, mínimo de 8 caracteres
+  propuesto para registro y coincidencia de contraseñas.
+- Mostrar/ocultar cada contraseña, errores asociados a campos y foco en el
+  primer error o en la confirmación al completar un formulario.
+- Registro: enlace al portal de ejemplo del rol seleccionado.
+- Login: confirmación de simulación y acceso a los dos perfiles de ejemplo.
+- Recuperación: confirmación genérica sin revelar si existe una cuenta,
+  regreso al login y opción de corregir el correo.
+
+Alcance: prototipo local, sin autenticación, cuentas reales, creación de wallet,
+peticiones de red, correos, tokens de recuperación ni persistencia de credenciales.
+Las contraseñas se vacían al completar el formulario. Los portales conservan
+sus identidades y datos ficticios actuales; no representan al usuario registrado.
+Los textos de demostración están separados del contenido principal.
+
+Pendiente para implementación real: integrar API de identidad, reglas definitivas
+de contraseña, verificación de correo, sesiones y flujo de restablecimiento
+mediante enlace seguro. El mínimo de 8 caracteres es una propuesta de interfaz.
+
+Capturas de las tres vistas en escritorio y móvil: vistas/.

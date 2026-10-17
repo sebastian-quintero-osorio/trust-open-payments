@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Trust — Solicitar préstamo · Mockup 02</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="../shared/pendientes.css">
+  <link rel="stylesheet" href="../portal-prestamos/portal.css">
+  <link rel="stylesheet" href="formulario.css">
+  
+  
+  
+  
+  
+<link rel="stylesheet" href="/lib/app.css"><script src="/config.js"></script><script type="module" src="/app.js"></script></head>
+<body data-mode="solicitar">
+  <a class="skip-link" href="#contenido">Ir al contenido</a>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.7 7.4M3 4v7h7M12 7v5l3 2"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M20 8V5a2 2 0 0 0-2-2H6a3 3 0 0 0 0 6h14v11H6a3 3 0 0 1-3-3V6"/><path d="M20 12h-5v5h5M16.5 14.5h.1"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-shop" viewBox="0 0 24 24"><path d="m4 3-2 6a3 3 0 0 0 5 2 3 3 0 0 0 5 0 3 3 0 0 0 5 0 3 3 0 0 0 5-2l-2-6ZM4 12v9h16v-9M9 21v-6h6v6M8 3 7 9m9-6 1 6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.2"/></symbol>
+  </svg>
+
+
+  <div class="review-bar" aria-label="Información del mockup">
+    <span><strong>Mockup 02</strong><span class="review-separator">/</span>Solicitar préstamo<span class="route-tag">Órbita</span></span>
+    <div><span class="review-state">En revisión</span><button id="scope-button" class="review-link" type="button">Alcance</button></div>
+  </div>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Navegación de la aplicación">
+      <div class="sidebar-brand"><a href="../portal-prestamos/index.html" aria-label="Trust, portal de préstamos"><img src="/assets/trust-logo.svg" alt="Trust" width="110" height="35"></a><button type="button" class="icon-button mobile-close" id="close-menu" aria-label="Cerrar menú"><svg class="icon"><use href="#i-close"/></svg></button></div>
+      <div class="workspace-label">Mi espacio</div>
+      <nav class="main-nav" aria-label="Principal">
+        <a class="nav-item active" href="../portal-prestamos/index.html" aria-current="location"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span>Portal de préstamos</span></a>
+        <a class="nav-item" data-wallet href="../wallet/index.html"><svg class="icon" aria-hidden="true"><use href="#i-wallet"/></svg><span>Wallet</span></a>
+      </nav>
+      <div class="sidebar-bottom"><div class="sidebar-rule"></div><div class="account"><div class="avatar">LE</div><div><strong>La Esquina</strong><span>Prestatario</span></div></div><span class="account-note">Cuenta de comercio</span></div>
+    </aside>
+    <button type="button" id="menu-overlay" class="menu-overlay" aria-label="Cerrar menú" hidden></button>
+
+
+    <div class="workspace">
+      <header class="topbar"><div class="topbar-location"><button type="button" class="icon-button menu-toggle" id="open-menu" aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button><span>Mi espacio</span><span class="breadcrumb-slash">/</span><strong>Préstamos</strong></div><div class="currency"><span class="currency-dot" aria-hidden="true"></span>COP <span class="currency-name">· Peso colombiano</span></div></header>
+
+
+      <main hidden id="contenido" tabindex="-1">
+        <a class="back-link" href="../portal-prestamos/index.html"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg>Volver al portal</a>
+        <div class="page-heading"><div><h1>Solicitar préstamo</h1><p>Define lo que necesitas y las condiciones que propones para tu negocio.</p></div><span class="role-label">Prestatario</span></div>
+        <div class="loan-layout" id="loan-layout">
+          <div class="loan-editor">
+            <ol class="steps" aria-label="Pasos de la solicitud"><li aria-current="step"><span class="step-number" aria-hidden="true">1</span>Condiciones</li><li><span class="step-number" aria-hidden="true">2</span>Revisión</li></ol>
+            <div id="edit-step">
+              <form id="loan-form" novalidate>
+                <div class="form-surface">
+                  <div class="error-summary" id="form-errors" role="alert" hidden></div>
+                  <fieldset>
+                    <legend>Monto del préstamo</legend>
+                    <p class="fieldset-intro">Indica el mínimo y el máximo que te servirían. Ambos deben estar dentro de tu cupo de $8.000.000 COP.</p>
+                    <div class="field-row">
+                      <div class="field"><label for="amount-min">Monto mínimo</label><div class="input-shell"><span aria-hidden="true">$</span><input id="amount-min" name="amountMin" inputmode="numeric" type="text" value="3.000.000" required aria-describedby="amount-min-help amount-min-error"><span aria-hidden="true">COP</span></div><p class="field-help" id="amount-min-help">Pesos colombianos, sin decimales.</p><p class="field-error" id="amount-min-error"></p></div>
+                      <div class="field"><label for="amount-max">Monto máximo</label><div class="input-shell"><span aria-hidden="true">$</span><input id="amount-max" name="amountMax" inputmode="numeric" type="text" value="5.000.000" required aria-describedby="amount-max-help amount-max-error"><span aria-hidden="true">COP</span></div><p class="field-help" id="amount-max-help">Igual o mayor que el monto mínimo.</p><p class="field-error" id="amount-max-error"></p></div>
+                    </div>
+                  </fieldset>
+                  <fieldset>
+                    <legend>Condiciones que propones</legend>
+                    <div class="field-row">
+                      <div class="field"><label for="interest">Tasa de interés máxima</label><div class="input-shell"><input id="interest" name="interest" inputmode="decimal" type="text" value="18,00" required aria-describedby="interest-help interest-error"><span aria-hidden="true">% E.A.</span></div><p class="field-help" id="interest-help">La tasa efectiva anual máxima que propones aceptar.</p><p class="field-error" id="interest-error"></p></div>
+                      <div class="field"><label for="repayment">Porcentaje de ventas que propones</label><div class="input-shell"><input id="repayment" name="repayment" inputmode="decimal" type="text" value="10" required aria-describedby="repayment-help repayment-error"><span aria-hidden="true">%</span></div><p class="field-help" id="repayment-help">Parte de cada venta que propones destinar a tu crédito. No es la tasa de interés.</p><p class="field-error" id="repayment-error"></p></div>
+                    </div>
+                    <div class="field term-field"><label for="term">Plazo propuesto</label><div class="input-shell"><input id="term" name="term" inputmode="numeric" type="text" value="12" required aria-describedby="term-help term-error"><span aria-hidden="true">meses</span></div><p class="field-help" id="term-help">El plazo final se define en el acuerdo entre ambas partes.</p><p class="field-error" id="term-error"></p></div>
+                    <div class="field notes-field"><label for="notes">¿Para qué necesitas el préstamo? <span>(opcional)</span></label><textarea id="notes" name="notes" maxlength="280" rows="3" aria-describedby="notes-help notes-error">Compra de inventario para mi tienda.</textarea><p class="field-help" id="notes-help">Máximo 280 caracteres.</p><p class="field-error" id="notes-error"></p></div>
+                  </fieldset>
+                </div>
+                <div class="form-actions"><button class="button button-detail" type="button" id="save-draft">Guardar borrador</button><button class="button button-primary" type="submit">Revisar solicitud<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button></div>
+                <p class="draft-status" id="draft-status" role="status"></p>
+              </form>
+            </div>
+            <section id="review-step" class="form-surface review-content" aria-labelledby="review-title" hidden>
+              <h2 id="review-title" tabindex="-1">Revisa tu solicitud</h2>
+              <p>Comprueba las condiciones antes de publicar. Puedes volver y modificarlas.</p>
+              <dl class="review-data"><div><dt>Monto del préstamo</dt><dd id="review-range"></dd></div><div><dt>Tasa de interés máxima</dt><dd id="review-interest"></dd></div><div><dt>Porcentaje de ventas para el pago</dt><dd id="review-repayment"></dd></div><div><dt>Plazo propuesto</dt><dd id="review-term"></dd></div><div class="review-notes"><dt>Información adicional</dt><dd id="review-notes"></dd></div></dl>
+              <p class="review-notice">Publicar una solicitud permite buscar una contraparte. El préstamo solo se considera firmado cuando ambas partes aceptan las condiciones.</p>
+              <div class="form-actions"><button type="button" class="button button-detail" id="edit-conditions">Editar condiciones</button><button type="button" class="button button-primary" id="publish-demo">Publicar solicitud</button></div>
+              <p class="simulation-label">Simulación del mockup: esta acción no envía datos ni crea un préstamo real.</p>
+            </section>
+          </div>
+          <aside class="summary" aria-labelledby="summary-title">
+            <div class="summary-context"><div class="orbit" aria-hidden="true"><div class="orbit-sphere"></div></div><p class="context-label">Tu cupo disponible</p><p class="context-amount">$8.000.000<span>COP</span></p><p class="context-help">Tu solicitud debe mantenerse dentro de este cupo.</p></div>
+            <div class="summary-content"><h2 id="summary-title">Tu solicitud, en resumen</h2><dl><div><dt>Rango de monto</dt><dd id="summary-range">$3.000.000 a $5.000.000 COP</dd></div><div><dt>Tasa de interés máxima</dt><dd id="summary-interest" class="summary-interest">Hasta 18,00 % E.A.</dd></div><div><dt>Porcentaje de cada venta</dt><dd id="summary-repayment">10,00 %</dd></div><div><dt>Plazo propuesto</dt><dd id="summary-term">12 meses</dd></div></dl>
+              <div class="repayment-example" id="repayment-example"><h3>Así se repartiría una venta</h3><p>Ejemplo con una venta de $100.000 COP</p><div class="repayment-bar" aria-hidden="true"><span id="business-bar"></span></div><div class="split-amounts"><div><span>Para el comercio</span><strong id="split-business">$90.000</strong></div><div><span>Para el crédito</span><strong id="split-credit">$10.000</strong></div></div></div>
+              <p class="summary-note" id="repayment-placeholder" hidden>Completa un porcentaje válido para ver el ejemplo de reparto.</p>
+            </div>
+            <p class="summary-note">El ejemplo muestra el reparto de una venta. El costo total y las demás condiciones se definirán en el acuerdo.</p>
+          </aside>
+        </div>
+        <section id="success-panel" class="form-surface success-panel" aria-labelledby="success-title" hidden><span class="success-mark" aria-hidden="true">✓</span><h2 id="success-title" tabindex="-1">Solicitud creada en esta demostración</h2><p>Has completado el recorrido del mockup. No se publicó información ni se movió dinero.</p><p>En el producto, el siguiente paso sería encontrar una contraparte y revisar las condiciones del acuerdo.</p><div class="form-actions"><a class="button button-primary" href="../portal-prestamos/index.html">Volver al portal</a><button class="button button-detail" type="button" id="return-to-edit">Volver al formulario</button></div></section>
+        <footer class="workspace-footer"><span>Trust</span><p>Cada acuerdo empieza con condiciones claras.</p></footer>
+      </main>
+    </div>
+  </div>
+  <div class="review-footer"><span>Datos y tasas ilustrativos · Simulación local</span><p>Mockup 02: solicitar préstamo · Pendiente de aprobación</p></div>
+  <div class="preview-notice" id="preview-notice" hidden><div><strong>Nota del mockup</strong><p id="preview-message" role="status"></p></div><button type="button" class="icon-button" id="dismiss-notice" aria-label="Cerrar nota"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+
+
+  <dialog id="scope-dialog" aria-labelledby="scope-title"><div class="dialog-heading"><span>Mockup 02 · Órbita</span><button type="button" class="icon-button" id="close-scope" aria-label="Cerrar alcance"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><h2 id="scope-title">Solicitar préstamo</h2><p>Formulario, resumen en vivo, revisión y publicación simulada. Los borradores se guardan solo en este navegador y se separan por rol.</p><ul><li>El prestatario define un rango dentro de su cupo y una tasa máxima propuesta.</li><li>El prestamista define un rango y una tasa ofrecida. No se inventa un cupo ni un saldo disponible para este rol.</li><li>El plazo propuesto y la tasa máxima en solicitudes son decisiones de diseño pendientes de validar contigo.</li><li>La validación del mockup revisa formato, rango y cupo. Las reglas comerciales, los costos y los límites normativos aún no están implementados.</li></ul><p>Cada formulario corresponde a un único rol: el prestatario solicita y el prestamista ofrece.</p><p class="font-note">Se conserva la base visual aprobada. Qontra continúa pendiente de su archivo web. Los enlaces de regreso conservan el perfil de esta cuenta.</p><button type="button" class="button button-primary" id="back-to-mockup">Volver al mockup</button></dialog>
+</body>
+</html>

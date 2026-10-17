@@ -1,0 +1,175 @@
+Trust frontend — análisis del contrato e integración
+Contrato: ../trust-api.openapi.yaml, OpenAPI 3.1.0, versión 0.1.0.
+Fecha de revisión: 17 de octubre de 2026.
+
+FUENTE DE VERDAD Y ARQUITECTURA
+
+La implementación está en src/. mockups/ y exploracion-visual/ se mantienen
+como referencias originales. Se reutilizan sus HTML, CSS y marca; los scripts
+de simulación de cuentas, préstamos, saldos y persistencia no se distribuyen.
+JavaScript modular nativo, sin framework ni dependencia de compilación.
+scripts/build.py copia la aplicación estática a dist/.
+
+lib/operations.js se genera desde operationId, verbo y ruta de todas las
+operaciones del contrato. El cliente utiliza estos identificadores; no
+inventa endpoints. tests/openapi.json es una copia del contrato para validar
+peticiones y respuestas de las pruebas de navegador. Regenerar ambos con
+scripts/contract.py cuando cambie el YAML.
+
+REGLAS TRANSVERSALES
+
+- /api/v1; JSON snake_case; Bearer JWT. El token vive en sessionStorage y
+  nunca se almacena en los borradores. El perfil /me determina el rol.
+- Un 401 de una ruta privada elimina la sesión y vuelve al acceso,
+  conservando el destino local para retomarlo tras iniciar sesión.
+- Money.value es un entero string de unidades mínimas. 4800000 a escala 2
+  son 48.000 COP. Se usan BigInt y cadenas; no redondeos de Number.
+- Los porcentajes son puntos básicos; 1500 significa 15 %.
+- Los mensajes de error proceden de error.message; error.details es objeto.
+- Fechas presentadas en America/Bogota. Cursores since se conservan sin
+  truncar microsegundos. Listas completas siguen next_offset hasta null.
+- Ninguna publicación, aceptación ni retorno de wallet se representa como
+  desembolso confirmado hasta que el backend devuelve active/paid.
+- El navegador no llama webhooks. Los endpoints dev no se invocan como
+  parte del producto ni se usan para sembrar un servidor externo.
+
+MAPA DE VISTAS
+
+Acceso/registro: login, register, getMe. El registro exige first_name,
+last_name y city, además del negocio para merchant.
+
+Portal: listLoanOffers(scope=market/mine), listLoanRequests(scope=market/mine),
+getMyCreditProfile, listLoans. Los filtros de cupo usan fits_only del servidor.
+Las pestañas separan publicaciones, acuerdos pendientes y créditos activos/
+pagados. No se muestra Al día a un préstamo pendiente de desembolso.
+
+Publicación: getConfig define asset, importe mínimo, paso, porcentajes y
+plazo. createLoanRequest solo admite rango y pct_bps. createLoanOffer añade
+fee_bps y term_months. Los borradores se separan por ID de usuario y rol.
+
+Detalle: getLoanOffer/getLoanRequest, previewLoan, createLoan, getLoan,
+acceptLoan, rejectLoan, cancelLoan, cancelLoanOffer/cancelLoanRequest.
+Las condiciones completas y el reparto del ejemplo vienen de previewLoan.
+La confirmación incluye plazo. En un crédito existente, la barra y el ejemplo
+usan el porcentaje vigente; los ejemplos monetarios proceden de getConfig.
+El regreso a pendientes abre Por responder, Esperando respuesta o Respondidas
+según el estado del acuerdo y el rol de quien consulta. Después de responder,
+se muestra el siguiente acuerdo pendiente y se actualiza el contador.
+disburseLoan requiere client=web y abre authorization_url en primer plano.
+El retorno /op/return consulta getLoan cada 2 s; op_status no demuestra pago.
+Sin sesión web, client=mobile ofrece y abre trust://loans/{id}; la app nativa
+debe consultar el estado usando su propia sesión. No se transmite el token
+en la URL. El enlace nativo se valida en navegador; la app móvil no se probó.
+
+Wallet: setPayoutWallet, getCollectionAccount/createCollectionAccount,
+getMyCreditProfile, listSales, getSalesToday cada 2,5 s, getSale,
+getLenderDashboard, listRepayments/getRepaymentTrace. QR generado desde
+qr_payload. La cuenta, el score y el historial se actualizan cada 30 s para
+recoger entregas posteriores y revocaciones; since solo trae ventas nuevas.
+El portafolio y los abonos del prestamista se actualizan cada 30 s. La wallet externa del prestamista no tiene endpoint de saldo;
+no se infiere saldo sumando préstamos o abonos.
+
+Notificaciones: listNotifications al cargar y cada 30 s, readNotification,
+readAllNotifications. Se cargan todas las páginas y los enlaces respetan el
+rol administrador. El contador de avisos es diferente a pendientes.
+
+Administrador: getAdminDashboard, listLoans para todos los acuerdos,
+getLoan, listRepayments, getRepaymentTrace y getLoanPctHistory. El reparto
+por préstamo se calcula con las ventas de las trazas, deduplicadas por ID.
+Filtros, paginación, retorno conservando parámetros
+y CSV. Búsqueda sin tildes y reinicio del estado al cambiar etapa, como en
+la referencia. No se ejecutan operaciones administrativas sobre fondos desde la
+vista de consulta del mockup.
+
+DIFERENCIAS QUE IMPIDEN AFIRMAR FIDELIDAD EXACTA
+
+1. Los mockups muestran una tasa E.A. y ganancias por intereses. El contrato
+   usa un cargo fijo fee_bps. No existe equivalencia directa ni una tasa E.A.
+   que pueda obtenerse sin asumir un calendario de pagos. La interfaz muestra
+   cargo fijo sobre capital. No se inventan ganancias históricas por interés.
+2. Las solicitudes no aceptan tasa máxima, plazo, propósito ni notas. Estos
+   campos no se envían ni se presentan como condiciones publicadas.
+3. El registro necesita nombres, apellidos y ciudad. Se añaden los campos
+   obligatorios que faltan en el mockup.
+4. No existe recuperación/restablecimiento de contraseña. La vista explica
+   su indisponibilidad; nunca simula un correo enviado.
+5. El prestamista no dispone de QR de recaudo ni saldo de su wallet externa
+   en esta API. Solo el comercio puede activar collection-account.
+6. AdminDashboard NO contiene serie de ventas, distribuciones históricas,
+   PAR30, conversión de cohortes, primeras financiaciones ni participantes
+   por período. Esos paneles muestran indisponibilidad en vez de datos demo.
+7. No hay endpoint administrativo global de publicaciones abiertas: las
+   listas loan-offers/loan-requests están limitadas a los roles de negocio.
+   El registro administrativo actual solo puede mostrar LoanSummary.
+8. LoanSummary omite fee_bps, term_months, outstanding y fechas de aceptación.
+   El listado administrativo consulta getLoan para las filas visibles y muestra
+   el cargo, el plazo y el saldo pendiente completos; permite reintentar por
+   fila. El saldo incluye el cargo, no se etiqueta como capital pendiente.
+9. next_action diferencia aceptación, autorización y espera. Los pendientes
+   del mockup basados en aceptaciones simétricas no describen este flujo.
+10. Se quitan las barras editoriales «Mockup», «Modo demostración» y alcance.
+    El producto no debe presentarse como una simulación que guarda acuerdos
+    localmente. Esto cambia el encuadre respecto de las capturas de revisión.
+
+Estas diferencias son límites del contrato actual respecto de los mockups.
+La integración aplica el contrato; no agrega funcionalidades no soportadas
+por el backend ni supone igualdad funcional completa con los mockups.
+
+INTEGRACIÓN CON EL BACKEND REAL (17 DE OCTUBRE DE 2026)
+
+backend/ ya contiene FastAPI, SQLAlchemy y el worker de desembolsos y pagos.
+../trust-api.openapi.yaml y ../contracts/trust-api.openapi.yaml coinciden;
+regenerar operations.js y tests/openapi.json no produjo diferencias.
+El cliente existente consume las rutas y modelos correctos sin adaptadores
+ni respuestas simuladas en el código distribuido.
+
+scripts/dev.py arranca ambos servicios y conserva la configuración del
+backend, ajustando APP_WEB_URL y PUBLIC_API_URL a los puertos locales.
+Esto evita que el consentimiento de la wallet redirija por defecto al
+dominio desplegado y pierda la sesión guardada en sessionStorage.
+La API se consume a través del proxy /api/v1 de scripts/serve.py.
+Esta integración usa el mismo origen; no requiere CORS para el navegador.
+
+tests/test_real_backend.py inicia FastAPI y el proxy en puertos libres con
+Postgres 16. Crea una base única por ejecución, siembra los usuarios de demo
+y elimina solo esa base al finalizar. No lee backend/.env. El navegador
+no sustituye las respuestas de Trust. Un observador de fetch valida las
+peticiones y respuestas contra el YAML original antes de que una navegación
+destruya el buffer del navegador; entrega a la aplicación el Response original.
+Se conservan trazas, HAR y un registro de operaciones verificadas.
+
+Cobertura: registro de comercio y prestamista en móvil, inicio/cierre de
+sesión, protección por rol, vinculación de wallet y QR; publicación de
+solicitud, propuesta del prestamista, aceptación y cancelación; publicación
+y toma de oferta, rechazo en wallet y reintento exitoso del desembolso;
+retorno /op/return con sesión conservada y estado confirmado por polling;
+venta, reparto, abono y trazas en ambas wallets; revisión del porcentaje,
+panel y detalle administrativo y exportación CSV; liquidación total del
+crédito y ventas posteriores sin descuento; errores reales 401/409,
+sesión inválida, retorno tras login y lectura de notificaciones.
+El historial sembrado
+ejercita paginación real con más de 1.600 ventas.
+
+Para el caso comprobado: préstamo de $2.000.000, cargo fijo 5 %, aporte
+15 %. Una venta de $48.000 asigna $40.800 al negocio y $7.200 al crédito;
+el total a pagar es $2.100.000. Los importes del neto del prestamista y
+Trust proceden del backend y suman el abono, sin recalcularlos en la UI.
+
+Evidencias y reproducción: README.txt y test-results/real-backend/.
+Las pruebas aisladas de frontend siguen en tests/test_browser.py; cubren
+errores, reconexión, sesión vencida, paginación, estados y responsive.
+Resultado de esta revisión: 47 pruebas Playwright aisladas y 3 pruebas
+Playwright de integración aprobadas, con 223 respuestas verificadas de 31
+operaciones del contrato. También pasaron las 5 pruebas unitarias JS, la
+prueba del proxy y la compilación estática. Se verificó además el acceso
+de los tres roles en el entorno iniciado con scripts/dev.py.
+
+LÍMITES DE ESTA VERIFICACIÓN
+
+FastAPI, Postgres, JWT, reglas de negocio y worker son reales. La capa de
+Open Payments usa FakeOpClient y la wallet de autorización local provista
+por el backend. No se han comprobado transferencias de dinero real, el
+op-service externo, Puntored/Bre-B en producción, DNS/TLS del despliegue,
+CORS entre orígenes ni la aplicación móvil nativa.
+Las funciones ausentes del contrato (recuperación de contraseña, métricas
+históricas adicionales, etc.) conservan los límites descritos arriba.

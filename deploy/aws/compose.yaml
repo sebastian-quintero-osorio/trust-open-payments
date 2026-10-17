@@ -1,0 +1,154 @@
+name: trust
+
+x-common: &common
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: '3'
+
+services:
+  db:
+    <<: *common
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: trust
+      POSTGRES_DB: trust
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      OP_DB_PASSWORD: ${OP_DB_PASSWORD:?Set OP_DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-payments-db.sh:/docker-entrypoint-initdb.d/10-payments.sh:ro
+    networks: [database]
+    mem_limit: 384m
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U trust -d trust']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    <<: *common
+    build: ../../backend
+    image: trust-backend:${RELEASE_TAG:-latest}
+    environment:
+      DATABASE_URL: postgresql+psycopg://trust:${POSTGRES_PASSWORD}@db:5432/trust
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      OP_CLIENT: http
+      OP_SERVICE_BASE_URL: http://op-service:8080
+      OP_SERVICE_API_KEY: ${OP_SERVICE_API_KEY:?Set OP_SERVICE_API_KEY}
+      PUNTORED_WEBHOOK_SECRETS: ${PUNTORED_WEBHOOK_SECRET:?Set PUNTORED_WEBHOOK_SECRET}
+      TRUST_REVENUE_WALLET_ADDRESS: ${TRUST_REVENUE_WALLET_ADDRESS:-}
+      PUBLIC_API_URL: https://${API_DOMAIN}
+      APP_WEB_URL: https://${APP_DOMAIN}
+      LANDING_URL: https://${LANDING_DOMAIN}
+      CORS_ORIGINS: https://${LANDING_DOMAIN},https://${APP_DOMAIN}
+      TRUSTED_PROXIES: 10.0.1.0/24,172.28.64.0/24
+      DEV_ENDPOINTS_ENABLED: 'false'
+      WORKER_ENABLED: 'true'
+    networks: [database, services, proxy]
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 512m
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: dokploy-network
+      traefik.http.routers.trust-api.rule: Host(`${API_DOMAIN}`)
+      traefik.http.routers.trust-api.entrypoints: websecure
+      traefik.http.routers.trust-api.tls.certresolver: letsencrypt
+      traefik.http.services.trust-api.loadbalancer.server.port: '8000'
+      traefik.http.routers.trust-api-http.rule: Host(`${API_DOMAIN}`)
+      traefik.http.routers.trust-api-http.entrypoints: web
+      traefik.http.routers.trust-api-http.middlewares: trust-https
+      traefik.http.middlewares.trust-https.redirectscheme.scheme: https
+      traefik.http.middlewares.trust-https.redirectscheme.permanent: 'true'
+
+  frontend:
+    <<: *common
+    build:
+      context: ../..
+      dockerfile: deploy/aws/frontend.Dockerfile
+    image: trust-frontend:${RELEASE_TAG:-latest}
+    networks: [services, proxy]
+    mem_limit: 64m
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: dokploy-network
+      traefik.http.routers.trust-app.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.trust-app.entrypoints: websecure
+      traefik.http.routers.trust-app.tls.certresolver: letsencrypt
+      traefik.http.services.trust-app.loadbalancer.server.port: '80'
+      traefik.http.routers.trust-app-http.rule: Host(`${APP_DOMAIN}`)
+      traefik.http.routers.trust-app-http.entrypoints: web
+      traefik.http.routers.trust-app-http.middlewares: trust-https
+
+  landing:
+    <<: *common
+    build:
+      context: ../..
+      dockerfile: deploy/aws/landing.Dockerfile
+      args:
+        PUBLIC_SITE_URL: https://${LANDING_DOMAIN}
+        PUBLIC_WAITLIST_ENDPOINT: /api/v1/waitlist
+    image: trust-landing:${RELEASE_TAG:-latest}
+    networks: [services, proxy]
+    mem_limit: 64m
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: dokploy-network
+      traefik.http.routers.trust-landing.rule: Host(`${LANDING_DOMAIN}`)
+      traefik.http.routers.trust-landing.entrypoints: websecure
+      traefik.http.routers.trust-landing.tls.certresolver: letsencrypt
+      traefik.http.services.trust-landing.loadbalancer.server.port: '80'
+      traefik.http.routers.trust-landing-http.rule: Host(`${LANDING_DOMAIN}`)
+      traefik.http.routers.trust-landing-http.entrypoints: web
+      traefik.http.routers.trust-landing-http.middlewares: trust-https
+
+  op-service:
+    <<: *common
+    profiles: [payments]
+    build: ../../open-payments
+    image: trust-payments:${RELEASE_TAG:-latest}
+    env_file:
+      - path: ./op-service.env
+        required: false
+    environment:
+      DATABASE_URL: postgres://op_service:${OP_DB_PASSWORD}@db:5432/op_service?sslmode=disable
+      INTERNAL_API_KEY: ${OP_SERVICE_API_KEY}
+      PUBLIC_BASE_URL: https://${PAY_DOMAIN}
+      ALLOWED_RETURN_URL_PREFIXES: ${OP_ALLOWED_RETURN_URL_PREFIXES:?Set OP_ALLOWED_RETURN_URL_PREFIXES}
+      TRUST_WEBHOOK_URL: https://${API_DOMAIN}/api/v1/webhooks/puntored/payments
+      TRUST_WEBHOOK_SECRET: ${PUNTORED_WEBHOOK_SECRET}
+      DEMO_MODE: 'false'
+      TRUSTED_PROXY_CIDRS: 10.0.1.0/24
+    networks: [database, services, proxy]
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 256m
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: dokploy-network
+      traefik.http.routers.trust-pay.rule: Host(`${PAY_DOMAIN}`)
+      traefik.http.routers.trust-pay.entrypoints: websecure
+      traefik.http.routers.trust-pay.tls.certresolver: letsencrypt
+      traefik.http.services.trust-pay.loadbalancer.server.port: '8080'
+      traefik.http.routers.trust-pay-http.rule: Host(`${PAY_DOMAIN}`)
+      traefik.http.routers.trust-pay-http.entrypoints: web
+      traefik.http.routers.trust-pay-http.middlewares: trust-https
+
+networks:
+  database:
+    internal: true
+  services:
+    ipam:
+      config:
+        - subnet: 172.28.64.0/24
+  proxy:
+    external: true
+    name: dokploy-network
+
+volumes:
+  postgres_data:

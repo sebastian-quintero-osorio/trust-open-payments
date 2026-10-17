@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-labelledby="title desc">
+<title id="title">Arquitectura de Trust — vista simplificada</title>
+<desc id="desc">Frontend web conectado al backend FastAPI por REST. El backend usa PostgreSQL y la API interna del servicio Go op-service. El servicio Go usa su propia persistencia PostgreSQL y se conecta por HTTPS a wallets Open Payments. El navegador permite autorizar en la wallet. El webhook de vuelta al backend corresponde al simulador QR de Puntored/Bre-B. Se representa el modo OP_CLIENT=http, sin afirmar un despliegue o validación bancaria real.</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1 L8 5 L2 9" fill="none" stroke="#168576" stroke-width="1.5"/></marker>
+<marker id="purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1 L8 5 L2 9" fill="none" stroke="#77689D" stroke-width="1.5"/></marker>
+</defs><g font-family="Liberation Sans, Arial, sans-serif">
+<rect x="0" y="0" width="1920" height="1080" rx="0" fill="#F8FAF8" stroke="none"/>
+<rect x="80" y="72" width="36" height="6" rx="3" fill="#168576" stroke="none"/>
+<text x="132" y="84" font-size="21" fill="#168576" font-weight="700" text-anchor="start">TRUST</text>
+<text x="80" y="163" font-size="56" fill="#183E39" font-weight="700" text-anchor="start">Arquitectura de la aplicación</text>
+<text x="80" y="207" font-size="26" fill="#617872" font-weight="400" text-anchor="start">De la experiencia web a los pagos.</text>
+<rect x="1571" y="116" width="269" height="46" rx="23" fill="#EBF1EC" stroke="none"/>
+<text x="1705" y="146" font-size="21" fill="#617872" font-weight="600" text-anchor="middle">Integración HTTP</text>
+<rect x="56" y="319" width="1328" height="363" rx="32" fill="#EDF3EE" stroke="none"/>
+<text x="82" y="308" font-size="16" fill="#617872" font-weight="700" text-anchor="start">APLICACIÓN TRUST</text>
+<text x="1460" y="337" font-size="16" fill="#77689D" font-weight="700" text-anchor="start">EXTERNO</text>
+<path d="M260 354 V274 H1790 V354" fill="none" stroke="#77689D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#purple)" stroke-dasharray="6 8"/>
+<rect x="754" y="253" width="412" height="42" rx="0" fill="#F8FAF8" stroke="none"/>
+<text x="960" y="282" font-size="22" fill="#77689D" font-weight="500" text-anchor="middle">Autorización en la wallet</text>
+<rect x="80" y="361" width="360" height="300" rx="24" fill="#E7EEE9" stroke="none"/>
+<rect x="80" y="354" width="360" height="300" rx="24" fill="white" stroke="#D9E4DE"/>
+<rect x="108" y="382" width="76" height="76" rx="22" fill="#EAF5EF" stroke="none"/>
+<g transform="translate(123 397)" fill="none" stroke="#168576" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+<rect x="2" y="4" width="42" height="34" rx="5"/><path d="M2 15 H44 M10 10 H11 M17 10 H18 M16 23 L11 27 L16 31 M30 23 L35 27 L30 31"/>
+</g>
+<text x="108" y="510" font-size="32" fill="#183E39" font-weight="700" text-anchor="start">Frontend</text>
+<text x="108" y="550" font-size="22" fill="#168576" font-weight="400" text-anchor="start">HTML · CSS · JavaScript</text>
+<text x="108" y="612" font-size="21" fill="#617872" font-weight="400" text-anchor="start">Portal de créditos y ventas</text>
+<rect x="540" y="361" width="360" height="300" rx="24" fill="#E7EEE9" stroke="none"/>
+<rect x="540" y="354" width="360" height="300" rx="24" fill="white" stroke="#D9E4DE"/>
+<rect x="568" y="382" width="76" height="76" rx="22" fill="#EAF5EF" stroke="none"/>
+<g transform="translate(583 397)" fill="none" stroke="#168576" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+<rect x="3" y="2" width="40" height="16" rx="4"/><rect x="3" y="26" width="40" height="16" rx="4"/><path d="M11 10 H12 M20 10 H35 M11 34 H12 M20 34 H35 M23 18 V26"/>
+</g>
+<text x="568" y="510" font-size="32" fill="#183E39" font-weight="700" text-anchor="start">Backend</text>
+<text x="568" y="550" font-size="22" fill="#168576" font-weight="400" text-anchor="start">Python · FastAPI</text>
+<text x="568" y="612" font-size="21" fill="#617872" font-weight="400" text-anchor="start">Créditos y reparto de ventas</text>
+<rect x="1000" y="361" width="360" height="300" rx="24" fill="#E7EEE9" stroke="none"/>
+<rect x="1000" y="354" width="360" height="300" rx="24" fill="white" stroke="#D9E4DE"/>
+<rect x="1028" y="382" width="76" height="76" rx="22" fill="#EAF5EF" stroke="none"/>
+<g transform="translate(1043 397)" fill="none" stroke="#168576" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+<path d="M4 13 H41 L31 3 M41 13 L31 23 M42 32 H5 L15 22 M5 32 L15 42"/>
+</g>
+<text x="1028" y="510" font-size="32" fill="#183E39" font-weight="700" text-anchor="start">Servicio de pagos</text>
+<text x="1028" y="550" font-size="22" fill="#168576" font-weight="400" text-anchor="start">Go · op-service</text>
+<text x="1028" y="612" font-size="21" fill="#617872" font-weight="400" text-anchor="start">Desembolsos y transferencias</text>
+<rect x="1460" y="361" width="360" height="300" rx="24" fill="#EEEBF2" stroke="none"/>
+<rect x="1460" y="354" width="360" height="300" rx="24" fill="white" stroke="#E0DCE9"/>
+<rect x="1488" y="382" width="76" height="76" rx="22" fill="#F1EEF8" stroke="none"/>
+<g transform="translate(1503 397)" fill="none" stroke="#77689D" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+<path d="M6 12 V8 Q6 3 11 3 H36 V12 M6 12 H38 Q43 12 43 17 V36 Q43 41 38 41 H8 Q3 41 3 36 V17 Q3 12 6 12 M43 23 H30 V32 H43"/><circle cx="35" cy="27.5" r="1"/>
+</g>
+<text x="1488" y="510" font-size="32" fill="#183E39" font-weight="700" text-anchor="start">Wallets</text>
+<text x="1488" y="550" font-size="22" fill="#77689D" font-weight="400" text-anchor="start">Open Payments</text>
+<text x="1488" y="612" font-size="21" fill="#617872" font-weight="400" text-anchor="start">Autorización y pagos</text>
+<text x="490.0" y="462" font-size="18" fill="#617872" font-weight="500" text-anchor="middle">REST</text>
+<path d="M448 485 H532" fill="none" stroke="#168576" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<text x="950.0" y="462" font-size="18" fill="#617872" font-weight="500" text-anchor="middle">API interna</text>
+<path d="M908 485 H992" fill="none" stroke="#168576" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<text x="1410.0" y="462" font-size="18" fill="#617872" font-weight="500" text-anchor="middle">HTTPS</text>
+<path d="M1368 485 H1452" fill="none" stroke="#168576" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+<text x="950" y="565" font-size="17" fill="#617872" font-weight="500" text-anchor="middle">Webhook*</text>
+<path d="M992 584 H908" fill="none" stroke="#168576" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M720 661 V733" fill="none" stroke="#A1B8AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="720" cy="733" r="4" fill="#168576"/>
+<rect x="570" y="746" width="300" height="78" rx="18" fill="white" stroke="#D9E4DE"/>
+<g transform="translate(592 764)" fill="none" stroke="#168576" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+<ellipse cx="22" cy="8" rx="17" ry="6"/><path d="M5 8 V33 C5 41 39 41 39 33 V8 M5 20 C5 28 39 28 39 20"/>
+</g>
+<text x="656" y="794" font-size="25" fill="#183E39" font-weight="600" text-anchor="start">PostgreSQL</text>
+<path d="M1180 661 V733" fill="none" stroke="#A1B8AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="1180" cy="733" r="4" fill="#168576"/>
+<rect x="1030" y="746" width="300" height="78" rx="18" fill="white" stroke="#D9E4DE"/>
+<g transform="translate(1052 764)" fill="none" stroke="#168576" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+<ellipse cx="22" cy="8" rx="17" ry="6"/><path d="M5 8 V33 C5 41 39 41 39 33 V8 M5 20 C5 28 39 28 39 20"/>
+</g>
+<text x="1116" y="794" font-size="25" fill="#183E39" font-weight="600" text-anchor="start">PostgreSQL</text>
+<path d="M80 923 H1840" fill="none" stroke="#D9E4DE" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="91" cy="968" r="5" fill="#168576"/>
+<text x="111" y="976" font-size="23" fill="#183E39" font-weight="400" text-anchor="start">* Puntored / Bre-B: simulador QR.</text>
+<text x="1840" y="976" font-size="20" fill="#617872" font-weight="400" text-anchor="end">Basado en el código del repositorio</text>
+</g></svg>

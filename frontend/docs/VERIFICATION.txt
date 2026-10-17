@@ -1,0 +1,114 @@
+Trust frontend — comprobaciones y límites
+17 de octubre de 2026
+
+Implementación en src/. Paquete estático generado en dist/ (ignorado por Git).
+El código de los mockups originales no se modificó.
+
+Comprobaciones ejecutadas:
+
+- 47 pruebas Playwright Chromium: acceso y errores de credenciales, registro,
+  protección de rutas y rol, publicar ofertas y solicitudes, validaciones,
+  conflictos 409, condiciones previas, creación y aceptación/rechazo,
+  autorización en wallet, retorno consultando el servidor, rango del
+  prestamista, historial con condiciones completas, notificaciones y texto
+  no ejecutable, paginación API, ventas/abonos, QR, enlaces por rol, listado
+  administrativo, filtros, CSV, detalle y retorno, estados vacíos y móvil.
+  Incluyen respuestas tardías, recuperación de notificaciones, paginación
+  de avisos, retorno tras login y sesión vencida, retorno móvil sin sesión
+  web, conservación del consentimiento, pausa y reanudación del polling,
+  actualización de entregas/saldos/score/QR y abonos recibidos en USD.
+  Además: cancelación de publicaciones y acuerdos por ambos roles, reparto
+  con porcentaje vigente, plazo de confirmación, siguiente pendiente tras
+  responder, contador actualizado, retorno al filtro correcto, búsqueda sin
+  tildes, reinicio de filtros y carga/reintento de condiciones por fila admin.
+- Cada petición y respuesta interceptada se valida con el OpenAPI original.
+- 5 pruebas unitarias: importes exactos, entrada de moneda, estados,
+  sumas con validación de moneda/escala y destinos locales tras el login.
+- 1 prueba HTTP del proxy con dos servidores locales: conserva el 302 y
+  Location del retorno de autorización de la wallet de pruebas.
+- Comparación píxel a píxel del panel gráfico de acceso con el HTML del
+  mockup: idéntico al excluir la barra editorial y alinear coordenadas.
+  Esta comparación NO cubre todas las pantallas ni las capturas completas.
+- 45 capturas de revisión: 15 vistas a 320, 820 y 1920 px; comprobación
+  de desbordamiento y de los logos dentro del afiche QR. PDF A4 generado
+  y revisado, sin navegación ni datos de la wallet fuera del afiche.
+- 12 hojas CSS originales conservadas byte a byte. El número anterior de
+  13 en una actualización de progreso era un error de recuento.
+- Sintaxis de todos los JS validada. Contrato JSON de pruebas idéntico al YAML.
+- dist/ coincide byte a byte con src/.
+- Proxy local: error 502 de backend no disponible validado contra Error;
+  details es un objeto, tal como exige el contrato.
+
+Comandos en este entorno:
+
+    python3 scripts/build.py
+    python3 scripts/serve.py --directory dist
+    python3 -m unittest discover -s tests -p 'test_server.py' -v
+    /home/david/.local/bin/playwright-python -m unittest discover -s tests -p 'test_browser.py' -v
+    /home/david/.local/share/playwright/venv/lib/python3.14/site-packages/playwright/driver/node --test tests/format.test.js
+
+La instalación normal de dependencias figura en README.txt. Se utilizó el
+runtime Playwright ya instalado en la máquina, añadiendo jsonschema/PyYAML.
+No se requiere Node para ejecutar o construir la aplicación estática.
+
+Evidencia local: test-results/<test>.png y <test>.zip (trazas Playwright).
+Revisión por tamaños y afiche: test-results/layout-review/.
+Los artefactos de prueba y dist/ no se incluyen en Git.
+
+Correcciones de esta revisión:
+
+- Restitución de paneles y jerarquía visual del dashboard y detalle admin.
+- Reparto del crédito calculado desde las trazas de sus abonos.
+- Respuestas de condiciones descartadas cuando el usuario cambia el monto.
+- Polling sin solicitudes simultáneas, reanudado al volver desde caché.
+- Consentimiento conservado cuando el estado del préstamo no cambia.
+- Actualización de saldos, entregas, score y revocación del QR.
+- Recuperación de avisos tras un fallo inicial y carga de todas sus páginas.
+- Enlaces de avisos adaptados al rol administrador.
+- Destino del préstamo conservado al iniciar sesión o renovar una vencida.
+- Retorno móvil sin exigir una sesión web ajena a la app nativa.
+- Cabecera Location preservada por el proxy local.
+- Métricas del prestamista alineadas y abonos actualizados cada 30 s.
+- Barra de reparto coherente con el porcentaje vigente, no con el mockup.
+- Plazo incluido en la confirmación y etiquetas de oferta/solicitud corregidas.
+- Condiciones y saldo administrativo completados desde getLoan por fila visible.
+- Búsqueda sin tildes y reinicio del estado al cambiar etapa/tipo de historial.
+- Regreso a la bandeja que contiene el acuerdo y siguiente pendiente tras
+  responder; el contador cambia sin esperar al siguiente sondeo.
+- Encabezado administrativo ajustado a 320 px; logos del afiche QR contenidos
+  en móvil y tableta. Las hojas originales siguen intactas; ajustes en app.css.
+
+La última ejecución de las 47 pruebas terminó sin fallos y sin errores JS
+no controlados en los recorridos cubiertos. No demuestra ausencia total
+de bugs ni sustituye la integración con servicios reales.
+
+Alcance NO demostrado:
+
+- API, base de datos o Open Payments reales: no hay backend local en 8000;
+  el dominio api.trustservices.com.co no resuelve en este entorno.
+- Transferencias, pagos QR, correo, firma jurídica y persistencia reales.
+- Igualdad visual y funcional completa de todos los mockups. Existen
+  diferencias expresas en el contrato: ver docs/API-CONTRACT.txt.
+- Una auditoría final sin errores en el sistema completo.
+
+Por tanto, estas pruebas no dan por cumplido el objetivo. Su cierre requiere
+resolver las diferencias de contrato y validar el backend real.
+
+Auditoría del objetivo original:
+
+1. Analizar el contrato: realizado; operaciones generadas y formas de petición/
+   respuesta comprobadas con el YAML. Diferencias en API-CONTRACT.txt.
+2. Igualdad exacta con todos los mockups: NO demostrada. El contrato exige
+   campos adicionales de registro, usa cargo fijo y no expone recuperación,
+   métricas históricas ni publicaciones globales para admin. Las adaptaciones
+   actuales son expresas; no se presenta una prueba parcial como igualdad total.
+3. Integración completa con servicios reales: NO demostrada. backend/ solo
+   contiene .gitkeep; localhost:8000 rechaza la conexión y el dominio publicado
+   no resuelve. Revalidado en esta revisión. Faltan servidor y cuentas de prueba.
+4. Pruebas Playwright: ejecutadas con HTTP interceptado y validación del contrato;
+   incluyen los tres roles y los flujos soportados. No mueven dinero.
+5. Repaso integral sin errores: la revisión local cubierta termina sin fallos;
+   la del sistema real sigue pendiente. El objetivo completo no está logrado.
+
+Para continuar hacia la igualdad exacta se necesita resolver con backend las
+formas/datos que faltan en el contrato, además del acceso al entorno integrado.

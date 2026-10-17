@@ -1,0 +1,80 @@
+TRUST — Mockup 01: base del portal de préstamos
+
+Dirección elegida por el usuario: Órbita.
+Base del portal aprobada por el usuario, incluida la tasa de interés.
+Actualización en revisión: historial centralizado como subvista del portal.
+La acción Solicitar préstamo enlaza al nuevo mockup complementario en revisión.
+
+Abrir index.html (prestatario) o prestamista.html (prestamista) directamente en el navegador.
+No requiere dependencias ni servidor. Cada archivo conserva un rol fijo en este mockup.
+
+Alcance de la vista actual:
+- Estructura común: navegación, encabezado, cuenta y área principal.
+- Cuenta de comercio/prestatario usada como ejemplo; no es una decisión sobre todos los perfiles.
+- Cupo disponible y listado de ofertas con monto, tasa de interés y porcentaje de ventas.
+- Filtro funcional: dentro del cupo / todas las ofertas.
+- Pestañas internas: Explorar préstamos e Historial; navegación por teclado y URL #historial.
+- Historial del prestatario: Firmados / Solicitados.
+- Historial del prestamista: Firmados / Ofrecidos.
+- Búsqueda por ID o nombre en ambos perfiles.
+- Solo los firmados tienen filtro y estados Al día / En retraso / Pagado.
+- Cada perfil tiene tres firmados y dos propuestas propias sin firma.
+- El prestatario explora ofertas; el prestamista explora solicitudes.
+- Las acciones de creación y los enlaces a formularios se mantienen dentro de su rol.
+- Sin resultados: mensaje y acción para restablecer los filtros.
+- Historial eliminado del menú principal, también en las variantes solicitar/ofrecer.
+- Navegación móvil y diálogo de alcance.
+- Solicitar préstamo abre ../crear-prestamo/solicitar.html.
+- Las demás acciones muestran una nota del prototipo, sin abrir otros flujos.
+
+Composición:
+  Navegación | Encabezado y moneda
+             | Título + solicitar préstamo
+             | Explorar préstamos / Historial
+             | Cupo + explicación breve del pago con ventas + arco Órbita
+             | Ofertas + filtro de cupo
+             | Prestamista / monto / tasa de interés E.A. / porcentaje de ventas / ver oferta
+
+En Historial, el cupo y el mercado se reemplazan por filtros y registros.
+Los filtros de historial se conservan al cambiar de pestaña durante la visita.
+Al cambiar de tipo se restablece el estado; la búsqueda permanece activa.
+Los botones Atrás/Adelante del navegador restauran la subvista elegida.
+Los datos del historial son independientes de las simulaciones locales de creación.
+"Sin firma" indica ausencia de acuerdo firmado; no define un estado de pago.
+
+Decisiones visuales:
+- Base #191919; acción #6930F9; luz #9D67FB; foco #B499FE; texto #F1E9FD.
+- La luz se concentra en el cupo. El listado conserva un fondo sólido.
+- Radios: panel 24 px; controles 12 px. Lectura a la izquierda y números tabulares.
+- Logo existente del brand kit. Arial/Helvetica temporal: falta el archivo web de Qontra.
+- Tokens, controles y accesibilidad básica en ../shared/base.css para futuras vistas.
+- Se evita añadir métricas o múltiples tarjetas de resumen para mantener simple la base.
+
+Datos ficticios en COP. El porcentaje de ventas no representa la tasa de interés.
+Tasas de ejemplo: 18,00 %, 16,00 % y 20,00 %, expresadas como efectiva anual (E.A.).
+E.A. es una convención de presentación propuesta, pendiente de confirmar para el producto.
+No se calculan intereses ni se afirman condiciones comerciales o límites normativos.
+Los costos, el plazo y la aceptación pertenecen al futuro detalle del acuerdo.
+No hay integración con cuentas, wallet, pagos ni backend.
+
+Fuentes: ../../Interfaces.txt, ../../../branding/trust.md y el PDF de branding.
+La exploración visual previa se conserva como documento histórico.
+
+Separación de roles: los perfiles del mockup son explícitos en cada archivo HTML.
+No existe un selector de roles en el producto ni opciones de historial ajenas al perfil.
+Esto modela la interfaz; la autorización real requiere sesión y validación en backend.
+
+Actualización: detalle y acuerdos (mockups 04 / 05)
+El portal y su historial quedaron aprobados. Ver oferta / Ver solicitud abren
+../detalle-prestamo/. Las propuestas dirigidas aparecen en el historial y, para
+la cuenta receptora, en Propuestas por aprobar. Solo la aprobación de ambas partes
+crea un registro firmado y actualiza saldos/cupo de demostración. Los IDs de estos
+acuerdos abren su detalle. Se conserva la separación prestatario/prestamista.
+Consultar ../detalle-prestamo/LEEME.txt para recorrer la simulación completa.
+
+Ganancias históricas del prestamista:
+El historial incorpora el resumen compartido con Wallet: ganancias por intereses
+cobrados en COP y tasa promedio simple E.A. de todos los préstamos firmados,
+incluidos los pagados. Los filtros de la tabla no alteran el resumen histórico.
+Valores iniciales de Aliado Capital: $220.000 COP y 16,33 % E.A., ilustrativos.
+Ver ../wallet/LEEME.txt para el desglose y la actualización de acuerdos locales.

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Trust — Panel de administración</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="../portal-prestamos/portal.css">
+  <link rel="stylesheet" href="admin.css">
+  <script src="../shared/shell.js" defer></script>
+  <script src="admin.js" defer></script>
+</head>
+<body data-profile="administrador">
+  <a class="skip-link" href="#contenido">Ir al contenido</a>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 3v17h17M8 15l4-5 4 2 5-7"/></symbol>
+    <symbol id="i-flow" viewBox="0 0 24 24"><path d="M3 12h7m0 0 4-6h7m-11 6 4 6h7M18 3l3 3-3 3m0 6 3 3-3 3"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6ZM8 12l3 3 5-6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.2"/></symbol>
+  </svg>
+  <div class="review-bar"><span><strong>Mockup 08</strong><span class="review-separator">/</span>Administrador <span class="route-tag">Órbita</span></span><div><span class="review-state">Datos de demostración</span><button id="scope-button" class="review-link" type="button">Criterios de las métricas</button></div></div>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Navegación de administración">
+      <div class="sidebar-brand"><a href="index.html" aria-label="Trust, métricas"><img src="../../exploracion-visual/assets/trust-logo.svg" alt="Trust" width="110" height="35"></a><button type="button" class="icon-button mobile-close" id="close-menu" aria-label="Cerrar menú"><svg class="icon"><use href="#i-close"/></svg></button></div>
+      <div class="workspace-label">Administración</div>
+      <nav class="main-nav" aria-label="Módulos de administración">
+        <a class="nav-item active" href="index.html" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg><span>Métricas</span></a>
+        <a class="nav-item" href="prestamos.html"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span>Panel de administrador</span></a>
+      </nav>
+      <div class="admin-context"><span class="currency-dot" aria-hidden="true"></span><div>Operación Colombia<small>Todos los montos en COP</small></div></div>
+      <div class="sidebar-bottom"><div class="sidebar-rule"></div><div class="account"><div class="avatar">TA</div><div><strong>Equipo Trust</strong><span>Administrador</span></div></div><span class="account-note">Vista consolidada de la plataforma</span></div>
+    </aside>
+    <button type="button" id="menu-overlay" class="menu-overlay" aria-label="Cerrar menú" hidden></button>
+    <div class="workspace">
+      <header class="topbar"><div class="topbar-location"><button type="button" class="icon-button menu-toggle" id="open-menu" aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú"><svg class="icon"><use href="#i-menu"/></svg></button><span>Administración</span><span class="breadcrumb-slash">/</span><strong>Métricas</strong></div><span class="currency"><span class="currency-dot" aria-hidden="true"></span>Colombia <span class="currency-name">· COP</span></span></header>
+      <main id="contenido" tabindex="-1">
+        <div class="page-heading"><div><h1>El pulso de Trust</h1><p>Crédito que llega a los negocios. Ventas que lo hacen volver.</p></div><button type="button" class="button button-detail" id="export"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Exportar resumen</button></div>
+        <div class="period-toolbar"><div class="period-control"><label for="period">Período</label><select id="period"><option value="month">Septiembre 2026</option><option value="week">24–30 septiembre 2026</option></select></div><p id="comparison-label">Comparado con agosto 2026</p><span class="snapshot">Corte: 30 sep 2026, 23:59 COT</span></div>
+        <p class="sr-only" id="filter-status" role="status"></p>
+        <noscript><p class="no-script">Activa JavaScript para ver las métricas y explorar este mockup.</p></noscript>
+
+        <section aria-label="Indicadores principales" class="kpi-grid" id="kpis"></section>
+
+        <section id="flujo" class="money-panel" aria-labelledby="flow-title">
+          <div class="section-heading"><div><h2 id="flow-title">El recorrido de cada venta</h2><p>Pagos confirmados vía Bre-B / Puntored durante el período.</p></div><button type="button" class="text-button" data-detail="flow">Cómo se distribuye <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg></button></div>
+          <div class="money-layout"><div class="money-origin"><span class="metric-caption">Dinero recaudado por ventas</span><strong id="sales-total"></strong><span class="unit">Millones de COP</span><p class="change" id="sales-change"></p><p class="origin-note">El punto de partida del pago automático de los créditos.</p></div><div class="money-destinations" id="destinations"></div></div>
+          <div class="reconciliation"><span class="reconciled-icon" aria-hidden="true">✓</span><p id="reconciliation"></p><span>Sin comisiones modeladas</span></div>
+        </section>
+
+        <div class="analytics-grid">
+          <section class="panel trend-panel" aria-labelledby="trend-title"><div class="section-heading"><div><h2 id="trend-title">Ritmo de recaudo</h2><p id="chart-subtitle">Millones de COP · acumulados por tramo</p></div></div><div class="chart-toolbar"><div class="filter-group" role="group" aria-label="Métrica del gráfico"><button type="button" data-chart="sales" aria-pressed="true">Ventas</button><button type="button" data-chart="lenders" aria-pressed="false">A prestamistas</button></div><span class="chart-legend"><i aria-hidden="true"></i>Período anterior</span></div><div id="chart" class="chart"></div><p class="chart-note" id="chart-note"></p><details class="chart-data"><summary>Ver datos del gráfico</summary><div class="table-scroll"><table><caption class="sr-only">Valores del gráfico en millones de COP</caption><thead><tr><th scope="col">Tramo</th><th scope="col">Seleccionado</th><th scope="col">Anterior</th></tr></thead><tbody id="chart-data"></tbody></table></div></details></section>
+          <section id="cartera" class="panel portfolio-panel" aria-labelledby="portfolio-title"><div class="section-heading"><div><h2 id="portfolio-title">Salud de la cartera</h2><p>Foto al cierre del 30 de septiembre</p></div><button class="info-button" type="button" data-detail="portfolio" aria-label="Cómo se calcula la salud de la cartera">i</button></div><div class="portfolio-total"><span>Capital pendiente de recuperar</span><strong>$3.840 <small>M COP</small></strong></div><div class="portfolio-bar" role="img" aria-label="94 % del capital en préstamos al día y 6 % en préstamos en retraso"><span></span><span></span></div><div class="portfolio-legend"><span><i class="dot purple"></i>Al día <strong>1.208</strong></span><span><i class="dot amber"></i>En retraso <strong>76</strong></span></div><div class="risk-metric"><div><span>Capital en riesgo a más de 30 días</span><strong>4,8 <small>%</small></strong><p>$184,32 M de capital · 51 préstamos</p></div><span class="risk-badge">PAR30</span></div><p class="portfolio-note">Un negocio sin ventas necesita seguimiento; eso no lo convierte automáticamente en moroso.</p><div class="paid-line"><span>Préstamos pagados en el período</span><strong id="paid-count"></strong></div></section>
+        </div>
+
+        <section class="panel matching-panel" aria-labelledby="matching-title"><div class="section-heading"><div><h2 id="matching-title">De la intención al crédito</h2><p>Propuestas creadas en el período y su avance al corte.</p></div><button type="button" class="text-button" data-detail="matching">Entender la conversión <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg></button></div><div class="matching-layout"><ol class="funnel" id="funnel"></ol><div class="matching-result"><span>Conversión a desembolso</span><strong id="conversion"></strong><p id="conversion-caption"></p></div></div><div class="market-footnote"><span><strong>132</strong> solicitudes abiertas</span><span><strong>84</strong> ofertas abiertas</span><p>Inventario al corte · aún sin acuerdo firmado</p></div></section>
+
+        <section class="ecosystem" aria-labelledby="ecosystem-title"><div><h2 id="ecosystem-title">Quiénes mueven Trust</h2><p>Participación durante el período</p></div><div><strong id="business-count"></strong><span>Negocios con ventas recaudadas</span></div><div><strong id="lender-count"></strong><span>Prestamistas que recibieron pagos</span></div><div><strong id="first-credit"></strong><span>Negocios con su primer crédito en Trust</span></div></section>
+
+        <section id="atencion" class="attention-section" aria-labelledby="attention-title"><div class="section-heading"><div><h2 id="attention-title">Dónde poner la atención <span class="count">2</span></h2><p>Colas de seguimiento al corte. Un préstamo puede aparecer en más de una.</p></div><span class="snapshot">30 sep 2026</span></div><div class="table-scroll attention-table" tabindex="0" aria-label="Alertas operativas, tabla desplazable"><table><caption class="sr-only">Señales operativas y de cartera al cierre del 30 de septiembre</caption><thead><tr><th scope="col">Señal</th><th scope="col">Alcance</th><th scope="col">Monto relacionado</th><th scope="col">Siguiente paso</th></tr></thead><tbody><tr><th scope="row"><span class="signal"><i class="dot lavender"></i>Sin ventas durante 7 días</span><small>Préstamos activos con una señal de baja actividad</small></th><td>48 préstamos</td><td>$126 M <small>Capital pendiente</small></td><td><button type="button" class="text-button" data-detail="inactive">Revisar actividad</button></td></tr><tr><th scope="row"><span class="signal"><i class="dot amber"></i>Retraso contractual &gt; 30 días</span><small>Seguimiento prioritario de recuperación</small></th><td>51 préstamos</td><td>$184,32 M <small>Capital expuesto</small></td><td><button type="button" class="text-button" data-detail="risk">Revisar cartera</button></td></tr></tbody></table></div></section>
+        <footer class="workspace-footer"><span>Trust</span><p>Datos ilustrativos en COP. M = millones. Sin operaciones reales.</p></footer>
+      </main>
+    </div>
+  </div>
+  <div class="review-footer"><span>Propuesta de métricas y criterios de producto · En revisión</span><p>Mockup 08 · Panel del administrador</p></div>
+  <div class="preview-notice" id="preview-notice" hidden><div><strong>Panel de administración</strong><p id="preview-message" role="status"></p></div><button type="button" class="icon-button" id="dismiss-notice" aria-label="Cerrar nota"><svg class="icon"><use href="#i-close"/></svg></button></div>
+  <dialog id="scope-dialog" aria-labelledby="scope-title"><div class="dialog-heading"><span>Definiciones del panel</span><button type="button" class="icon-button" id="close-scope" aria-label="Cerrar criterios"><svg class="icon"><use href="#i-close"/></svg></button></div><h2 id="scope-title">Leer las cifras con contexto.</h2><p>Este panel propone cómo medir Trust. Todas las cifras son ficticias y no se conectan a las cuentas locales de los otros mockups.</p><ul><li><strong>Período y corte.</strong> Ventas, pagos, nuevos créditos y participación son movimientos del período. Préstamos activos, cartera, tasa, inventario abierto y alertas son saldos al 30 de septiembre; no cambian al elegir la semana que termina el mismo día.</li><li><strong>Recaudo.</strong> Solo ventas confirmadas; excluye intentos fallidos, recargas y desembolsos. En esta simulación no hay devoluciones ni comisiones y todas las ventas están distribuidas.</li><li><strong>Distribución.</strong> Ventas confirmadas = abonos confirmados a negocios + pagos confirmados a prestamistas. No se suman los desembolsos del crédito a los ingresos por ventas.</li><li><strong>Tasa promedio.</strong> Media de tasas E.A. pactadas, ponderada por capital pendiente de los préstamos activos. No es una rentabilidad realizada. El promedio simple del historial del prestamista tiene otro alcance.</li><li><strong>Cartera.</strong> Capital pendiente, sin intereses futuros. PAR30 = capital pendiente completo de préstamos con más de 30 días de retraso contractual / capital pendiente total. Requiere un vencimiento exigible definido en el contrato.</li><li><strong>Matching.</strong> Propuestas únicas iniciadas por cualquiera de los dos roles. Se sigue la misma cohorte hasta el corte y cada propuesta se cuenta una sola vez. Los acuerdos aceptados por ambas partes y los desembolsos confirmados son hitos diferentes.</li><li><strong>Ingresos de Trust.</strong> Pendientes de definir el modelo de comisiones. Ni las ventas recaudadas ni los intereses recibidos por los prestamistas se presentan como ingresos de Trust.</li><li><strong>Moneda.</strong> Se muestra únicamente la operación en COP. Para expansión internacional, separar monedas; cualquier consolidación necesita una política explícita de conversión.</li></ul><p class="font-note">Identidad Órbita y logotipo existentes. Arial/Helvetica como sustitución temporal de Qontra. Exportación CSV e interacciones locales; sin backend. El módulo Panel de administrador permite explorar una muestra de préstamos y sus detalles.</p><button type="button" class="button button-primary" id="back-to-mockup">Volver al panel</button></dialog>
+  <dialog id="detail-dialog" aria-labelledby="detail-title"><div class="dialog-heading"><span>Contexto de la métrica</span><button type="button" class="icon-button" id="close-detail" aria-label="Cerrar detalle"><svg class="icon"><use href="#i-close"/></svg></button></div><h2 id="detail-title"></h2><div id="detail-content"></div><button type="button" class="button button-detail" id="back-detail">Volver al panel</button></dialog>
+</body>
+</html>

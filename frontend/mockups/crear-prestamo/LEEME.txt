@@ -1,0 +1,68 @@
+TRUST — Mockups 02 y 03: solicitar / ofrecer préstamo
+
+Estado: base aprobada por el usuario. El detalle y la aprobación autorizados se
+desarrollan en ../detalle-prestamo/. No continuar a otros módulos sin aprobación.
+
+Abrir solicitar.html u ofrecer.html directamente en el navegador, sin instalar dependencias.
+También se llega a solicitar.html desde la acción Solicitar préstamo del portal aprobado.
+No hay enlaces entre formularios de distinto rol. Abrir cada archivo para revisarlo.
+
+Alcance:
+- Definir condiciones: rango mínimo/máximo en COP, interés E.A., porcentaje de ventas,
+  plazo propuesto en meses y descripción opcional.
+- Revisar los valores, volver a editar y simular la publicación.
+- Resumen en vivo y ejemplo de reparto de una venta de $100.000 COP.
+- Borrador local independiente para cada rol, recuperado al abrir la misma variante.
+- No se crean ofertas reales, se actualiza el listado del portal ni se mueve dinero.
+
+Decisiones propuestas (pendientes de aprobación):
+- Solicitud: interés E.A. máximo que el prestatario propone aceptar.
+- Oferta: interés E.A. ofrecido por el prestamista.
+- Plazo propuesto: se incluye para describir el acuerdo, sin calcular cuotas ni vencimientos.
+- Cupo de ejemplo del prestatario: $8.000.000. No se inventa un límite para el prestamista.
+- El rango admite mínimo igual a máximo para representar un monto exacto.
+- Tasas y datos iniciales son ilustrativos. No son condiciones comerciales.
+
+Validaciones del prototipo:
+- Montos positivos en pesos enteros; mínimo <= máximo.
+- Ambos extremos del rango del prestatario <= cupo.
+- Tasa no negativa; hasta dos decimales. No aplica topes comerciales o normativos.
+- Porcentaje de ventas > 0 y <= 100, hasta dos decimales.
+- Plazo entero positivo; descripción hasta 280 caracteres.
+- Los errores bloquean la revisión, se vinculan al campo y enfocan el primero al continuar.
+- Un borrador puede estar incompleto: guardar no equivale a validar o publicar.
+
+Reutilización:
+- ../shared/base.css: tokens y controles de la identidad aprobada.
+- ../shared/shell.js: menú, navegación móvil y notas de alcance del mockup.
+- ../portal-prestamos/portal.css: estructura visual aprobada.
+- formulario.css y formulario.js: formulario compartido por ambas variantes.
+
+Composición de escritorio:
+  Menú | Encabezado y regreso al portal
+       | Título / rol
+       | Pasos y formulario sólido     | Contexto Órbita
+       | Rango / condiciones           | Resumen en vivo
+       | Guardar borrador / revisar    | Ejemplo de reparto
+
+En móvil, el formulario ocupa una columna y el resumen aparece después.
+La luz orbital se concentra en el contexto del resumen; los campos usan superficies sólidas.
+Se conservan la paleta, el logotipo y la tipografía provisional de la base aprobada.
+
+Pendientes funcionales para etapas posteriores:
+Autenticación, persistencia remota, cupo real, disponibilidad de fondos, monedas/países,
+reglas comerciales y normativas de tasa/plazo, costos, matching y aceptación de ambas partes.
+Los enlaces de regreso conservan el rol: solicitar vuelve a index.html y ofrecer vuelve
+a prestamista.html dentro de ../portal-prestamos/.
+
+Verificación realizada en Brave/Chromium:
+- Ambas variantes entre 360 y 1440 px, sin desbordamiento horizontal.
+- Formatos inválidos, rango invertido, cupo por rol y porcentajes fuera del rango.
+- Monto exacto, interés cero, porcentaje del 100 % y plazo de un mes.
+- Resumen, conservación de datos al editar, borradores y simulación final.
+- Menú móvil, Escape, retorno del foco y movimiento reducido.
+- Navegación y filtro del portal tras extraer el script compartido.
+- Capturas de escritorio, móvil y revisión en vistas/.
+
+Integración con acuerdos: los enlaces conservan la cuenta, los borradores se separan
+por cuenta y el formulario de solicitud consulta el cupo restante de la demostración.

@@ -1,0 +1,83 @@
+.back-link { display: inline-flex; align-items: center; gap: 8px; color: var(--color-muted); font-size: 12px; text-decoration: none; margin-bottom: 26px; min-height: 32px; }
+.back-link .icon { transform: rotate(180deg); width: 16px; }
+.page-heading p { max-width: 65ch; }
+.detail-state { border: 1px solid #685580; border-radius: 8px; padding: 6px 10px; font-size: 11px; color: var(--color-lavender); white-space: nowrap; }
+.agreement-progress { list-style: none; display: flex; gap: 32px; padding: 0 0 24px; margin: 0 0 30px; border-bottom: 1px solid var(--color-border); }
+.agreement-progress li { display: flex; align-items: center; gap: 10px; color: var(--color-muted); font-size: 12px; }
+.agreement-progress li > span { display: grid; place-items: center; width: 26px; height: 26px; flex-shrink: 0; border: 1px solid #63576f; border-radius: 50%; font-size: 11px; }
+.agreement-progress [aria-current] { color: var(--color-text); }
+.agreement-progress [aria-current] > span { border-color: var(--color-lavender); background: #44276a; }
+.detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 285px; gap: 32px; align-items: start; }
+.conditions-surface { border: 1px solid #49404f; border-radius: var(--radius-panel); padding: 30px; background: var(--color-surface); }
+.counterparty { display: flex; align-items: center; gap: 12px; }
+.counterparty p { color: var(--color-muted); font-size: 11px; margin-bottom: 4px; }
+.counterparty h2 { font-size: 20px; }
+.counterparty .lender-avatar { width: 44px; height: 44px; font-size: 13px; }
+.listing-reference { margin-left: auto; font-size: 10px; color: var(--color-muted); }
+.amount-line { padding: 30px 0; margin-bottom: 24px; border-bottom: 1px solid var(--color-border); }
+.amount-line > span { font-size: 12px; color: var(--color-muted); }
+.amount-line p { display: flex; align-items: baseline; gap: 12px; margin-top: 8px; }
+.amount-line strong { font-size: clamp(32px, 3.2vw, 44px); font-weight: 400; letter-spacing: -.045em; line-height: 1.2; }
+.amount-line p > span { font-size: 11px; color: var(--color-muted); }
+.conditions-surface h3 { font-size: 16px; letter-spacing: -.015em; }
+.detail-terms { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 24px 0 18px; }
+.detail-terms dt, .sale-values dt, .balance-line dt { color: var(--color-muted); font-size: 11px; }
+.detail-terms dd { margin: 7px 0 0; font-size: 17px; }
+#detail-rate { color: var(--color-lavender); }
+.terms-note, .aside-note { font-size: 11px; color: var(--color-muted); line-height: 1.75; max-width: 70ch; }
+.purpose { margin-top: 26px; padding-top: 24px; border-top: 1px solid var(--color-border); }
+.purpose p { color: var(--color-muted); font-size: 13px; line-height: 1.7; margin-top: 12px; max-width: 65ch; }
+.repayment-visual { padding: 28px 24px; position: relative; overflow: hidden; isolation: isolate; border: 1px solid #70548e; border-radius: 24px; background: radial-gradient(ellipse at 100% 100%, #472578, transparent 75%), #282031; }
+.repayment-visual > :not(.orbit) { position: relative; z-index: 1; }
+.repayment-visual .orbit { width: 240px; height: 240px; right: -185px; bottom: -130px; opacity: .7; }
+.repayment-visual h2 { font-size: 26px; line-height: 1.2; }
+.repayment-visual p { color: #d3c6e1; font-size: 12px; line-height: 1.7; margin-top: 18px; max-width: 22ch; }
+.repayment-visual p strong { color: var(--color-text); font-weight: 400; }
+.sale-split { display: flex; height: 7px; background: var(--color-violet); border-radius: 4px; overflow: hidden; margin: 26px 0 20px; }
+.sale-split span { background: var(--color-lavender); border-right: 3px solid #282031; }
+.sale-values { display: grid; gap: 18px; margin: 0; }
+.sale-values dd { font-size: 20px; margin: 4px 0 0; }
+.detail-aside > .aside-note { margin: 18px 2px; }
+.account-availability { border-top: 1px solid var(--color-border); padding-top: 24px; margin-top: 24px; }
+.account-availability span, .account-availability small { display: block; font-size: 11px; color: var(--color-muted); }
+.account-availability strong { display: block; font-size: 22px; font-weight: 400; margin: 7px 0; }
+.account-availability small { font-size: 10px; }
+.agreement-section { margin-top: 30px; }
+.agreement-section h2, .movement-section h2 { font-size: 22px; }
+.agreement-section > p { margin-top: 12px; color: var(--color-muted); line-height: 1.75; font-size: 13px; max-width: 70ch; }
+.consent { display: flex; align-items: start; gap: 12px; font-size: 13px; line-height: 1.7; margin-top: 24px; cursor: pointer; }
+.consent input { width: 18px; height: 18px; margin: 3px 0 0; flex: 0 0 auto; accent-color: var(--color-purple); }
+.detail-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.eligibility-note { color: #f4cd8a; font-size: 12px; margin-top: 16px; }
+.eligibility-note:empty { display: none; }
+button:disabled { cursor: not-allowed; opacity: .5; }
+.agreement-actions { flex-wrap: nowrap; align-items: stretch; }
+.agreement-actions .button { min-width: 0; white-space: normal; text-align: center; }
+.history-link { color: var(--color-lavender); text-decoration: underline; text-underline-offset: 4px; }
+.history-link:hover { color: var(--color-text); }
+.acceptances { margin-top: 22px; border-top: 1px solid var(--color-border); }
+.acceptance { display: flex; gap: 14px; align-items: start; padding: 16px 0; border-bottom: 1px solid var(--color-border); }
+.acceptance > span { color: var(--color-lavender); font-size: 18px; }
+.acceptance strong { display: block; font-size: 13px; font-weight: 400; }
+.acceptance small { display: block; color: var(--color-muted); font-size: 11px; margin-top: 5px; }
+.movement-section { margin-top: 32px; padding-top: 28px; border-top: 1px solid var(--color-border); }
+.section-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.section-heading span { color: var(--color-lavender); font-size: 11px; }
+.movement-section > p { font-size: 11px; color: var(--color-muted); margin: 12px 0 20px; }
+.movement { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--color-border); }
+.movement strong { font-size: 13px; font-weight: 400; }
+.movement small { display: block; font-size: 11px; color: var(--color-muted); margin-top: 4px; }
+.movement > span { font-size: 17px; white-space: nowrap; }
+.movement.credit > span { color: var(--color-lavender); }
+.balance-line { display: flex; justify-content: space-between; gap: 16px; margin: 24px 0; }
+.balance-line dd { margin: 6px 0 0; font-size: 18px; }
+.demo-toolbar { display: flex; justify-content: space-between; gap: 16px; padding: 10px 28px; background: #27212e; border-bottom: 1px solid #46394f; color: var(--color-muted); font-size: 11px; }
+.demo-toolbar a { color: var(--color-lavender); }
+.confirmation-terms { margin: 24px 0; display: grid; gap: 12px; }
+.confirmation-terms div { display: flex; justify-content: space-between; gap: 20px; font-size: 13px; }
+.confirmation-terms dt { color: var(--color-muted); }
+.confirmation-terms dd { margin: 0; text-align: right; }
+.action-error { color: #f4cd8a; font-size: 13px; margin: 16px 0; }
+@media (max-width: 1200px) { .detail-layout { grid-template-columns: minmax(0, 1fr) 250px; gap: 24px; } .conditions-surface { padding: 24px; } .listing-reference { display: none; } }
+@media (max-width: 1000px) { .detail-layout { grid-template-columns: minmax(0, 1fr); } .detail-aside { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; } .repayment-visual { grid-row: span 3; } .account-availability { margin: 0; } .agreement-progress { gap: 22px; } }
+@media (max-width: 700px) { .page-heading { gap: 16px; } .page-heading p { max-width: 65ch; } .back-link { margin-bottom: 20px; } .agreement-progress { gap: 12px; justify-content: space-between; margin-bottom: 24px; padding-bottom: 20px; } .agreement-progress li { flex: 1; flex-direction: column; align-items: start; font-size: 10px; gap: 9px; } .conditions-surface { padding: 22px; } .counterparty h2 { font-size: 20px; } .amount-line strong { font-size: 36px; } .detail-terms { gap: 22px 16px; } .detail-terms dd { font-size: 15px; } .detail-terms dt { font-size: 10px; } .detail-aside { display: block; } .account-availability { margin-top: 24px; } .detail-actions { flex-direction: column; } .detail-actions .button { width: 100%; } .demo-toolbar { padding: 12px 20px; flex-direction: column; gap: 4px; } .movement { gap: 12px; } .movement > span { font-size: 15px; } .balance-line dd { font-size: 16px; } .section-heading { align-items: start; } }

@@ -1,5 +1,6 @@
 # Ignorar CLAUDE.md en cualquier nivel del proyecto
 **/CLAUDE.md
+**/AGENTS.md
 
 # Material interno (investigación y pitch), no se sube
 .internal/
