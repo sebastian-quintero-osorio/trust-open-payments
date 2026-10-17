@@ -2,7 +2,7 @@
 
 Servicio Go interno de Trust. El contrato original es `op-service.openapi.yaml`.
 Incluye servidor, configuración, modelos, validación, persistencia, idempotencia,
-cliente Open Payments, consentimiento, workers financieros, simulador QR y CI.
+cliente Open Payments, consentimiento, workers financieros, simulador QR y validaciones locales.
 Las validaciones locales usan HTTPS y PostgreSQL; la aceptación real con Test Wallet
 queda para el cierre con las credenciales configuradas por el operador.
 
@@ -68,12 +68,9 @@ export TEST_DATABASE_URL='postgres://usuario@localhost/op_service_test'
 
 El script exige PostgreSQL para que las pruebas de integración no se omitan.
 Incluye formato, regeneración, módulos, vet, Staticcheck, race tests, gosec,
-govulncheck, OpenAPI y Gitleaks sobre archivos e historial. El workflow usa los
-mismos comandos, permisos mínimos y acciones fijadas por SHA; cualquier fallo
-hace fallar el check `op-service / quality-security`. Al publicar, el administrador
-debe exigir ese check en la protección de la rama para impedir merges ante fallos.
-No se ha configurado protección remota ni ejecutado GitHub Actions en esta entrega
-local, conforme a la instrucción de realizar commits sin push.
+govulncheck, OpenAPI y Gitleaks sobre archivos e historial. El workflow de GitHub
+Actions se retiró temporalmente por solicitud del usuario; las validaciones se
+ejecutan localmente. No se ha configurado protección remota ni ejecutado Actions.
 
 ## Integración pendiente
 

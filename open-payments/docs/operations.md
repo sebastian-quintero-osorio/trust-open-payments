@@ -128,9 +128,9 @@ insuficiente, expiración, límites de consentimiento, revocación, reutilizaci�
 del pool, concurrencia, cuerpos estables del webhook y orden de commit del cursor.
 Las claves locales se generan para cada prueba y nunca se publican en Test Wallet.
 
-El workflow añade construcción de imagen, validación de Compose y Caddy. Para exigir
-checks en un PR se debe configurar protección de rama al publicar en GitHub; la
-petición actual autoriza únicamente commits locales.
+El workflow de GitHub Actions se retiró temporalmente por solicitud del usuario.
+La construcción de imagen y las validaciones de Compose y Caddy se ejecutan
+localmente. La publicación del código no acredita checks automáticos remotos.
 
 ## Recuperación operativa
 
