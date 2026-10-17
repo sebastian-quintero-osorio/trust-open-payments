@@ -6,3 +6,18 @@
 
 # Archivos de macOS
 .DS_Store
+
+# Instrucciones locales y tareas
+**/AGENTS.md
+**/task[0-9]*.md
+tasks/
+
+# Secretos locales de entorno en cualquier directorio
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Cachés y archivos compilados de Python
+__pycache__/
+*.py[cod]
