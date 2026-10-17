@@ -79,6 +79,7 @@ func (s *Service) RunOnce(ctx context.Context, owner string) (bool, error) {
 		e = s.executeFlow(step, &job)
 	}
 	if e != nil {
+		slog.Warn("financial workflow deferred", "resource_id", job.ResourceID, "job_id", job.ID, "stage_kind", job.Kind, "reason", "dependency_failure")
 		cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
 		defer stop()
 		if re := s.Work.Resume(cleanup, job, job.Kind, time.Now().Add(s.Config.PollInterval)); re != nil {
@@ -229,6 +230,15 @@ func (s *Service) executeFlow(ctx context.Context, j *workflow.Job) error {
 		if status(v) != "processing" {
 			return s.Work.Finish(ctx, *j)
 		}
+		if f.Kind != "payment" {
+			var usable bool
+			if e = s.DB.Pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM resources r JOIN resource_sessions rs ON rs.resource_id=r.id WHERE rs.session_id=$1 AND r.kind='pool_wallet' AND r.status IN ('authorized','assigned'))", j.GrantID).Scan(&usable); e != nil {
+				return e
+			}
+			if !usable {
+				return s.failFlow(ctx, *j, &f, "grant_revoked", session)
+			}
+		}
 		if e = s.Work.EnsureToken(ctx, db, j.GrantID, session, s.OP); e != nil {
 			return s.failFlow(ctx, *j, &f, failureCode(e), session)
 		}
@@ -329,6 +339,9 @@ func (s *Service) executeFlow(ctx context.Context, j *workflow.Job) error {
 func (s *Service) pollFlow(ctx context.Context, j *workflow.Job, f *Flow, session *workflow.Session) error {
 	out, e := s.OP.GetOutgoing(ctx, f.Outgoing.ID, session.Grant.AccessToken.Value)
 	if e != nil {
+		if failureCode(e) == "grant_revoked" {
+			return s.failFlow(ctx, *j, f, "grant_revoked", session)
+		}
 		return e
 	}
 	if out.ID == "" {
@@ -340,8 +353,13 @@ func (s *Service) pollFlow(ctx context.Context, j *workflow.Job, f *Flow, sessio
 	}
 	if out.Failed {
 		code := "internal"
-		if out.Metadata["cancellationReason"] == "Insufficient funds" {
+		switch out.Metadata["cancellationReason"] {
+		case "Insufficient funds":
 			code = "insufficient_balance"
+		case "InvalidAmount":
+			code = "invalid_amount"
+		case "NonPositiveReceiveAmount":
+			code = "amount_too_small"
 		}
 		return s.failFlow(ctx, *j, f, code, session)
 	}
@@ -431,6 +449,10 @@ func failureCode(e error) string {
 	return "internal"
 }
 func receiverFailure(e error) string {
+	code := failureCode(e)
+	if code == "invalid_amount" || code == "amount_too_small" {
+		return code
+	}
 	var remote *op.Error
 	if errors.As(e, &remote) && remote.Status >= 400 && remote.Status < 500 {
 		return "receiver_unreachable"
@@ -505,7 +527,7 @@ func (s *Service) failFlow(ctx context.Context, j workflow.Job, f *Flow, code st
 			return e
 		}
 	}
-	if code == "grant_revoked" {
+	if code == "grant_revoked" || session.Blocked || session.Rotating {
 		session.Blocked = true
 		if e = s.Work.SaveSession(ctx, tx, j.GrantID, *session); e != nil {
 			return e
@@ -589,6 +611,9 @@ func (s *Service) revokeGrantAccounts(ctx context.Context, tx pgx.Tx, grantID st
 				return e
 			}
 			v["status"] = "revoked"
+			if _, e = tx.Exec(ctx, "UPDATE collection_wallets SET active=false WHERE account_id=$1", accountID); e != nil {
+				return e
+			}
 			if e = save(ctx, tx, accountID, v); e != nil {
 				return e
 			}

@@ -20,7 +20,7 @@ Variables obligatorias al arrancar:
 | `OP_CLIENT_WALLET_ADDRESS` | Wallet HTTPS del cliente Trust |
 | `OP_KEY_ID` | Identificador de su clave pública registrada |
 | `OP_PRIVATE_KEY` | PEM PKCS#8 Ed25519, incluidos saltos de línea |
-| `ALLOWED_RETURN_URL_PREFIXES` | Prefijos HTTPS separados por comas |
+| `ALLOWED_RETURN_URL_PREFIXES` | Prefijos HTTPS separados por comas; opcional en modo demo |
 
 También se admiten `POOL_WALLET_ADDRESSES`, `SIM_PAYER_WALLET_ADDRESS`,
 `SIM_ENABLED` (por defecto false), `SIM_MAX_AMOUNT`, `TRUST_WEBHOOK_URL`,
@@ -147,3 +147,24 @@ terminen fuera de orden. Un sim completado ya tuvo al menos un intento de webhoo
 El saldo de recaudo es informativo; si las salidas exceden entradas observadas se
 omite ledger_balance, ya que el contrato no representa saldos negativos. Trust es
 responsable de la contabilidad real por comercio.
+
+
+## Despliegue y aceptación (fase 5)
+
+Ver [la guía operativa](docs/operations.md) para configurar credenciales, levantar
+Compose, autorizar el pool y ejecutar aceptación real con un archivo de intentos
+estable. Docker usa un binario estático en distroless nonroot, filesystem de solo
+lectura y Caddy como única entrada pública. El override local expone la API solo
+en loopback. `scripts/live-smoke.py` utiliza únicamente la biblioteca estándar.
+
+La suite incluye un receptor FastAPI real para verificar el contrato de webhook;
+la aplicación de negocio Trust y su contabilidad siguen perteneciendo a su backend.
+Las cinco fases tienen implementación y validación local. La aceptación contra
+Test Wallet y el despliegue público siguen pendientes de credenciales y operación
+real. La publicación del código no implica que esa aceptación haya sido aprobada.
+
+## Demo sin dominio
+
+Desde esta carpeta: `python3 scripts/demo.py`. El arranque obtiene una URL HTTPS
+temporal, deja la API en localhost y configura el retorno sin frontend.
+Requisitos y pasos: [guía de demo](docs/demo.md).

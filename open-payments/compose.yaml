@@ -1,0 +1,79 @@
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-op_service}
+      POSTGRES_USER: ${POSTGRES_USER:-op_service}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      payments:
+        ipv4_address: 172.30.0.4
+  op-service:
+    build: .
+    image: trust-op-service:local
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 20s
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-op_service}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-op_service}?sslmode=disable
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY}
+      DEMO_MODE: ${DEMO_MODE:-false}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?Set PUBLIC_BASE_URL}
+      OP_CLIENT_WALLET_ADDRESS: ${OP_CLIENT_WALLET_ADDRESS:?Set OP_CLIENT_WALLET_ADDRESS}
+      OP_KEY_ID: ${OP_KEY_ID:?Set OP_KEY_ID}
+      OP_PRIVATE_KEY: ${OP_PRIVATE_KEY:?Set OP_PRIVATE_KEY}
+      POOL_WALLET_ADDRESSES: ${POOL_WALLET_ADDRESSES:-}
+      SIM_PAYER_WALLET_ADDRESS: ${SIM_PAYER_WALLET_ADDRESS:-}
+      TRUST_WEBHOOK_URL: ${TRUST_WEBHOOK_URL:-}
+      TRUST_WEBHOOK_SECRET: ${TRUST_WEBHOOK_SECRET:-}
+      ALLOWED_RETURN_URL_PREFIXES: ${ALLOWED_RETURN_URL_PREFIXES:-}
+      SIM_ENABLED: ${SIM_ENABLED:-false}
+      SIM_MAX_AMOUNT: ${SIM_MAX_AMOUNT:-50000}
+      INTERACTION_TIMEOUT_SECONDS: ${INTERACTION_TIMEOUT_SECONDS:-600}
+      POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS:-2}
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-172.30.0.2/32}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      payments:
+        ipv4_address: 172.30.0.3
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      PAY_DOMAIN: ${PAY_DOMAIN:-localhost}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      op-service:
+        condition: service_healthy
+    networks:
+      payments:
+        ipv4_address: 172.30.0.2
+networks:
+  payments:
+    name: trust-payments
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

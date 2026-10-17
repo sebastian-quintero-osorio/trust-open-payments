@@ -109,6 +109,9 @@ func (s *Service) authorizePool(ctx context.Context, tx pgx.Tx, r httpapi.Reques
 	if e != nil {
 		return upstream(e)
 	}
+	if status(v) == "revoked" {
+		v["collection_account_id"] = nil
+	}
 	v["status"] = "awaiting_authorization"
 	v["authorization_url"] = attempt.URL
 	v["authorization_expires_at"] = attempt.Expires.UTC().Format(time.RFC3339Nano)
@@ -181,7 +184,7 @@ func (s *Service) createAccount(ctx context.Context, tx pgx.Tx, r httpapi.Reques
 		return problem(409, "already_assigned")
 	}
 	var poolID string
-	e := tx.QueryRow(ctx, `SELECT p.resource_id::text FROM pool_wallets p JOIN resources r ON r.id=p.resource_id WHERE p.role='collection' AND p.asset_code=$1 AND r.status='authorized' AND NOT EXISTS(SELECT 1 FROM collection_wallets c WHERE c.pool_id=p.resource_id) ORDER BY r.created_at,r.id FOR UPDATE OF r SKIP LOCKED LIMIT 1`, input.AssetCode).Scan(&poolID)
+	e := tx.QueryRow(ctx, `SELECT p.resource_id::text FROM pool_wallets p JOIN resources r ON r.id=p.resource_id WHERE p.role='collection' AND p.asset_code=$1 AND r.status='authorized' AND NOT EXISTS(SELECT 1 FROM collection_wallets c WHERE c.pool_id=p.resource_id AND c.active) ORDER BY r.created_at,r.id FOR UPDATE OF r SKIP LOCKED LIMIT 1`, input.AssetCode).Scan(&poolID)
 	if errors.Is(e, pgx.ErrNoRows) {
 		return problem(409, "pool_exhausted")
 	}
@@ -227,6 +230,9 @@ func (s *Service) revokeAccount(ctx context.Context, _ pgx.Tx, r httpapi.Request
 	}
 	if status(v) == "active" {
 		v["status"] = "revoked"
+		if _, e = tx.Exec(ctx, "UPDATE collection_wallets SET active=false WHERE account_id=$1", id); e != nil {
+			return persistence.Response{}, e
+		}
 		if e = save(ctx, tx, id, v); e != nil {
 			return persistence.Response{}, e
 		}

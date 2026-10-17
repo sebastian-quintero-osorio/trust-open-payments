@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/sebastian-quintero-osorio/trust-open-payments/open-payments/internal/domain"
@@ -13,6 +14,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"net/netip"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -139,10 +141,7 @@ func (s *Service) qrPay(w http.ResponseWriter, r *http.Request) {
 		if !valid {
 			return problem(400, "validation_error")
 		}
-		host, _, e := net.SplitHostPort(r.RemoteAddr)
-		if e != nil {
-			host = r.RemoteAddr
-		}
+		host := s.clientIP(r)
 		ip := sha256.Sum256([]byte(host))
 		var count int
 		e = tx.QueryRow(ctx, `INSERT INTO qr_rate_limits(ip_hash,minute,requests) VALUES($1,date_trunc('minute',now()),1) ON CONFLICT(ip_hash,minute) DO UPDATE SET requests=qr_rate_limits.requests+1 WHERE qr_rate_limits.requests<5 RETURNING requests`, ip[:]).Scan(&count)
@@ -162,6 +161,10 @@ func (s *Service) qrPay(w http.ResponseWriter, r *http.Request) {
 		return result, nil
 	})
 	if e != nil {
+		if errors.Is(e, persistence.ErrConflict) || errors.Is(e, persistence.ErrInProgress) {
+			http.Error(w, "El formulario ya está en uso; conserva el mismo monto", http.StatusConflict)
+			return
+		}
 		http.Error(w, "Pago no disponible; reintenta con el mismo formulario", http.StatusServiceUnavailable)
 		return
 	}
@@ -174,4 +177,27 @@ func (s *Service) qrPay(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Idempotent-Replayed", "true")
 	}
 	_, _ = w.Write([]byte(`<!doctype html><html lang="es"><meta charset="utf-8"><title>Trust</title><h1>Pago enviado</h1><p>La confirmación del recaudo está en proceso.</p></html>`))
+}
+
+// clientIP trusts a single forwarded address only from configured private proxies.
+func (s *Service) clientIP(r *http.Request) string {
+	host, _, e := net.SplitHostPort(r.RemoteAddr)
+	if e != nil {
+		host = r.RemoteAddr
+	}
+	peer, e := netip.ParseAddr(host)
+	if e != nil {
+		return host
+	}
+	for _, prefix := range s.Config.TrustedProxyCIDRs {
+		if prefix.Contains(peer) {
+			forwarded := r.Header.Get("X-Forwarded-For")
+			ip, e := netip.ParseAddr(forwarded)
+			if e == nil {
+				return ip.String()
+			}
+			break
+		}
+	}
+	return peer.String()
 }

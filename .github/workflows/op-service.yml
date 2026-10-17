@@ -41,6 +41,18 @@ jobs:
       - name: Install pinned analyzers
         run: ./scripts/install-tools.sh
       - name: Install OpenAPI validator
-        run: python3 -m pip install -r scripts/requirements-tools.txt
+        run: |
+          python3 -m venv "$RUNNER_TEMP/op-service-validation"
+          "$RUNNER_TEMP/op-service-validation/bin/pip" install -r scripts/requirements-tools.txt
+          printf '%s\n' "$RUNNER_TEMP/op-service-validation/bin" >> "$GITHUB_PATH"
       - name: Validate contract, integration, concurrency, and security
         run: ./scripts/check.sh
+
+      - name: Build non-root image
+        run: docker build -t trust-op-service:ci .
+      - name: Validate deployment manifests
+        run: |
+          docker compose --env-file .env.example config --quiet
+          docker compose --env-file .env.example -f compose.yaml -f compose.demo.yaml config --quiet
+          docker run --rm -e PAY_DOMAIN=pay.example -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2 caddy validate --config /etc/caddy/Caddyfile
+          docker run --rm -v "$PWD/Caddy.demo:/etc/caddy/Caddyfile:ro" caddy:2 caddy validate --config /etc/caddy/Caddyfile

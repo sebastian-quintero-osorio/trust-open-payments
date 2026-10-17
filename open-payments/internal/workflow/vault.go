@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
+	"encoding/json"
 	"errors"
 
 	"github.com/sebastian-quintero-osorio/trust-open-payments/open-payments/internal/config"
@@ -66,3 +67,5 @@ func (v *Vault) Open(id string, data []byte, value any) error {
 	}
 	return gob.NewDecoder(bytes.NewReader(plain)).Decode(value)
 }
+
+func init() { gob.Register(map[string]any{}); gob.Register([]any{}); gob.Register(json.Number("")) }

@@ -125,6 +125,10 @@ func (s *Service) listSim(ctx context.Context, _ pgx.Tx, r httpapi.Request) (per
 	return jsonResponse(200, map[string]any{"items": items, "next_after": next})
 }
 func (s *Service) assignSequence(ctx context.Context, tx pgx.Tx, id string, v map[string]any) error {
+	// Serialize allocation until commit so a cursor cannot observe seq 2 before seq 1.
+	if _, e := tx.Exec(ctx, "SELECT pg_advisory_xact_lock(714583922)"); e != nil {
+		return e
+	}
 	var seq int64
 	if e := tx.QueryRow(ctx, "UPDATE sim_entries SET seq=COALESCE(seq,nextval('sim_terminal_sequence')) WHERE resource_id=$1 RETURNING seq", id).Scan(&seq); e != nil {
 		return e

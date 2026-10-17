@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"net/netip"
 	"net/url"
 	"strconv"
 	"strings"
@@ -50,11 +51,20 @@ type Config struct {
 	AllowedReturnPrefixes []string
 	InteractionTimeout    time.Duration
 	PollInterval          time.Duration
+	TrustedProxyCIDRs     []netip.Prefix
 }
 
 // Load reads all documented settings. Error messages name fields, never values.
 func Load(get func(string) string) (Config, error) {
 	c := Config{InternalAPIKey: Secret(get("INTERNAL_API_KEY")), DatabaseURL: Secret(get("DATABASE_URL")), PrivateKey: Secret(get("OP_PRIVATE_KEY")), KeyID: get("OP_KEY_ID"), ClientWallet: get("OP_CLIENT_WALLET_ADDRESS"), PublicBaseURL: strings.TrimRight(get("PUBLIC_BASE_URL"), "/"), SimPayerWallet: get("SIM_PAYER_WALLET_ADDRESS"), SimMaxAmount: get("SIM_MAX_AMOUNT"), WebhookURL: get("TRUST_WEBHOOK_URL"), WebhookSecret: Secret(get("TRUST_WEBHOOK_SECRET"))}
+	demo := false
+	if value := get("DEMO_MODE"); value != "" {
+		var err error
+		demo, err = strconv.ParseBool(value)
+		if err != nil {
+			return Config{}, errors.New("DEMO_MODE must be a boolean")
+		}
+	}
 	for _, field := range []struct {
 		name  string
 		value string
@@ -80,6 +90,11 @@ func Load(get func(string) string) (Config, error) {
 	}
 	c.PoolWallets = split(get("POOL_WALLET_ADDRESSES"))
 	c.AllowedReturnPrefixes = split(get("ALLOWED_RETURN_URL_PREFIXES"))
+	// A demo without a frontend returns to the existing public health endpoint.
+	// Explicit return URLs still require an allowlist; no wildcard is introduced.
+	if demo && len(c.AllowedReturnPrefixes) == 0 {
+		c.AllowedReturnPrefixes = []string{c.PublicBaseURL + "/v1/health"}
+	}
 	if len(c.AllowedReturnPrefixes) == 0 {
 		return Config{}, errors.New("ALLOWED_RETURN_URL_PREFIXES is required")
 	}
@@ -118,6 +133,13 @@ func Load(get func(string) string) (Config, error) {
 	c.PollInterval, err = seconds(get("POLL_INTERVAL_SECONDS"), 2)
 	if err != nil {
 		return Config{}, errors.New("POLL_INTERVAL_SECONDS must be between 1 and 86400")
+	}
+	for _, cidr := range split(get("TRUSTED_PROXY_CIDRS")) {
+		prefix, e := netip.ParsePrefix(cidr)
+		if e != nil || !prefix.Addr().IsPrivate() {
+			return Config{}, errors.New("TRUSTED_PROXY_CIDRS must contain private proxy CIDRs")
+		}
+		c.TrustedProxyCIDRs = append(c.TrustedProxyCIDRs, prefix)
 	}
 	return c, nil
 }

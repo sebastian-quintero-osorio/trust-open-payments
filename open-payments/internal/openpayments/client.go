@@ -305,6 +305,9 @@ func (c *Client) CreateIncoming(ctx context.Context, w Wallet, t config.Secret, 
 func (c *Client) GetIncoming(ctx context.Context, target string, t config.Secret) (Incoming, error) {
 	var i Incoming
 	e := c.request(ctx, "GET", target, t, nil, &i)
+	if e == nil && i.ID != "" && !SameOrigin(i.ID, target) {
+		return Incoming{}, &Error{Status: 502, Code: "upstream_error"}
+	}
 	return i, e
 }
 
@@ -363,6 +366,9 @@ func (c *Client) CreateOutgoing(ctx context.Context, w Wallet, t config.Secret, 
 func (c *Client) GetOutgoing(ctx context.Context, target string, t config.Secret) (Outgoing, error) {
 	var o Outgoing
 	e := c.request(ctx, "GET", target, t, nil, &o)
+	if e == nil && o.ID != "" && !SameOrigin(o.ID, target) {
+		return Outgoing{}, &Error{Status: 502, Code: "upstream_error"}
+	}
 	return o, e
 }
 

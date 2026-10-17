@@ -17,6 +17,7 @@ import (
 	"github.com/sebastian-quintero-osorio/trust-open-payments/open-payments/internal/persistence"
 	"github.com/sebastian-quintero-osorio/trust-open-payments/open-payments/internal/testutil"
 	"io"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -38,6 +39,7 @@ type protocolFixture struct {
 	quotes                        map[string]quoteFixture
 	outgoing                      map[string]op.Outgoing
 	creates, continues, completes int
+	extraDebit, rejectDirect      bool
 	failBalance, lostResponse     bool
 	webhookFailures               int
 	webhooks                      [][]byte
@@ -127,6 +129,10 @@ func (f *protocolFixture) serve(w http.ResponseWriter, r *http.Request) {
 		}
 		id := f.base + path + "/" + uuid.NewString()
 		quote := op.Quote{ID: id, DebitAmount: *amount, ReceiveAmount: *amount, ExpiresAt: time.Now().Add(5 * time.Minute)}
+		if f.extraDebit {
+			n, _ := new(big.Int).SetString(quote.DebitAmount.Value, 10)
+			quote.DebitAmount.Value = n.Add(n, big.NewInt(1)).String()
+		}
 		f.quotes[id] = quoteFixture{Quote: quote, IncomingID: body.Receiver}
 		w.WriteHeader(201)
 		writeFixture(w, quote)
@@ -139,6 +145,11 @@ func (f *protocolFixture) serve(w http.ResponseWriter, r *http.Request) {
 				items = append(items, o)
 			}
 			writeFixture(w, map[string]any{"result": items, "pagination": map[string]any{"hasNextPage": false}})
+			return
+		}
+		if f.rejectDirect && body.QuoteID == "" {
+			w.WriteHeader(400)
+			writeFixture(w, map[string]any{"error": map[string]string{"code": "invalid_request"}})
 			return
 		}
 		f.creates++

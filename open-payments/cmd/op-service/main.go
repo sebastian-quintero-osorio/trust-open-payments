@@ -18,6 +18,20 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "check-config" {
+		if _, e := config.Load(os.Getenv); e != nil {
+			slog.Error("configuration invalid", "reason", e.Error())
+			os.Exit(1)
+		}
+		slog.Info("configuration valid")
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		if e := probeHealth(); e != nil {
+			os.Exit(1)
+		}
+		return
+	}
 	if e := run(); e != nil {
 		slog.Error("service stopped", "reason", e.Error())
 		os.Exit(1)

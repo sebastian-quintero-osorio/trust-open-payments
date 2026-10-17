@@ -70,6 +70,32 @@ func TestReturnURLAllowlist(t *testing.T) {
 	}
 }
 
+func TestDemoDefaultsKeepReturnURLsRestricted(t *testing.T) {
+	env := validEnv(t)
+	env["DEMO_MODE"] = "true"
+	delete(env, "ALLOWED_RETURN_URL_PREFIXES")
+	c, err := Load(func(k string) string { return env[k] })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !c.ReturnURLAllowed("https://pay.example/v1/health?op_status=completed") || c.ReturnURLAllowed("https://evil.example/") || c.ReturnURLAllowed("https://pay.example/other") {
+		t.Fatal("demo return URL restriction failed")
+	}
+	if len(c.TrustedProxyCIDRs) != 0 {
+		t.Fatal("demo must not trust unconfigured proxy headers")
+	}
+	env["ALLOWED_RETURN_URL_PREFIXES"] = "https://app.example/"
+	c, err = Load(func(k string) string { return env[k] })
+	if err != nil || !c.ReturnURLAllowed("https://app.example/return") || c.ReturnURLAllowed("https://pay.example/v1/health") {
+		t.Fatal("explicit return allowlist must take precedence")
+	}
+	delete(env, "ALLOWED_RETURN_URL_PREFIXES")
+	env["PUBLIC_BASE_URL"] = "http://localhost:8080"
+	if _, err = Load(func(k string) string { return env[k] }); err == nil {
+		t.Fatal("demo accepted insecure callback URL")
+	}
+}
+
 func TestStructuredLogsRedactNestedSecrets(t *testing.T) {
 	env := validEnv(t)
 	cfg, err := Load(func(k string) string { return env[k] })

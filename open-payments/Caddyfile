@@ -1,0 +1,11 @@
+{$PAY_DOMAIN} {
+	@browser path /v1/health /v1/interact/finish/* /qr/*
+	handle @browser {
+		reverse_proxy op-service:8080 {
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+	handle {
+		respond "Not found" 404
+	}
+}
