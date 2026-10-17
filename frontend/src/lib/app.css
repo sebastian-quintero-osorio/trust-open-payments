@@ -1,0 +1,35 @@
+/* Source mockup styles are preserved. Only production states are added here. */
+.app-error { padding: 16px; margin: 16px 0; border: 1px solid #b7768b; border-radius: 12px; background: #35242c; color: #ffcfda; overflow-wrap: anywhere; }
+.app-loading { padding: 20px 0; color: var(--color-muted); }
+button:disabled { opacity: .55; cursor: wait; }
+.session-logout { border: 0; padding: 8px 0; background: none; color: var(--color-muted); text-align: left; }
+.app-notifications { max-height: 65vh; overflow: auto; }
+.app-notifications article { padding: 16px 0; border-bottom: 1px solid var(--color-border); }
+.app-notifications p { margin: 8px 0; }
+.offer-row strong, .record-id, .wallet-id-row strong { overflow-wrap: anywhere; }
+.offer-row .metric-amount strong { font-size: 18px; }
+.app-field { display: grid; gap: 8px; margin: 16px 0; }
+.app-field input, .app-field select { width: 100%; border: 1px solid var(--color-border); border-radius: 12px; padding: 12px; background: var(--color-surface); color: var(--color-text); }
+.contract-note { color: var(--color-muted); font-size: 13px; margin-top: 12px; }
+.chart-unavailable { min-height: 230px; display: grid; place-items: center; text-align: center; color: var(--color-muted); font-size: 12px; }
+.portfolio-bar.data-unavailable { background: var(--color-border); }
+.portfolio-bar.data-unavailable span { visibility: hidden; }
+.party-facts dd, .detail-reference > span { overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 360px) {
+  .topbar .currency { display: none; }
+  .topbar > .icon-button { flex-shrink: 0; }
+}
+@media screen and (max-width: 400px) {
+  .qr-brand { gap: 12px; }
+  .qr-brand img { width: calc(60% - 6px); height: auto; margin-left: 0; }
+  .qr-brand .puntored-logo { width: calc(40% - 6px); }
+}
+@media screen and (min-width: 701px) and (max-width: 1150px) {
+  .qr-brand img { margin-left: -12px; }
+  .qr-brand .puntored-logo { margin-left: 0; }
+}
+@media (min-width: 701px) {
+  .wallet-metrics { row-gap: 24px; }
+  .wallet-metrics article:nth-child(3n+1) { padding-left: 0; }
+  .wallet-metrics article:nth-child(3n) { border-right: 0; }
+}

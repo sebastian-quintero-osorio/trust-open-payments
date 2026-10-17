@@ -1,0 +1,51 @@
+:root {
+  color-scheme: dark;
+  --color-base: #191919;
+  --color-purple: #6930f9;
+  --color-violet: #9d67fb;
+  --color-lavender: #b499fe;
+  --color-text: #f1e9fd;
+  --color-muted: #bdb8c7;
+  --color-border: #3c3744;
+  --color-surface: #201e24;
+  --radius-panel: 24px;
+  --radius-control: 12px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --motion-duration: 320ms;
+  --motion-easing: cubic-bezier(.2,.8,.2,1);
+  font: 16px/1.5 Arial, Helvetica, sans-serif;
+  color: var(--color-text);
+  background: var(--color-base);
+}
+* { box-sizing: border-box; }
+body, h1, h2, h3, p { margin: 0; }
+button, input, select { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; color: inherit; }
+a { color: inherit; text-underline-offset: 4px; }
+img { display: block; max-width: 100%; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 3px solid var(--color-lavender); outline-offset: 4px; }
+h1, h2, h3 { font-weight: 500; line-height: 1.15; letter-spacing: -.035em; }
+button { transition: background-color var(--motion-duration) var(--motion-easing), border-color var(--motion-duration) var(--motion-easing); }
+.icon { width: 20px; height: 20px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.icon-library { position: absolute; width: 0; height: 0; overflow: hidden; }
+.icon-button { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; background: transparent; border: 1px solid transparent; border-radius: var(--radius-control); }
+.icon-button:hover { background: #302837; }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 12px 18px; border-radius: var(--radius-control); border: 1px solid transparent; font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+.button-primary { background: var(--color-purple); border-color: #8a5eff; color: var(--color-text); }
+.button-primary:hover { background: #5923db; border-color: var(--color-lavender); }
+.button-detail { background: transparent; border-color: #63576f; }
+.button-detail:hover { background: #30263e; border-color: var(--color-lavender); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.skip-link { position: fixed; top: -100px; left: 16px; z-index: 100; background: var(--color-text); color: var(--color-base); padding: 12px 18px; border-radius: 8px; }
+.skip-link:focus { top: 12px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

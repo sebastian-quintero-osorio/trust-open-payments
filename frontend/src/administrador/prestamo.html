@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Trust — Detalle del préstamo</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="../portal-prestamos/portal.css">
+  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="prestamos.css">
+  
+  
+  
+<link rel="stylesheet" href="/lib/app.css"><script src="/config.js"></script><script type="module" src="/app.js"></script></head>
+<body data-profile="administrador">
+  <a class="skip-link" href="#contenido">Ir al contenido</a>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 3v17h17M8 15l4-5 4 2 5-7"/></symbol>
+    <symbol id="i-flow" viewBox="0 0 24 24"><path d="M3 12h7m0 0 4-6h7m-11 6 4 6h7M18 3l3 3-3 3m0 6 3 3-3 3"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6ZM8 12l3 3 5-6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.2"/></symbol>
+  </svg>
+  <div class="review-bar"><span><strong>Mockup 09</strong><span class="review-separator">/</span>Administrador <span class="route-tag">Órbita</span></span><div><span class="review-state">Datos de demostración</span><button id="scope-button" class="review-link" type="button">Sobre esta vista</button></div></div>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Navegación de administración">
+      <div class="sidebar-brand"><a href="index.html" aria-label="Trust, métricas"><img src="/assets/trust-logo.svg" alt="Trust" width="110" height="35"></a><button type="button" class="icon-button mobile-close" id="close-menu" aria-label="Cerrar menú"><svg class="icon"><use href="#i-close"/></svg></button></div>
+      <div class="workspace-label">Administración</div>
+      <nav class="main-nav" aria-label="Módulos de administración">
+        <a class="nav-item" href="index.html"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg><span>Métricas</span></a>
+        <a class="nav-item active" href="prestamos.html" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span>Panel de administrador</span></a>
+      </nav>
+      <div class="admin-context"><span class="currency-dot" aria-hidden="true"></span><div>Operación Colombia<small>Todos los montos en COP</small></div></div>
+      <div class="sidebar-bottom"><div class="sidebar-rule"></div><div class="account"><div class="avatar">TA</div><div><strong>Equipo Trust</strong><span>Administrador</span></div></div><span class="account-note">Vista consolidada de la plataforma</span></div>
+    </aside>
+    <button type="button" id="menu-overlay" class="menu-overlay" aria-label="Cerrar menú" hidden></button>
+    <div class="workspace">
+      <header class="topbar"><div class="topbar-location"><button type="button" class="icon-button menu-toggle" id="open-menu" aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú"><svg class="icon"><use href="#i-menu"/></svg></button><span>Administración</span><span class="breadcrumb-slash">/</span><strong>Préstamos</strong></div><span class="currency"><span class="currency-dot" aria-hidden="true"></span>Colombia <span class="currency-name">· COP</span></span></header>
+      <main hidden id="contenido" tabindex="-1">
+        <a class="back-loans" id="back-loans" href="prestamos.html"><span aria-hidden="true">←</span> Volver a préstamos</a>
+        <noscript><p class="no-script">Activa JavaScript para consultar el detalle del préstamo.</p></noscript>
+        <div class="loan-empty" id="loan-not-found" hidden><h1>Préstamo no encontrado</h1><p>Este identificador no pertenece a la muestra. Vuelve al listado para consultar un registro disponible.</p><a class="button button-primary" href="prestamos.html">Ver todos los préstamos</a></div>
+        <div id="loan-detail"></div>
+
+        <footer class="workspace-footer"><span>Trust</span><p>Muestra ficticia en COP · Corte: 30 sep 2026 · Solo consulta</p></footer>
+      </main>
+    </div>
+  </div>
+  <div class="review-footer"><span>Identidad Órbita · En revisión</span><p>Mockup 09 · Administración de préstamos</p></div>
+  <div class="preview-notice" id="preview-notice" hidden><div><strong>Panel de administración</strong><p id="preview-message" role="status"></p></div><button type="button" class="icon-button" id="dismiss-notice" aria-label="Cerrar nota"><svg class="icon"><use href="#i-close"/></svg></button></div>
+  <dialog id="scope-dialog" aria-labelledby="scope-title"><div class="dialog-heading"><span>Alcance de la demostración</span><button type="button" class="icon-button" id="close-scope" aria-label="Cerrar información"><svg class="icon"><use href="#i-close"/></svg></button></div><h2 id="scope-title">Del interés al préstamo realizado.</h2><p>Esta vista reúne una muestra de 12 registros ficticios de toda la plataforma, sin limitarse a una cuenta. Es independiente de las cifras agregadas de Métricas y de los acuerdos locales de los otros mockups.</p><ul><li><strong>Ofrecido / solicitado.</strong> Publicaciones o propuestas sin desembolso confirmado, incluso cuando ambas partes ya aceptaron.</li><li><strong>Realizado.</strong> Acuerdo aceptado por ambas partes con desembolso confirmado. Conserva su origen como oferta o solicitud y aparece una sola vez.</li><li><strong>Estado de pago.</strong> Al día, En retraso o Pagado solo aplica a realizados. Un período sin ventas no implica mora; el ejemplo en retraso tiene una obligación contractual vencida.</li><li><strong>Montos.</strong> Los rangos de publicaciones son propuestos. El monto de un realizado corresponde al capital desembolsado. No se suman propuestas y desembolsos como cartera.</li><li><strong>Pagos.</strong> Los recaudos ilustrativos se separan en capital e intereses. El saldo pendiente muestra solo capital. No se modelan comisiones ni devoluciones.</li></ul><p class="font-note">Solo consulta. No aprueba préstamos, modifica acuerdos ni mueve dinero. No hay backend ni autenticación real.</p><button type="button" class="button button-primary" id="back-to-mockup">Volver a la vista</button></dialog>
+</body>
+</html>

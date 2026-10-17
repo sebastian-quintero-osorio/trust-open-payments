@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Trust — Ver oferta · Mockup 04</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <link rel="stylesheet" href="../shared/pendientes.css">
+  <link rel="stylesheet" href="../portal-prestamos/portal.css">
+  <link rel="stylesheet" href="detalle.css">
+  <script src="../shared/shell.js" defer></script>
+  <script src="../shared/loan-demo.js" defer></script>
+  <script src="../shared/pendientes.js" defer></script>
+  <script src="detalle.js" defer></script>
+</head>
+<body data-kind="oferta">
+  <a class="skip-link" href="#contenido">Ir al contenido</a>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.7 7.4M3 4v7h7M12 7v5l3 2"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M20 8V5a2 2 0 0 0-2-2H6a3 3 0 0 0 0 6h14v11H6a3 3 0 0 1-3-3V6"/><path d="M20 12h-5v5h5M16.5 14.5h.1"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-shop" viewBox="0 0 24 24"><path d="m4 3-2 6a3 3 0 0 0 5 2 3 3 0 0 0 5 0 3 3 0 0 0 5 0 3 3 0 0 0 5-2l-2-6ZM4 12v9h16v-9M9 21v-6h6v6M8 3 7 9m9-6 1 6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.2"/></symbol>
+  </svg>
+
+
+  <div class="review-bar" aria-label="Información del mockup">
+    <span><strong>Mockup 04</strong><span class="review-separator">/</span>Ver oferta<span class="route-tag">Órbita</span></span>
+    <div><span class="review-state">En revisión</span><button id="scope-button" class="review-link" type="button">Alcance</button></div>
+  </div>
+  <div class="demo-toolbar" id="demo-toolbar" hidden><span id="demo-context">Recorrido del mockup</span><a id="demo-switch" href="#">Revisar como contraparte</a></div>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Navegación de la aplicación">
+      <div class="sidebar-brand"><a href="../portal-prestamos/index.html" aria-label="Trust, portal de préstamos"><img src="../../exploracion-visual/assets/trust-logo.svg" alt="Trust" width="110" height="35"></a><button type="button" class="icon-button mobile-close" id="close-menu" aria-label="Cerrar menú"><svg class="icon"><use href="#i-close"/></svg></button></div>
+      <div class="workspace-label">Mi espacio</div>
+      <nav class="main-nav" aria-label="Principal">
+        <a class="nav-item active" href="../portal-prestamos/index.html" aria-current="location"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg><span>Portal de préstamos</span></a>
+        <a class="nav-item" data-wallet href="../wallet/index.html"><svg class="icon" aria-hidden="true"><use href="#i-wallet"/></svg><span>Wallet</span></a>
+      </nav>
+      <div class="sidebar-bottom"><div class="sidebar-rule"></div><div class="account"><div class="avatar">LE</div><div><strong>La Esquina</strong><span>Prestatario</span></div></div><span class="account-note">Cuenta de comercio</span></div>
+    </aside>
+    <button type="button" id="menu-overlay" class="menu-overlay" aria-label="Cerrar menú" hidden></button>
+
+
+    <div class="workspace">
+      <header class="topbar"><div class="topbar-location"><button type="button" class="icon-button menu-toggle" id="open-menu" aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button><span>Mi espacio</span><span class="breadcrumb-slash">/</span><strong>Préstamos</strong></div><div class="currency"><span class="currency-dot" aria-hidden="true"></span>COP <span class="currency-name">· Peso colombiano</span></div></header>
+
+
+      <main id="contenido" tabindex="-1">
+        <a class="back-link" id="back-portal" href="../portal-prestamos/index.html"><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg><span id="back-label">Volver al portal</span></a>
+        <div class="page-heading"><div><h1 id="detail-title">Ver oferta</h1><p id="detail-intro">Revisa las condiciones antes de enviar tu solicitud.</p></div><span class="detail-state" id="detail-state">Disponible</span></div>
+        <p id="load-error" class="action-error" role="alert" hidden></p>
+        <div id="detail-content" hidden>
+          <ol class="agreement-progress" aria-label="Progreso del acuerdo"><li id="progress-review" aria-current="step"><span>1</span>Condiciones</li><li id="progress-wait"><span>2</span>Aprobación</li><li id="progress-signed"><span>3</span>Préstamo firmado</li></ol>
+          <div class="detail-layout">
+            <div class="detail-main">
+              <section class="conditions-surface" aria-labelledby="conditions-title">
+                <div class="counterparty"><div class="lender-avatar" id="counterparty-avatar" aria-hidden="true">AC</div><div><p id="counterparty-role">Prestamista</p><h2 id="counterparty-name">Aliado Capital</h2></div><span class="listing-reference" id="listing-reference"></span></div>
+                <div class="amount-line"><span id="amount-label">Monto ofrecido</span><p><strong id="detail-amount"></strong><span>COP</span></p></div>
+                <h3 id="conditions-title">Condiciones del préstamo</h3>
+                <dl class="detail-terms"><div><dt id="interest-label">Tasa de interés</dt><dd id="detail-rate"></dd></div><div><dt>De cada venta</dt><dd id="detail-share"></dd></div><div><dt id="term-label">Plazo propuesto</dt><dd id="detail-term"></dd></div><div><dt>Forma de pago</dt><dd>Ventas del prestatario</dd></div></dl>
+                <p class="terms-note" id="rate-note">La tasa de interés y el porcentaje de ventas son condiciones distintas.</p>
+                <div class="purpose"><h3 id="purpose-title">Sobre esta oferta</h3><p id="detail-note"></p></div>
+              </section>
+              <section class="agreement-section" aria-labelledby="agreement-title">
+                <h2 id="agreement-title" tabindex="-1">Tu siguiente paso</h2><p id="agreement-description"></p>
+                <div id="acceptances" class="acceptances" hidden></div>
+                <form id="agreement-form">
+                  <label class="consent"><input type="checkbox" id="accept-terms" required><span id="consent-text"></span></label>
+                  <p class="action-error" id="action-error" role="alert" hidden></p>
+                  <p class="eligibility-note" id="eligibility-note"></p>
+                </form>
+                <div class="detail-actions agreement-actions" role="group" aria-label="Acciones del acuerdo">
+                  <button class="button button-primary" type="submit" form="agreement-form" id="primary-action">Solicitar préstamo</button>
+                  <button class="button button-detail" type="button" id="reject-action" hidden>Rechazar propuesta</button>
+                  <a class="button history-link" id="history-link" href="../portal-prestamos/index.html#historial" hidden><span id="record-link-label">Ver en mi historial</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+                </div>
+              </section>
+              <div class="response-complete" id="response-complete" role="status" hidden><p id="response-message"></p><a class="button button-detail" id="next-pending" hidden>Revisar siguiente pendiente</a><a class="return-received" id="return-received">Volver a pendientes</a></div>
+              <section class="movement-section" id="movement-section" aria-labelledby="movement-title" hidden><div class="section-heading"><h2 id="movement-title">Desembolso registrado</h2><span>Simulación</span></div><p id="movement-reference"></p><div id="movement-list"></div><dl class="balance-line"><div><dt>Tu saldo antes</dt><dd id="balance-before"></dd></div><div><dt>Tu saldo después</dt><dd id="balance-after"></dd></div></dl><p class="terms-note">Se registra el capital desembolsado. El pago del préstamo se realizará con los aportes de ventas acordados.</p></section>
+            </div>
+            <aside class="detail-aside" aria-labelledby="repayment-title">
+              <div class="repayment-visual"><div class="orbit" aria-hidden="true"><div class="orbit-sphere"></div><div class="orbit-trace"></div></div><h2 id="repayment-title">Cada venta<br>aporta al acuerdo.</h2><p>Así se repartiría una venta de <strong>$100.000 COP</strong>.</p><div class="sale-split" aria-hidden="true"><span id="split-business-bar"></span></div><dl class="sale-values"><div><dt>Para el comercio</dt><dd id="split-business"></dd></div><div><dt>Para pagar el crédito</dt><dd id="split-loan"></dd></div></dl></div>
+              <p class="aside-note">El porcentaje acordado se aplica a los pagos recibidos a través de Bre-B en la wallet de Puntored.</p>
+              <div class="account-availability"><span id="availability-label">Tu cupo disponible</span><strong id="availability-value"></strong><small id="availability-caption">Calculado por Trust</small></div>
+              <p class="aside-note" id="next-explanation">Enviar tu solicitud registra tu aceptación. La contraparte debe aprobarla para firmar el préstamo y desembolsar el dinero.</p>
+            </aside>
+          </div>
+        </div>
+        <footer class="workspace-footer"><span>Trust</span><p>Cada acuerdo empieza con condiciones claras.</p></footer>
+      </main>
+    </div>
+  </div>
+  <div class="review-footer"><span>Datos y tasas ilustrativos · Simulación local</span><p>Mockup 04: ver oferta y acuerdo · Pendiente de aprobación</p></div>
+  <div class="preview-notice" id="preview-notice" hidden><div><strong>Nota del mockup</strong><p id="preview-message" role="status"></p></div><button type="button" class="icon-button" id="dismiss-notice" aria-label="Cerrar nota"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+
+
+  <dialog id="scope-dialog" aria-labelledby="scope-title"><div class="dialog-heading"><span>Mockup 04 / 05 · Órbita</span><button type="button" class="icon-button" id="close-scope" aria-label="Cerrar alcance"><svg class="icon"><use href="#i-close"/></svg></button></div><h2 id="scope-title">Un acuerdo, dos aceptaciones.</h2><p>La propuesta enviada registra la aceptación del remitente. La contraparte debe aprobar las mismas condiciones para firmar y simular el desembolso.</p><p>El enlace de revisión permite representar la cuenta receptora. No es un selector de rol del producto. El historial, los saldos y el cupo se actualizan solo en este navegador, con datos ficticios. No se ejecutan firmas legales ni pagos.</p><p class="font-note">Paleta y logotipo del brand kit. Arial/Helvetica provisional, pendiente del archivo web de Qontra. El prototipo no calcula intereses acumulados ni un calendario de pagos.</p><button type="button" class="button button-primary" id="back-to-mockup">Volver al mockup</button></dialog>
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-description"><div class="dialog-heading"><span>Confirmación del acuerdo</span><button type="button" class="icon-button" id="close-confirm" aria-label="Cerrar confirmación"><svg class="icon"><use href="#i-close"/></svg></button></div><h2 id="confirm-title"></h2><p id="confirm-description"></p><dl class="confirmation-terms" id="confirmation-terms"></dl><p class="action-error" id="confirm-error" role="alert" hidden></p><div class="detail-actions"><button type="button" class="button button-detail" id="cancel-confirm">Volver al detalle</button><button type="button" class="button button-primary" id="commit-action">Confirmar</button></div></dialog>
+</body>
+</html>

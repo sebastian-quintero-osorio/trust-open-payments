@@ -1,0 +1,140 @@
+Trust frontend — análisis del contrato y alcance pendiente
+Contrato: ../trust-api.openapi.yaml, OpenAPI 3.1.0, versión 0.1.0.
+Fecha de revisión: 17 de octubre de 2026.
+
+FUENTE DE VERDAD Y ARQUITECTURA
+
+La implementación está en src/. mockups/ y exploracion-visual/ se mantienen
+como referencias originales. Se reutilizan sus HTML, CSS y marca; los scripts
+de simulación de cuentas, préstamos, saldos y persistencia no se distribuyen.
+JavaScript modular nativo, sin framework ni dependencia de compilación.
+scripts/build.py copia la aplicación estática a dist/.
+
+lib/operations.js se genera desde operationId, verbo y ruta de todas las
+operaciones del contrato. El cliente utiliza estos identificadores; no
+inventa endpoints. tests/openapi.json es una copia del contrato para validar
+peticiones y respuestas de las pruebas de navegador. Regenerar ambos con
+scripts/contract.py cuando cambie el YAML.
+
+REGLAS TRANSVERSALES
+
+- /api/v1; JSON snake_case; Bearer JWT. El token vive en sessionStorage y
+  nunca se almacena en los borradores. El perfil /me determina el rol.
+- Un 401 de una ruta privada elimina la sesión y vuelve al acceso,
+  conservando el destino local para retomarlo tras iniciar sesión.
+- Money.value es un entero string de unidades mínimas. 4800000 a escala 2
+  son 48.000 COP. Se usan BigInt y cadenas; no redondeos de Number.
+- Los porcentajes son puntos básicos; 1500 significa 15 %.
+- Los mensajes de error proceden de error.message; error.details es objeto.
+- Fechas presentadas en America/Bogota. Cursores since se conservan sin
+  truncar microsegundos. Listas completas siguen next_offset hasta null.
+- Ninguna publicación, aceptación ni retorno de wallet se representa como
+  desembolso confirmado hasta que el backend devuelve active/paid.
+- El navegador no llama webhooks. Los endpoints dev no se invocan como
+  parte del producto ni se usan para sembrar un servidor externo.
+
+MAPA DE VISTAS
+
+Acceso/registro: login, register, getMe. El registro exige first_name,
+last_name y city, además del negocio para merchant.
+
+Portal: listLoanOffers(scope=market/mine), listLoanRequests(scope=market/mine),
+getMyCreditProfile, listLoans. Los filtros de cupo usan fits_only del servidor.
+Las pestañas separan publicaciones, acuerdos pendientes y créditos activos/
+pagados. No se muestra Al día a un préstamo pendiente de desembolso.
+
+Publicación: getConfig define asset, importe mínimo, paso, porcentajes y
+plazo. createLoanRequest solo admite rango y pct_bps. createLoanOffer añade
+fee_bps y term_months. Los borradores se separan por ID de usuario y rol.
+
+Detalle: getLoanOffer/getLoanRequest, previewLoan, createLoan, getLoan,
+acceptLoan, rejectLoan, cancelLoan, cancelLoanOffer/cancelLoanRequest.
+Las condiciones completas y el reparto del ejemplo vienen de previewLoan.
+La confirmación incluye plazo. En un crédito existente, la barra y el ejemplo
+usan el porcentaje vigente; los ejemplos monetarios proceden de getConfig.
+El regreso a pendientes abre Por responder, Esperando respuesta o Respondidas
+según el estado del acuerdo y el rol de quien consulta. Después de responder,
+se muestra el siguiente acuerdo pendiente y se actualiza el contador.
+disburseLoan requiere client=web y abre authorization_url en primer plano.
+El retorno /op/return consulta getLoan cada 2 s; op_status no demuestra pago.
+Sin sesión web, client=mobile ofrece y abre trust://loans/{id}; la app nativa
+debe consultar el estado usando su propia sesión. No se transmite el token
+en la URL. El enlace nativo se valida en navegador; la app móvil no se probó.
+
+Wallet: setPayoutWallet, getCollectionAccount/createCollectionAccount,
+getMyCreditProfile, listSales, getSalesToday cada 2,5 s, getSale,
+getLenderDashboard, listRepayments/getRepaymentTrace. QR generado desde
+qr_payload. La cuenta, el score y el historial se actualizan cada 30 s para
+recoger entregas posteriores y revocaciones; since solo trae ventas nuevas.
+El portafolio y los abonos del prestamista se actualizan cada 30 s. La wallet externa del prestamista no tiene endpoint de saldo;
+no se infiere saldo sumando préstamos o abonos.
+
+Notificaciones: listNotifications al cargar y cada 30 s, readNotification,
+readAllNotifications. Se cargan todas las páginas y los enlaces respetan el
+rol administrador. El contador de avisos es diferente a pendientes.
+
+Administrador: getAdminDashboard, listLoans para todos los acuerdos,
+getLoan, listRepayments, getRepaymentTrace y getLoanPctHistory. El reparto
+por préstamo se calcula con las ventas de las trazas, deduplicadas por ID.
+Filtros, paginación, retorno conservando parámetros
+y CSV. Búsqueda sin tildes y reinicio del estado al cambiar etapa, como en
+la referencia. No se ejecutan operaciones administrativas sobre fondos desde la
+vista de consulta del mockup.
+
+DIFERENCIAS QUE IMPIDEN AFIRMAR FIDELIDAD EXACTA
+
+1. Los mockups muestran una tasa E.A. y ganancias por intereses. El contrato
+   usa un cargo fijo fee_bps. No existe equivalencia directa ni una tasa E.A.
+   que pueda obtenerse sin asumir un calendario de pagos. La interfaz muestra
+   cargo fijo sobre capital. No se inventan ganancias históricas por interés.
+2. Las solicitudes no aceptan tasa máxima, plazo, propósito ni notas. Estos
+   campos no se envían ni se presentan como condiciones publicadas.
+3. El registro necesita nombres, apellidos y ciudad. Se añaden los campos
+   obligatorios que faltan en el mockup.
+4. No existe recuperación/restablecimiento de contraseña. La vista explica
+   su indisponibilidad; nunca simula un correo enviado.
+5. El prestamista no dispone de QR de recaudo ni saldo de su wallet externa
+   en esta API. Solo el comercio puede activar collection-account.
+6. AdminDashboard NO contiene serie de ventas, distribuciones históricas,
+   PAR30, conversión de cohortes, primeras financiaciones ni participantes
+   por período. Esos paneles muestran indisponibilidad en vez de datos demo.
+7. No hay endpoint administrativo global de publicaciones abiertas: las
+   listas loan-offers/loan-requests están limitadas a los roles de negocio.
+   El registro administrativo actual solo puede mostrar LoanSummary.
+8. LoanSummary omite fee_bps, term_months, outstanding y fechas de aceptación.
+   El listado administrativo consulta getLoan para las filas visibles y muestra
+   el cargo, el plazo y el saldo pendiente completos; permite reintentar por
+   fila. El saldo incluye el cargo, no se etiqueta como capital pendiente.
+9. next_action diferencia aceptación, autorización y espera. Los pendientes
+   del mockup basados en aceptaciones simétricas no describen este flujo.
+10. Se quitan las barras editoriales «Mockup», «Modo demostración» y alcance.
+    El producto no debe presentarse como una simulación que guarda acuerdos
+    localmente. Esto cambia el encuadre respecto de las capturas de revisión.
+
+Se preguntó al usuario si debe prevalecer el contrato o ampliarse backend.
+Hasta recibir respuesta, se conserva el diseño base y se aplica el contrato.
+Estas diferencias siguen abiertas; no demuestran el objetivo de igualdad
+visual exacta y funcionalidad completa de todos los mockups.
+
+DEPENDENCIAS EXTERNAS PARA VALIDACIÓN REAL
+
+backend/ está vacío en esta copia del repositorio. El 17 de octubre de 2026,
+https://api.trustservices.com.co/api/v1/health falló por resolución DNS.
+Se necesita un servidor funcional y cuentas merchant, lender y admin para
+probar autorización real, fondos, CORS, persistencia, QR y el retorno de OP.
+Las respuestas interceptadas de Playwright prueban el frontend contra el
+contrato; NO prueban que exista ni funcione el backend o la wallet real.
+
+AUDITORÍA PENDIENTE
+
+- Revisar todas las vistas desktop/móvil frente a referencias actuales.
+- Resolver los desacuerdos de diseño/contrato anteriores.
+- Completar cobertura de errores, datos vacíos, listas largas, paginación,
+  conflictos de negocio, reconexión, cambios de porcentaje y notificaciones.
+- Verificar trazas de ventas/abonos y QR contra datos reales.
+- Verificar con backend el recorrido entre dos usuarios hasta desembolso,
+  venta, abono y cierre, además del acceso de administrador.
+- Ejecutar una revisión final completa sin encontrar errores nuevos.
+
+El objetivo no está cumplido. Una batería local verde no sustituye la
+igualdad completa ni la prueba con el backend real.

@@ -1,0 +1,24 @@
+.pending-access { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 12px; font-size: 12px; text-decoration: none; }
+.pending-access.has-pending { background: #30243f; border-color: #685580; }
+.pending-access:hover { border-color: var(--color-lavender); }
+.pending-access .icon { width: 18px; height: 18px; color: var(--color-lavender); }
+.pending-count { display: inline-grid; place-items: center; min-width: 23px; height: 23px; padding: 0 5px; border-radius: 7px; background: #44315d; color: #e4d5ff; font-variant-numeric: tabular-nums; }
+.topbar .currency { margin-left: auto; }
+.proposal-updates { margin-bottom: 24px; border: 1px solid #685580; border-radius: 12px; padding: 0 18px; background: #211d28; }
+.proposal-update { display: flex; align-items: center; gap: 16px; padding: 10px 0; font-size: 13px; }
+.proposal-update + .proposal-update { border-top: 1px solid var(--color-border); }
+.proposal-update p { flex: 1; }
+.proposal-update a { color: var(--color-lavender); white-space: nowrap; }
+.proposal-update button { flex-shrink: 0; font-size: 22px; }
+.response-complete { margin-top: 24px; padding: 24px; border: 1px solid #685580; border-radius: 16px; background: #211d28; }
+.response-complete p { margin-bottom: 18px; font-size: 14px; line-height: 1.7; }
+.return-received { display: inline-flex; align-items: center; min-height: 44px; margin: 4px 12px; color: var(--color-lavender); font-size: 13px; }
+@media (max-width: 700px) {
+  .topbar .currency, .topbar-location > span { display: none; }
+  .pending-access { font-size: 11px; gap: 7px; padding: 8px 10px; margin-left: auto; }
+  .proposal-update { gap: 8px; flex-wrap: wrap; }
+  .proposal-update p { flex-basis: calc(100% - 55px); }
+  .proposal-update a { order: 3; padding: 0 0 8px; }
+  .response-complete { padding: 20px; }
+  .response-complete .button { width: 100%; white-space: normal; }
+}

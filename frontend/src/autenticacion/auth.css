@@ -1,0 +1,102 @@
+.review-bar { min-height: 40px; padding: 10px 32px; display: flex; justify-content: space-between; gap: 12px; background: #221e29; border-bottom: 1px solid var(--color-border); color: var(--color-muted); font-size: 11px; }
+.review-separator { margin: 0 10px; }
+.route-tag { margin-left: 12px; color: var(--color-lavender); }
+.auth-header { max-width: 1320px; padding: 30px 48px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.auth-header > div { display: flex; align-items: center; gap: 16px; font-size: 13px; }
+.auth-header > div > span { color: var(--color-muted); }
+.auth-header a:not(:first-child), .form-panel a:not(.button) { color: var(--color-lavender); }
+.auth-layout { width: min(1224px, calc(100% - 96px)); margin: 10px auto 40px; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(48px, 6vw, 88px); align-items: start; min-height: 650px; }
+.brand-panel { min-height: 650px; align-self: start; position: relative; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #68517f; border-radius: var(--radius-panel); background: radial-gradient(ellipse at 70% 65%, #452775 0, transparent 57%), linear-gradient(140deg, #302539, #211d29 70%); }
+.brand-copy { padding: 44px 40px 0; position: relative; z-index: 1; }
+.brand-caption { font-size: 12px; color: #d6c4e8; margin-bottom: 28px; }
+.brand-copy h2 { font-size: clamp(30px, 3.05vw, 43px); line-height: 1.13; }
+.brand-copy > p:last-child { max-width: 34ch; margin-top: 20px; font-size: 14px; line-height: 1.75; color: #d0c3df; }
+.connection-art { position: relative; min-height: 285px; flex: 1; }
+.orbit-sphere { position: absolute; width: 240px; height: 240px; border-radius: 50%; left: calc(50% - 120px); top: 42px; background: radial-gradient(circle at 50% 65%, #241c33 48%, #452084 66%, #8848ff 74%, #d7c0ff 78%, #6635bf 83%); box-shadow: 0 -4px 30px #9d67fb40, inset 0 2px 3px #f1e9fd; }
+.orbit-line { position: absolute; width: 320px; height: 320px; border: 1px solid #b499fe30; border-radius: 50%; left: calc(50% - 160px); top: 2px; }
+.orbit-label { display: flex; gap: 9px; align-items: center; position: absolute; z-index: 1; padding: 12px 16px; border: 1px solid #806198; border-radius: 12px; background: #30243ded; color: #e7daf8; font-size: 12px; }
+.orbit-label .icon { color: var(--color-lavender); }
+.borrower-node { top: 70px; left: 28px; }
+.lender-node { right: 24px; top: 224px; }
+.sale-node { position: absolute; top: 150px; left: 0; width: 100%; text-align: center; }
+.sale-node span { color: #d0c3df; display: block; font-size: 12px; }
+.sale-node strong { display: block; font-size: 23px; letter-spacing: -.035em; font-weight: 400; margin-top: 4px; }
+.brand-foot { display: flex; gap: 12px; align-items: start; padding: 34px 40px; position: relative; background: linear-gradient(transparent, #241e30); }
+.brand-foot p { color: #d0c3df; font-size: 12px; line-height: 1.7; max-width: 38ch; }
+.brand-dot { margin-top: 7px; width: 6px; height: 6px; flex: 0 0 auto; background: var(--color-lavender); border-radius: 50%; }
+.form-panel { min-width: 0; padding: 24px 0; max-width: 480px; width: 100%; }
+.form-heading { margin-bottom: 28px; }
+.form-heading h1 { font-size: 34px; line-height: 1.15; max-width: 17ch; }
+.form-heading > p { margin-top: 14px; font-size: 14px; line-height: 1.7; color: var(--color-muted); max-width: 48ch; }
+.field { margin-top: 20px; min-width: 0; }
+.field label, .role-fieldset legend { display: block; font-size: 13px; margin-bottom: 9px; }
+.input-wrap { position: relative; }
+.input-wrap input { width: 100%; min-width: 0; height: 50px; border: 1px solid #766384; border-radius: 10px; padding: 12px 14px; background: #1e1c22; color: var(--color-text); font-size: 16px; }
+.input-wrap input::placeholder { color: #a29aaa; font-size: 14px; }
+.input-wrap:has(.password-toggle) input { padding-right: 50px; }
+.password-toggle { position: absolute; top: 3px; right: 3px; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: var(--color-muted); }
+.password-toggle:hover, .password-toggle[aria-pressed="true"] { color: var(--color-lavender); background: #30263e; }
+.field-help, .field-error { margin-top: 7px; font-size: 12px; line-height: 1.5; }
+.field-help { color: var(--color-muted); }
+.field-help:empty, .field-error:empty { display: none; }
+.field-error { color: #f4cd8a; }
+.input-wrap input[aria-invalid="true"] { border-color: #f4cd8a; }
+.error-summary { padding: 12px 14px; margin-bottom: 20px; border: 1px solid #a78652; border-radius: 10px; font-size: 13px; background: #352b20; color: #f4cd8a; }
+.forgot-row { text-align: right; margin-top: 14px; font-size: 12px; }
+.forgot-row a { display: inline-flex; align-items: center; min-height: 32px; }
+.submit-button { width: 100%; margin-top: 28px; }
+.form-bottom { margin-top: 24px; font-size: 13px; text-align: center; color: var(--color-muted); }
+.form-bottom a { display: inline-flex; align-items: center; min-height: 32px; gap: 8px; }
+.demo-note { font-size: 11px; line-height: 1.6; color: var(--color-muted); text-align: center; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--color-border); }
+.role-fieldset { margin: 0; border: 0; padding: 0; min-width: 0; }
+.role-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.role-option { position: relative; cursor: pointer; }
+.role-option input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.role-card { display: flex; flex-direction: column; min-height: 132px; padding: 16px; border: 1px solid #63576f; border-radius: 12px; background: var(--color-surface); }
+.role-card > .icon { color: var(--color-lavender); margin-bottom: 14px; }
+.role-card strong { font-size: 14px; font-weight: 500; }
+.role-card > span:not(.radio-mark) { margin-top: 5px; font-size: 11px; color: var(--color-muted); }
+.radio-mark { width: 16px; height: 16px; border: 1px solid #9b8da9; border-radius: 50%; position: absolute; top: 18px; right: 16px; }
+.role-option input:checked + .role-card { border-color: var(--color-lavender); background: #332541; }
+.role-option input:checked + .role-card .radio-mark { border: 5px solid var(--color-lavender); }
+.role-option input:focus-visible + .role-card { outline: 3px solid var(--color-lavender); outline-offset: 4px; }
+.role-option input[aria-invalid="true"] + .role-card { border-color: #f4cd8a; }
+.role-help { color: var(--color-muted); margin-top: 10px; font-size: 12px; min-height: 36px; }
+.password-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.password-row .field label { font-size: 12px; }
+.heading-icon, .success-icon { width: 52px; height: 52px; display: grid; place-items: center; background: #332541; color: var(--color-lavender); border: 1px solid #68517f; border-radius: 16px; margin-bottom: 24px; }
+.heading-icon .icon, .success-icon .icon { width: 25px; height: 25px; }
+.success-panel h2 { font-size: 32px; }
+.success-panel > p { margin-top: 18px; color: var(--color-muted); font-size: 14px; line-height: 1.7; }
+.success-panel .success-detail { color: var(--color-lavender); overflow-wrap: anywhere; }
+.success-actions { display: grid; gap: 12px; margin-top: 28px; }
+.auth-footer { max-width: 1224px; margin: auto; padding: 0 0 24px; display: flex; justify-content: space-between; gap: 20px; font-size: 11px; color: var(--color-muted); }
+.auth-footer > span { color: var(--color-lavender); }
+@media (max-width: 1050px) {
+  .auth-layout { width: calc(100% - 64px); gap: 36px; }
+  .auth-header { padding: 28px 32px; }
+  .brand-copy { padding: 32px 26px 0; }
+  .brand-foot { padding: 32px 26px; }
+  .borrower-node { left: 12px; }
+  .lender-node { right: 12px; }
+  .form-heading h1 { font-size: 30px; }
+  .auth-footer { padding: 0 32px 24px; }
+  .password-row { grid-template-columns: 1fr; gap: 0; }
+}
+@media (max-width: 760px) {
+  .review-bar { padding: 10px 20px; font-size: 10px; }
+  .review-separator { margin: 0 5px; }
+  .route-tag { display: none; }
+  .auth-header { padding: 26px 24px; }
+  .auth-header img { width: 94px; height: auto; }
+  .auth-header > div > span { display: none; }
+  .auth-layout { display: block; width: min(480px, calc(100% - 48px)); min-height: 0; margin: 24px auto 48px; }
+  .brand-panel { display: none; }
+  .form-panel { max-width: none; padding: 0; }
+  .form-heading h1 { font-size: 32px; }
+  .role-card { padding: 14px 12px; }
+  .role-card strong { font-size: 13px; }
+  .radio-mark { right: 12px; top: 15px; }
+  .auth-footer { padding: 0 24px 24px; align-items: start; }
+  .auth-footer p { text-align: right; max-width: 28ch; }
+}

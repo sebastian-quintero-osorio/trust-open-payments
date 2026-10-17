@@ -1,0 +1,68 @@
+{
+  "status": "Propuesta pendiente de elección",
+  "brand": {
+    "black": "#191919",
+    "electricPurple": "#6930F9",
+    "violet": "#9D67FB",
+    "lavender": "#B499FE",
+    "lightLilac": "#F1E9FD"
+  },
+  "semantic": {
+    "background": "#191919",
+    "text": "#F1E9FD",
+    "muted": "#BDB8C7",
+    "primary": "#6930F9",
+    "focus": "#B499FE",
+    "overdueText": "#F4CD8A",
+    "overdueBackground": "#3B3022"
+  },
+  "typography": {
+    "brandProposed": "Qontra",
+    "brandFontStatus": "Archivo web pendiente; no cargado en esta exploración",
+    "preview": "Arial, Helvetica, sans-serif",
+    "bodyProposed": "Sans de sistema",
+    "sizesPx": [
+      12,
+      14,
+      16,
+      20,
+      28,
+      40
+    ],
+    "numericVariant": "tabular-nums"
+  },
+  "spacePx": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48
+  ],
+  "directions": {
+    "precision": {
+      "panelRadiusPx": 6,
+      "durationMs": 160,
+      "material": "mate"
+    },
+    "flujo": {
+      "panelRadiusPx": 20,
+      "durationMs": 220,
+      "material": "sólido con luz localizada"
+    },
+    "orbita": {
+      "panelRadiusPx": 24,
+      "durationMs": 320,
+      "material": "sólido con un panel translúcido"
+    }
+  },
+  "reducedMotion": {
+    "durationMs": 0
+  },
+  "notes": [
+    "Colores semánticos fuera de brand son extensiones propuestas.",
+    "El porcentaje de reparto no es una tasa de interés.",
+    "Conservar estados de préstamos firmados: Al día, En retraso, Pagado."
+  ]
+}

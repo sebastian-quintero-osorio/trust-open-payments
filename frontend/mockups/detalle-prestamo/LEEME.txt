@@ -1,0 +1,78 @@
+TRUST — Mockups 04 y 05: detalle de oferta / solicitud y acuerdo
+
+Estado: en revisión. Conserva la base Órbita aprobada. No avanzar a otro módulo
+hasta que el usuario apruebe este flujo.
+
+Entradas:
+- oferta.html: La Esquina ve la oferta de Aliado Capital y solicita el préstamo.
+- solicitud.html: Aliado Capital ve la solicitud de La Esquina y oferta el préstamo.
+- También se accede desde Ver oferta / Ver solicitud en los portales existentes.
+- Las tres ofertas y las dos solicitudes tienen detalle con sus propias condiciones.
+
+Recorrido:
+1. Revisar monto en COP, tasa E.A., plazo y porcentaje de ventas.
+2. Aceptar las condiciones y pulsar Solicitar préstamo u Ofertar préstamo.
+3. Confirmar el envío. Queda pendiente, sin firma conjunta ni movimientos.
+4. En la franja de revisión superior, usar Revisar como [contraparte]. Este enlace
+   sirve para revisar otra cuenta ficticia, fuera de la navegación del producto.
+   También se puede abrir el portal de la cuenta receptora: muestra la bandeja
+   Propuestas por aprobar, con un enlace al mismo acuerdo.
+5. La contraparte acepta las mismas condiciones y pulsa Aprobar y firmar préstamo.
+   Una confirmación muestra partes, monto, tasa, porcentaje de ventas y plazo.
+6. Confirmar firma y desembolso: se muestra el débito al prestamista, el abono al
+   prestatario, el saldo propio antes/después y ambas aceptaciones con fecha.
+7. Ver en mi historial abre el registro filtrado dentro del portal. El préstamo
+   firmado comienza Al día. Su ID permite volver a consultar el acuerdo.
+
+La contraparte también puede rechazar. Se conserva la propuesta sin firma ni
+movimientos, dentro de Solicitados u Ofrecidos según el rol de la cuenta.
+El prestatario nunca ofrece préstamos; el prestamista nunca los solicita.
+
+Persistencia y ejecución:
+Los acuerdos se guardan en localStorage, clave trust.mockup.agreements.v1.
+No se usan servicios externos, wallets reales, autenticación ni firma legal.
+Las cuentas, saldos, cupos, tasas y plazos son datos ficticios para el recorrido.
+Los préstamos históricos de ejemplo son independientes del saldo inicial de demo.
+Los formularios de publicación anteriores siguen siendo una demostración separada:
+no agregan nuevas publicaciones al catálogo de este recorrido.
+
+Para compartir el estado entre páginas de manera consistente, desde frontend:
+  python3 -m http.server 8765 --bind 127.0.0.1
+Abrir http://127.0.0.1:8765/mockups/portal-prestamos/index.html
+Prestamista: http://127.0.0.1:8765/mockups/portal-prestamos/prestamista.html
+Usar el mismo navegador, origen y puerto durante todo el recorrido.
+También se verificó la apertura directa file:// en Brave, aunque el almacenamiento
+compartido de archivos locales depende del navegador. Se recomienda servidor local.
+
+Para reiniciar únicamente los acuerdos ficticios, en la consola del navegador:
+  localStorage.removeItem('trust.mockup.agreements.v1'); location.reload();
+Esto no borra los borradores de los formularios ni las filas históricas de ejemplo.
+
+Criterios del prototipo:
+- La aceptación inicial corresponde al remitente; únicamente el receptor responde.
+- La respuesta se aplica una vez. Recargar o repetirla no duplica desembolsos.
+- Los saldos y movimientos se derivan del mismo registro firmado persistido.
+- El cupo y los fondos se revisan al enviar y al firmar; un cambio mientras se espera
+  puede bloquear la firma. Las propuestas pendientes no reservan cupo ni dinero.
+- El cupo restante se refleja en el portal, su filtro y el formulario de solicitud.
+- Los fallos de almacenamiento no se presentan como operaciones exitosas.
+- Web Locks serializa cambios entre pestañas cuando el navegador lo soporta.
+- El importe es el monto concreto de la publicación. Una solicitud indica una tasa
+  máxima; en esta primera versión, la oferta dirigida conserva exactamente esa tasa.
+- La negociación de nuevas condiciones, costos, cálculo de intereses devengados,
+  calendario de pagos y desembolso real quedan pendientes de definición funcional.
+
+Visual:
+Superficies sólidas, tipografía y controles de la base aprobada. Paleta y logo del
+brand kit; Arial/Helvetica provisional hasta disponer de Qontra web. El recurso
+orbital se concentra en el reparto de ventas. Las ayudas son texto, sin cards con
+borde lateral. En móvil, las condiciones y la acción preceden al ejemplo de ventas.
+
+Verificación en Brave/Chromium:
+- Ambos sentidos del acuerdo: envío, confirmación, espera, aceptación y rechazo.
+- Sin transferencia pendiente o rechazada; préstamo y movimientos únicos al firmar.
+- Bandeja receptora, historial por rol, identidad de otras contrapartes y navegación.
+- Cupo excedido, cupo modificado durante la espera y fondos insuficientes al aprobar.
+- Casilla obligatoria, cancelar, rutas inválidas y persistencia bloqueada/dañada.
+- Diseños entre 360 y 1440 px, navegación móvil, Escape, foco y movimiento reducido.
+- IDs HTML y enlaces locales; capturas de escritorio y móvil en vistas/.

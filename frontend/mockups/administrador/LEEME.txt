@@ -1,0 +1,237 @@
+TRUST — Mockup 08: panel del administrador
+
+Abrir index.html directamente en el navegador. No requiere instalación, conexión
+ni servidor. Conserva la identidad Órbita y los recursos compartidos existentes.
+Cuenta fija de administrador; no agrega un cambio de rol a los otros perfiles.
+Es una propuesta en revisión, sin backend ni autorización de acceso real.
+
+OBJETIVO DE PRODUCTO
+
+El administrador necesita responder cinco preguntas:
+1. ¿Está llegando crédito a los negocios? Nuevos préstamos, capital desembolsado
+   y negocios que reciben su primer crédito dentro de Trust.
+2. ¿Las ventas están pagando los créditos? Recaudo, distribución confirmada,
+   capital recuperado e intereses efectivamente cobrados.
+3. ¿Qué sigue expuesto? Préstamos activos, capital pendiente y retrasos.
+4. ¿Trust está encontrando contrapartes? Conversión de una misma cohorte desde
+   propuesta iniciada hasta desembolso confirmado; inventario abierto aparte.
+5. ¿Dónde debe intervenir el equipo? Ausencia de ventas y retraso contractual,
+   con contexto y siguiente paso propuesto.
+
+El protagonista visual es el recorrido del dinero desde una venta hasta sus
+destinatarios. Los indicadores de crecimiento acompañan este flujo. El diseño
+evita usar el total de usuarios registrados como sustituto de actividad real.
+
+SISTEMA VISUAL
+
+Base #191919; superficie #201E24; acción #6930F9; violeta #9D67FB;
+lavanda #B499FE; texto #F1E9FD. Ámbar únicamente para retrasos.
+Arial/Helvetica como en los mockups aprobados, pendiente del archivo web Qontra.
+Números tabulares, alineación izquierda, jerarquía 36/19/12 px aproximadamente.
+Conserva paneles redondeados de Órbita; la luz se concentra en el flujo de ventas.
+
+  Navegación | Título / período / comparación / corte
+             | Nuevos créditos / capital / activos / tasa
+             | Ventas recaudadas -> negocios / prestamistas
+             | Tendencia de recaudo       | Cartera y riesgo
+             | Conversión de propuestas a desembolsos
+             | Participación de negocios y prestamistas
+             | Colas de atención operativa
+
+Se revisó la composición para priorizar el modelo de pago con ventas de Trust,
+en lugar de repetir tarjetas genéricas con todos los indicadores al mismo nivel.
+
+CONTRATO DE LAS MÉTRICAS (propuesta, no política aprobada)
+
+Períodos:
+- Septiembre 2026 vs. agosto 2026; meses calendario completos, 30 y 31 días.
+- 24–30 septiembre vs. 17–23 septiembre; semanas de igual duración.
+- Ambos terminan el 30 sep 2026, 23:59 COT (America/Bogota).
+- Activos, cartera, tasa, inventario y alertas son fotos al mismo corte y no
+  cambian al alternar estos períodos. Movimientos y cohortes sí cambian.
+- Las variaciones son relativas: (actual / anterior - 1) × 100.
+- No se presenta el crecimiento de un mes como crecimiento diario normalizado.
+
+Préstamos:
+- Desembolsados: IDs únicos con transferencia de capital confirmada en el período.
+- Capital desembolsado: suma del principal entregado; excluye ofertas, solicitudes
+  y acuerdos cuyo desembolso no esté confirmado.
+- Activos: desembolsados con capital pendiente. Al día + En retraso = activos.
+- Pagados en el período: créditos que terminaron de pagarse en esas fechas.
+  No se mezclan con los activos al corte ni con un total histórico sin etiqueta.
+- Firmado significa aceptación de ambas partes. No se usa una firma por sí sola
+  como evidencia de un pago confirmado. En los demás mockups ambos pasos se simulan
+  juntos; aquí se distinguen conceptualmente para poder observar fallos operativos.
+
+Dinero:
+- Recaudo por ventas: ventas confirmadas a través del canal, sin recargas,
+  desembolsos, intentos fallidos ni pagos duplicados.
+- Pagado a negocios: abonos confirmados provenientes de esas ventas, después
+  del aporte al crédito. No incluye financiación recibida.
+- Pagado a prestamistas: capital recuperado + intereses cobrados de esas ventas.
+  No incluye intereses futuros, capital aún pendiente ni rendimiento anualizado.
+- Las proporciones de los destinos son agregadas; no son una tasa contractual.
+- Todas las ventas de la fixture están distribuidas, sin comisiones ni devoluciones.
+  Por ello, ventas = negocios + prestamistas, exactamente.
+  No se incluye un indicador ni una alerta de pendientes de distribución.
+- En producción: registrar reversiones, costos, saldos de apertura y cierre y
+  transferencias de cohortes anteriores. Conciliar por ID de venta/reparto y
+  destinatario; no restar pagos de un período a ventas de otro sin explicarlo.
+
+Tasa y riesgo:
+- Tasa: Σ(tasa E.A. pactada × capital pendiente) / capital pendiente total de
+  créditos activos en COP. No ponderar por número de préstamos ni mezclar monedas.
+- El 18,4 % del ejemplo puede reproducirse con estas agrupaciones ilustrativas:
+  $1.920 M al 18 % + $1.152 M al 18,5 % + $768 M al 19,25 %, sobre $3.840 M.
+- El promedio simple histórico del prestamista tiene otro alcance y permanece
+  intacto; el administrador ve exposición de cartera vigente.
+- Capital pendiente: principal sin recuperar, excluyendo intereses futuros.
+- PAR30: capital pendiente completo de préstamos con retraso contractual >30
+  días / capital pendiente total. No es porcentaje de cuotas ni conteo de créditos.
+- La barra muestra capital: $3.609,6 M al día (94 %) y $230,4 M en retraso (6 %).
+  Sus contadores son 1.208 y 76 préstamos. De los 76, 51 concentran $184,32 M con
+  retraso >30 días. $184,32 M / $3.840 M = 4,8 %.
+- En un crédito pagado mediante ventas, siete días sin ventas no demuestran mora.
+  El retraso exige una obligación contractual vencida. Si el contrato no la define,
+  PAR30 no puede calcularse de forma fiable: mostrar No disponible en producción.
+- El umbral de 7 días sin ventas es una propuesta de seguimiento.
+
+Matching y participación:
+- Cohorte: propuestas únicas iniciadas durante el período por cualquiera de los
+  roles; seguir su avance hasta el corte, sin contar cada match como nueva propuesta.
+- Cada paso contiene al siguiente. Compatibilidad considera rangos de monto, cupo,
+  tasa, plazo y aporte de ventas; necesita validación como regla de producto.
+- Conversión = propuestas de la cohorte con desembolso / propuestas iniciadas.
+- Un desembolso del período puede provenir de una cohorte anterior. En esta fixture
+  todos provienen de la cohorte actual, por eso ambos totales coinciden.
+- Cohortes recientes han tenido menos tiempo para convertirse. No comparar su
+  conversión como si tuvieran la misma madurez; se evita una flecha de crecimiento.
+- Solicitudes y ofertas abiertas son inventario al corte, ajeno al denominador.
+- Negocios con ventas y prestamistas con pagos son IDs únicos del período;
+  nunca sumar sus conteos diarios o semanales para obtener únicos mensuales.
+- Primer crédito significa primer desembolso histórico dentro de Trust; no implica
+  primer crédito formal de la vida del negocio ni una medida probada de inclusión.
+
+COHERENCIA DE LOS EJEMPLOS
+
+Mes: $864 M = $752 M negocios + $112 M prestamistas.
+Prestamistas: $112 M = $92 M capital + $20 M intereses.
+Activos: 1.208 al inicio + 186 nuevos - 110 pagados = 1.284 al cierre.
+Capital: $3.312 M al inicio + $620 M nuevos - $92 M recuperados = $3.840 M.
+Embudo: 320 -> 240 -> 204 -> 186 (58,125 %, visible 58,1 %).
+
+Semana: $224 M = $194,8 M negocios + $29,2 M prestamistas.
+Prestamistas: $29,2 M = $24 M capital + $5,2 M intereses.
+Activos: 1.258 al inicio + 52 nuevos - 26 pagados = 1.284 al cierre.
+Capital: $3.684 M al inicio + $180 M nuevos - $24 M recuperados = $3.840 M.
+Embudo: 92 -> 68 -> 57 -> 52 (56,5217 %, visible 56,5 %).
+
+Las series del gráfico suman los respectivos totales de ventas y prestamistas.
+Comparación mensual por tramos: 1–7, 8–14, 15–21, 22–fin de mes.
+El último tramo tiene 9 días en septiembre y 10 en agosto, declarado en la vista.
+Los 48 préstamos sin ventas pueden coincidir con préstamos en retraso;
+no se suman las alertas como si fueran personas o préstamos únicos.
+
+INTERACCIONES
+
+- Selector de dos períodos completos; actualiza métricas, comparación, distribución,
+  gráfico, cohorte y participación. Mantiene las fotos al corte.
+- Gráfico Ventas / A prestamistas, con tabla accesible de valores exactos.
+- Definiciones junto a indicadores, criterios generales y detalles de las alertas.
+- Exportar resumen descarga un CSV del período seleccionado, con valores COP
+  completos, unidades, alcance temporal, criterios, comparación y origen ficticio.
+- Sidebar por módulos: Métricas (vista actual) y Panel de administrador.
+  El segundo abre prestamos.html, el registro administrativo de préstamos.
+  Menú móvil, Escape y restauración de foco.
+- No ejecuta reintentos de pagos ni acciones de recuperación de cartera.
+- No consulta ni modifica localStorage de prestatarios o prestamistas.
+
+DECISIONES PARA LA SIGUIENTE ITERACIÓN
+
+Ingresos/comisiones y margen de Trust: no mostrar una cifra inventada hasta definir
+quién paga, base de cálculo, costo del recaudo y momento de reconocimiento.
+Alertas: validar umbrales, responsables y reglas contractuales de mora.
+Incluir frescura real de datos, estados de carga/error/sin datos y conciliación
+cuando exista una fuente backend; esta vista usa un corte histórico explícito.
+Expansión internacional: filtros por país y moneda; política explícita para
+conversión consolidada, sin sumar importes de monedas distintas.
+Listado administrativo disponible en prestamos.html (mockup 09). La muestra
+es independiente de las cifras agregadas; no representa un desglose de métricas.
+Métricas posteriores: tiempo hasta desembolso, concentración por prestamista/sector,
+repetición de crédito y desempeño por cohortes, una vez existan datos suficientes.
+
+
+MOCKUP 09 — REGISTRO ADMINISTRATIVO Y DETALLE
+
+Abrir prestamos.html o entrar desde «Panel de administrador» en Métricas.
+Desde cualquier fila, «Ver detalle» abre prestamo.html?id=<identificador>.
+Funciona directamente con file://, sin instalación ni servidor.
+
+Alcance:
+- Muestra global de 12 registros únicos: 4 ofrecidos, 4 solicitados, 4 realizados.
+- Administrador de consulta; no aprueba, rechaza, firma ni modifica acuerdos.
+- Los ofrecidos/solicitados incluyen publicaciones abiertas, propuestas pendientes,
+  rechazadas y acuerdos aceptados por desembolsar. Sin estados de pago ni recaudos.
+- Un realizado exige aceptación de ambas partes y desembolso confirmado; conserva
+  el origen de oferta/solicitud y solo se cuenta una vez en su etapa actual.
+- Los realizados tienen estado Al día, En retraso o Pagado.
+- Datos ficticios al 30 sep 2026, en COP. No lee ni modifica localStorage.
+  No hay backend, autenticación ni integración con Puntored. Esta muestra no es
+  el desglose de las cifras agregadas del mockup de métricas.
+
+Diseño:
+Se conserva la base #191919, superficie #201E24, violeta #9D67FB, lavanda
+#B499FE y texto #F1E9FD de Órbita. Ámbar identifica retraso; verde, pagos al día
+o finalizados. Arial/Helvetica, números tabulares, contenido alineado a izquierda.
+
+  Navegación | Título y alcance
+             | Resumen de la muestra y capital pendiente
+             | Etapas / búsqueda / estado / orden
+             | Registro con participantes y condiciones / detalle
+             | Paginación
+
+  Detalle    | Identificador / etapa / estado
+             | Condiciones y monto / participantes
+             | Capital recuperado / reparto de ventas / recaudos
+             | Hitos del préstamo
+
+El registro prioriza comparación y trazabilidad. Los cuatro indicadores son
+contexto estable de la muestra completa; los filtros actúan sobre el listado.
+En móvil, la tabla se presenta como fichas y el detalle se apila. Las tablas
+financieras conservan sus columnas mediante desplazamiento horizontal accesible.
+
+Interacciones:
+- Etapas Todos, Ofrecidos, Solicitados, Realizados, con contadores globales.
+- Búsqueda por ID, negocio o prestamista, sin distinguir tildes ni mayúsculas.
+- Estados compatibles con la etapa. Cambiar etapa reinicia estado y página.
+- Orden por fecha de creación o monto; para rangos, se usa el monto máximo.
+- Paginación de 6 registros, filtros en URL y retorno desde detalle conservándolos.
+- Sin resultados: mensaje, limpieza de filtros y exportación deshabilitada.
+- Exportación CSV de TODOS los registros filtrados, incluidas otras páginas.
+  Incluye unidades, corte, estado, origen, rangos y fuente ficticia.
+- Detalle con ID inexistente o ausente: error explícito y enlace al registro.
+- Navegación por teclado, foco visible, menú móvil y diálogo de alcance.
+
+Coherencia monetaria de esta muestra:
+- Capital desembolsado histórico: $24.000.000 COP; recuperado: $9.600.000 COP.
+- Capital pendiente: $14.400.000 COP; 3 activos y 1 pagado.
+- Cada recaudo = capital + intereses; cada venta = negocio + prestamista.
+- Intereses ilustrativos registrados, no cálculo de un plan de amortización.
+- Pendiente significa capital, excluye intereses futuros. Para no desembolsados
+  se deja vacío en CSV, en lugar de presentar cero como un saldo de préstamo.
+- El ejemplo en retraso tiene obligación vencida el 25 ago 2026, 36 días al corte,
+  por $450.000 COP. No confundirla con $8.200.000 de capital total pendiente.
+- Las fechas y referencias de pagos son ficticias; no se emiten comprobantes reales.
+
+Archivos:
+prestamos-data.js: fuente de datos y formatos del módulo.
+prestamos.js / prestamos.html: listado y filtros.
+prestamo.js / prestamo.html: detalle administrativo, sin acciones de contraparte.
+prestamos.css: estilos propios, reutilizando base, portal y admin.
+
+Verificación en Chromium:
+Listado, búsqueda sin tildes, filtros, orden, paginación, regreso desde detalle,
+CSV de todas las páginas filtradas, 12 detalles, conciliación de capital y ventas,
+identificadores inválidos, menú móvil, diálogo de alcance y acceso desde Métricas.
+Sin errores JavaScript; sin desbordamiento de página entre 320 y 1920 px.
+Apertura directa con file:// comprobada. Capturas de revisión en vistas/.

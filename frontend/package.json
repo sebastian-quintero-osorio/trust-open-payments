@@ -1,0 +1,10 @@
+{
+  "name": "trust-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "python3 scripts/serve.py",
+    "build": "python3 scripts/build.py",
+    "test:unit": "node --test tests/*.test.js"
+  }
+}

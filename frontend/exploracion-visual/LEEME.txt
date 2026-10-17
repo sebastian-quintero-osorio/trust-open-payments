@@ -1,0 +1,24 @@
+TRUST — Exploración visual
+
+Abrir index.html en un navegador. No requiere instalación, dependencias ni conexión a internet.
+Para abrir una ruta directamente: index.html?ruta=precision, index.html?ruta=flujo o index.html?ruta=orbita.
+
+Alcance: comparar tres direcciones visuales antes de desarrollar mockups.
+Los controles reales son el selector de ruta, la preferencia local y el campo de monto ilustrativo.
+Los botones financieros son muestras visuales sin operación. No hay cuentas, pagos ni backend.
+La preferencia se guarda solo en localStorage del navegador y no se envía al equipo.
+
+Fuentes: ../Interfaces.txt, ../../branding/trust.md y ../../branding/TRUST - OPEN PAYMENTS.pdf.
+El logotipo se extrajo del PDF mediante pdftocairo; se conserva su dibujo y proporción.
+No se suministró un archivo web de Qontra. Los ejemplos usan Arial/Helvetica/sans-serif
+como sustitución explícita; Qontra sigue propuesta para títulos de marca.
+La sans de sistema para datos y formularios es una propuesta, no una regla original del kit.
+
+Recomendación pendiente de elección: Flujo.
+Paleta exacta del kit: #191919, #6930F9, #9D67FB, #B499FE, #F1E9FD.
+Los colores de superficies derivadas y el ámbar de retraso son extensiones propuestas.
+La revisión de contraste se limita a pares de colores; no equivale a una auditoría completa.
+
+El mapa de interfaces, fundamentos, diferencias y decisiones pendientes están dentro de index.html.
+No se ha elegido framework ni implementado la aplicación. Los tokens son un borrador
+para la etapa de diseño; solo la dirección elegida debe convertirse en sistema definitivo.

@@ -1,0 +1,214 @@
+.review-bar { min-height: 44px; padding: 8px 28px; display: flex; justify-content: space-between; align-items: center; gap: 16px; font-size: 11px; color: var(--color-muted); background: #211d28; border-bottom: 1px solid #46394f; }
+.review-bar > span, .review-bar > div { display: flex; align-items: center; gap: 12px; }
+.review-bar strong { color: var(--color-text); font-weight: 500; }
+.review-separator { color: #776783; }
+.route-tag { color: var(--color-lavender); }
+.review-state { border: 1px solid #655277; padding: 3px 8px; border-radius: 5px; }
+.review-link { border: 0; background: transparent; text-decoration: underline; text-underline-offset: 4px; font-size: 11px; min-height: 32px; }
+.app-shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: calc(100vh - 94px); max-width: 1920px; margin: auto; }
+.sidebar { display: flex; flex-direction: column; border-right: 1px solid var(--color-border); padding: 38px 18px 24px; }
+.sidebar-brand { padding: 0 16px; display: flex; justify-content: space-between; align-items: center; }
+.workspace-label { color: #a69bb1; font-size: 12px; margin: 56px 16px 16px; }
+.main-nav { display: flex; flex-direction: column; gap: 8px; }
+.nav-item { display: flex; gap: 12px; align-items: center; min-height: 48px; padding: 12px 14px; border: 1px solid transparent; border-radius: 12px; color: var(--color-muted); background: transparent; text-decoration: none; font-size: 13px; text-align: left; width: 100%; }
+.nav-item:hover { background: #25212c; color: var(--color-text); }
+.nav-item.active { background: linear-gradient(100deg, #38274c, #272130); border-color: #5c4277; color: var(--color-text); }
+.nav-item.active .icon { color: var(--color-lavender); }
+.sidebar-bottom { margin-top: auto; padding: 100px 14px 0; }
+.sidebar-rule { border-top: 1px solid var(--color-border); margin-bottom: 24px; }
+.account { display: flex; gap: 12px; align-items: center; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: #34293f; border: 1px solid #68517d; font-size: 12px; color: var(--color-lavender); }
+.account strong { font-size: 13px; font-weight: 500; }
+.account span { display: block; color: var(--color-muted); font-size: 11px; margin-top: 2px; }
+.account-note { display: block; margin-top: 16px; font-size: 10px; color: #a69bb1; }
+.topbar { min-height: 84px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--color-border); padding: 16px 48px; font-size: 12px; }
+.topbar-location { display: flex; align-items: center; gap: 16px; color: var(--color-muted); }
+.topbar-location strong { color: var(--color-text); font-weight: 400; }
+.breadcrumb-slash { color: #82788d; }
+.currency { color: var(--color-muted); display: flex; gap: 6px; align-items: center; font-size: 11px; }
+.currency-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-lavender); margin-right: 3px; }
+main { max-width: 1376px; margin: auto; padding: 44px 48px 24px; }
+.page-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 32px; }
+h1 { font-size: clamp(28px, 2.5vw, 36px); letter-spacing: -.045em; }
+.page-heading p { margin-top: 12px; color: var(--color-muted); font-size: 14px; }
+.credit-banner { position: relative; display: grid; grid-template-columns: 1.1fr 1fr; gap: 48px; align-items: center; isolation: isolate; overflow: hidden; border-radius: var(--radius-panel); border: 1px solid #70548e; padding: 34px 38px; min-height: 252px; background: radial-gradient(ellipse at 75% 130%, #472578 0%, transparent 65%), linear-gradient(120deg, #30253c 0%, #241f2d 54%, #211e27 100%); box-shadow: inset 0 1px 0 #d9bbff25, 0 8px 48px #6930f908; }
+.credit-summary, .credit-explanation { position: relative; z-index: 1; }
+.credit-label { display: flex; align-items: center; gap: 10px; }
+.credit-label .icon { width: 18px; height: 18px; color: var(--color-lavender); }
+.credit-label h2 { font-size: 14px; font-weight: 400; letter-spacing: 0; }
+.credit-amount { margin-top: 18px; font-size: clamp(36px, 3.5vw, 50px); letter-spacing: -.05em; font-variant-numeric: tabular-nums; line-height: 1.2; white-space: nowrap; }
+.credit-amount > span { font-size: 11px; margin-left: 10px; color: var(--color-muted); letter-spacing: 0; }
+.credit-caption { margin-top: 9px; font-size: 12px; color: var(--color-muted); }
+.lending-headline { max-width: 380px; margin-top: 20px; font-size: clamp(26px, 3vw, 38px); line-height: 1.2; letter-spacing: -.045em; }
+.credit-source { display: flex; align-items: center; gap: 7px; margin-top: 26px; font-size: 10px; color: #c7b4df; }
+.credit-source > span { width: 5px; height: 5px; border-radius: 50%; background: var(--color-lavender); }
+.credit-explanation { max-width: 280px; align-self: start; padding-top: 3px; }
+.credit-explanation h3 { font-size: 24px; line-height: 1.2; }
+.credit-explanation p { margin-top: 14px; max-width: 235px; font-size: 12px; line-height: 1.7; color: #cfc3df; }
+.orbit { position: absolute; width: 340px; height: 340px; right: -100px; bottom: -236px; pointer-events: none; z-index: 0; }
+.orbit-sphere { width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle at 50% 50%, #211a2f 51%, #392051 59%, #6930f9 65%, #b499fe 69%, #f1e9fd 70%, #9d67fb 71%, #6930f944 75%, transparent 79%); box-shadow: 0 0 70px #9d67fb26; transform: rotate(-22deg); }
+.orbit-trace { position: absolute; inset: -25px; border-radius: 50%; border: 1px solid #b499fe25; }
+.marketplace { margin-top: 42px; }
+.offers-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 22px; }
+.offers-heading h2 { font-size: 22px; display: flex; align-items: center; gap: 10px; }
+.count { font-size: 11px; font-weight: 400; display: grid; place-items: center; width: 24px; height: 24px; background: #30263c; color: var(--color-lavender); border-radius: 8px; letter-spacing: 0; }
+.offers-heading p { color: var(--color-muted); font-size: 12px; margin-top: 10px; }
+.filter-group { display: flex; padding: 4px; border: 1px solid var(--color-border); border-radius: 12px; gap: 2px; background: #1d1b20; }
+.filter-group button { min-height: 40px; padding: 8px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--color-muted); font-size: 11px; white-space: nowrap; }
+.filter-group button[aria-pressed="true"] { background: #35283f; color: var(--color-text); border-color: #624973; }
+.filter-group button:hover { color: var(--color-text); }
+.offer-list { border: 1px solid #49404f; border-radius: 16px; overflow: hidden; background: #1d1b20; }
+.list-labels, .offer-row { display: grid; grid-template-columns: minmax(165px, 1.3fr) minmax(125px, 1fr) minmax(130px, 1fr) minmax(115px, 1fr) 108px; gap: 20px; padding: 0 24px; align-items: center; }
+.list-labels { min-height: 43px; font-size: 10px; color: #afa2bb; background: #241f2b; border-bottom: 1px solid #49404f; }
+.offer-row { min-height: 115px; }
+.offer-row + .offer-row { border-top: 1px solid var(--color-border); }
+.lender { display: flex; align-items: center; gap: 12px; }
+.lender-avatar { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid #685580; border-radius: 12px; background: #30243f; color: var(--color-lavender); font-size: 12px; flex-shrink: 0; }
+.lender-avatar-soft { background: #28242e; border-color: #534a60; color: #d7cae7; border-radius: 50%; }
+.lender h3 { font-size: 14px; letter-spacing: -.02em; line-height: 1.3; }
+.lender p { color: var(--color-muted); font-size: 10px; margin-top: 5px; }
+.lender p.outside-limit { color: #f4cd8a; }
+.offer-metric strong { display: block; font-size: 18px; font-weight: 400; letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
+.offer-metric small { display: block; font-size: 10px; color: var(--color-muted); margin-top: 3px; }
+.offer-row .button { min-height: 44px; font-size: 12px; padding: 10px 12px; }
+.offer-row .icon { width: 16px; height: 16px; }
+.metric-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+.metric-interest strong { color: var(--color-lavender); }
+.offers-footnote { display: flex; gap: 9px; align-items: start; margin: 18px 2px 0; color: #aaa0b4; }
+.offers-footnote .icon { width: 15px; height: 15px; margin-top: 1px; }
+.offers-footnote p { font-size: 11px; line-height: 1.6; max-width: 730px; }
+.workspace-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 42px; padding-top: 20px; border-top: 1px solid var(--color-border); color: #a69bb1; }
+.workspace-footer span { font-size: 13px; color: var(--color-lavender); }
+.workspace-footer p { font-size: 10px; }
+.review-footer { display: flex; justify-content: space-between; gap: 16px; padding: 15px 28px; background: #211d28; color: var(--color-muted); font-size: 10px; border-top: 1px solid #46394f; }
+.preview-notice { position: fixed; z-index: 50; bottom: 24px; right: 24px; display: flex; gap: 16px; width: min(440px, calc(100% - 32px)); padding: 20px; background: #30253b; border: 1px solid #9170b7; border-radius: 16px; box-shadow: 0 8px 32px #0005; }
+.preview-notice strong { display: block; font-size: 12px; color: var(--color-lavender); font-weight: 400; margin-bottom: 7px; }
+.preview-notice p { font-size: 13px; line-height: 1.6; }
+.preview-notice .icon-button { flex-shrink: 0; }
+dialog { width: min(560px, calc(100% - 32px)); max-height: calc(100dvh - 48px); overflow-y: auto; padding: 28px; border: 1px solid #8a6aa5; border-radius: 24px; background: #241f2c; color: var(--color-text); }
+dialog::backdrop { background: #000a; backdrop-filter: blur(5px); }
+.dialog-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; color: var(--color-lavender); font-size: 12px; }
+dialog h2 { font-size: 28px; margin-bottom: 20px; }
+dialog p, dialog li { font-size: 14px; color: var(--color-muted); line-height: 1.6; }
+dialog li { margin: 8px 0; }
+dialog ul { padding-left: 20px; margin: 20px 0; }
+dialog .font-note { font-size: 12px; padding-top: 18px; margin-top: 20px; border-top: 1px solid var(--color-border); }
+dialog > .button { margin-top: 24px; }
+.menu-toggle, .mobile-close { display: none; }
+
+@media (min-width: 1600px) {
+  main { padding-top: 56px; }
+  .credit-banner { min-height: 285px; padding: 40px 44px; }
+  .credit-explanation { margin-left: 30px; }
+  .orbit { right: -30px; bottom: -205px; }
+}
+@media (max-width: 1200px) {
+  .app-shell { grid-template-columns: 210px minmax(0, 1fr); }
+  .sidebar { padding-left: 12px; padding-right: 12px; }
+  .nav-item { padding-left: 12px; gap: 9px; font-size: 12px; }
+  .topbar { padding-left: 32px; padding-right: 32px; }
+  main { padding-left: 32px; padding-right: 32px; }
+  .page-heading { align-items: start; }
+  .page-heading p { font-size: 13px; max-width: 280px; }
+  .page-heading > .button { font-size: 12px; padding: 12px 14px; }
+  .credit-banner { padding: 28px; gap: 24px; }
+  .credit-explanation h3 { font-size: 22px; }
+  .list-labels, .offer-row { grid-template-columns: minmax(145px, 1.2fr) minmax(110px, 1fr) minmax(110px, 1fr) minmax(100px, 1fr) 100px; gap: 12px; padding-left: 18px; padding-right: 18px; }
+  .lender { gap: 8px; }
+  .lender-avatar { width: 32px; height: 32px; font-size: 10px; }
+  .lender h3 { font-size: 12px; }
+  .offer-metric strong { font-size: 16px; }
+  .offer-row .button { font-size: 11px; gap: 6px; padding: 10px; }
+  .offers-heading h2 { font-size: 20px; }
+  .offers-heading { align-items: start; }
+}
+@media (max-width: 1000px) {
+  .app-shell { grid-template-columns: 190px minmax(0, 1fr); }
+  main { padding: 32px 24px 24px; }
+  .topbar { padding-left: 24px; padding-right: 24px; }
+  .page-heading { flex-direction: column; gap: 20px; }
+  .page-heading p { max-width: none; }
+  .credit-banner { gap: 20px; padding: 24px; }
+  .credit-amount { font-size: 34px; }
+  .credit-amount > span { font-size: 10px; margin-left: 6px; }
+  .credit-explanation h3 { font-size: 20px; }
+  .credit-explanation p { font-size: 11px; }
+  .offers-heading { flex-direction: column; gap: 18px; }
+  .lender-avatar { width: 36px; height: 36px; }
+  .lender h3 { font-size: 13px; }
+}
+@media (max-width: 1100px) {
+  .list-labels { display: none; }
+  .offer-row { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 22px; gap: 22px 18px; }
+  .lender { grid-column: 1 / 3; grid-row: 1; }
+  .offer-row .button { grid-column: 3; grid-row: 1; justify-self: end; }
+  .offer-metric { grid-row: 2; min-width: 0; }
+  .metric-label { position: static; width: auto; height: auto; padding: 0; margin: 0 0 8px; overflow: visible; clip: auto; white-space: normal; display: block; color: var(--color-muted); font-size: 10px; }
+}
+@media (max-width: 700px) {
+  .review-bar { padding: 8px 16px; gap: 8px; }
+  .review-bar > span { gap: 8px; font-size: 10px; }
+  .review-state { display: none; }
+  .review-link { font-size: 10px; }
+  .app-shell { display: block; min-height: calc(100dvh - 100px); }
+  .sidebar { display: none; position: fixed; z-index: 40; width: 270px; top: 0; bottom: 0; background: var(--color-base); padding: 24px 18px; overflow-y: auto; }
+  .sidebar.is-open { display: flex; }
+  .sidebar-brand { padding: 0 8px; }
+  .sidebar-bottom { padding-top: 40px; }
+  .workspace-label { margin-top: 36px; }
+  .nav-item { font-size: 14px; gap: 14px; }
+  .menu-toggle, .mobile-close { display: inline-grid; }
+  .menu-overlay { display: block; position: fixed; z-index: 30; inset: 0; background: #0009; border: 0; border-radius: 0; }
+  body.menu-open { overflow: hidden; }
+  .topbar { min-height: 72px; padding: 12px 16px; gap: 8px; }
+  .topbar-location { gap: 9px; font-size: 11px; }
+  .currency-name { display: none; }
+  main { padding: 28px 20px 24px; }
+  h1 { font-size: 30px; }
+  .page-heading { margin-bottom: 26px; gap: 20px; }
+  .page-heading p { font-size: 13px; line-height: 1.65; max-width: 280px; margin-top: 10px; }
+  .page-heading > .button { min-height: 48px; padding: 12px 18px; font-size: 13px; }
+  .credit-banner { grid-template-columns: 1fr; padding: 26px; gap: 28px; border-radius: 22px; }
+  .credit-amount { font-size: 42px; }
+  .credit-source { margin-top: 18px; }
+  .credit-explanation { max-width: 205px; padding-top: 0; }
+  .credit-explanation h3 { font-size: 22px; }
+  .credit-explanation p { max-width: 190px; font-size: 12px; margin-top: 12px; }
+  .orbit { width: 280px; height: 280px; bottom: -150px; right: -170px; }
+  .marketplace { margin-top: 32px; }
+  .offers-heading { margin-bottom: 20px; }
+  .offers-heading h2 { font-size: 22px; }
+  .offers-heading p { max-width: 270px; font-size: 12px; line-height: 1.6; }
+  .filter-group { width: 100%; }
+  .filter-group button { min-height: 44px; flex: 1; font-size: 12px; }
+  .offer-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 20px 18px; gap: 22px 12px; }
+  .lender { grid-column: 1; }
+  .offer-row .button { grid-column: 2; }
+  .metric-repayment { grid-column: 1 / -1; grid-row: 3; display: grid; grid-template-columns: 1fr auto; column-gap: 16px; align-items: center; border-top: 1px solid var(--color-border); padding-top: 16px; }
+  .metric-repayment .metric-label { grid-column: 1; grid-row: 1; margin-bottom: 0; }
+  .metric-repayment strong { grid-column: 2; grid-row: 1 / 3; }
+  .metric-repayment small { grid-column: 1; grid-row: 2; }
+  .offer-metric strong { font-size: 20px; }
+  .offer-row .button { font-size: 11px; }
+  .lender h3 { font-size: 12px; }
+  .lender-avatar { width: 32px; height: 32px; border-radius: 10px; }
+  .offer-row[data-eligible="false"] .lender h3 { max-width: 85px; }
+  .offers-footnote { margin-top: 16px; }
+  .offers-footnote p { font-size: 10px; }
+  .workspace-footer { margin-top: 28px; align-items: start; }
+  .workspace-footer p { max-width: 210px; text-align: right; line-height: 1.6; }
+  .review-footer { padding: 14px 20px; flex-direction: column; gap: 4px; font-size: 10px; }
+  .preview-notice { right: 16px; bottom: 16px; padding: 16px; }
+  dialog { padding: 22px; }
+  dialog h2 { font-size: 25px; }
+}
+@media (max-width: 370px) {
+  .review-bar .route-tag { display: none; }
+  .credit-banner { padding: 22px; }
+  .credit-amount { font-size: 37px; }
+  .offer-row { padding: 20px 14px; gap: 20px 8px; }
+  .lender { gap: 7px; }
+  .lender-avatar { width: 28px; height: 28px; }
+  .offer-row .button { padding: 10px 8px; }
+  .offer-metric strong { font-size: 18px; }
+}
