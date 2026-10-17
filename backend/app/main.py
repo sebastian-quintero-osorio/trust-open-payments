@@ -14,7 +14,10 @@ from app.integrations.op.boot import adopt_collection_accounts
 from app.integrations.op.client import OpClient, get_op_client
 from app.integrations.op.fake import FakeOpClient
 from app.models import Base
+from app.modules.platform.router import dev_router
 from app.modules.platform.router import router as platform_router
+from app.modules.platform.service import log_market_asset_warnings
+from app.modules.users.router import router as users_router
 from app.worker import start_worker
 
 API_PREFIX = "/api/v1"
@@ -32,7 +35,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if isinstance(op, FakeOpClient):  # OP_CLIENT=fake: un reinicio no pierde las cuentas de recaudo (02 R15)
         with SessionLocal() as db:
             adopt_collection_accounts(db, op)
-    # TODO(spec 03 R1): verificar el asset de mercado.
+    log_market_asset_warnings(op)  # 03 R1: un ERROR por cada desajuste del asset de mercado; nunca rompe el arranque
     stop_worker = start_worker() if get_settings().worker_enabled else None
     try:
         yield
@@ -51,7 +54,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.include_router(users_router, prefix=API_PREFIX)
     app.include_router(platform_router, prefix=API_PREFIX)
+    app.include_router(dev_router, prefix=API_PREFIX)
     return app
 
 

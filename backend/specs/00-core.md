@@ -131,7 +131,7 @@ Las specs de módulo usan exactamente estas funciones. Si una firma cambia, se c
 
 ## Tests
 - `pytest` contra Postgres (`TEST_DATABASE_URL`). Las tablas se recrean al iniciar la sesión de tests y se truncan entre tests.
-- `conftest.py` provee: `db`, `client` (TestClient con `WORKER_ENABLED=false`, `OP_CLIENT=fake`, `OP_FAKE_AUTO_COMPLETE=false` y `TRUST_REVENUE_WALLET_ADDRESS=https://ilp.interledger-test.dev/trust-revenue`), `fake_op` (el FakeOpClient de la app, para inspeccionar llamadas; se hace `fake_op.reset()` entre tests), `make_merchant(...)`, `make_lender(...)`, `auth(user)` (headers) y `freeze(dt)` (congela `clock.now()`).
+- `conftest.py` provee: `db`, `client` (TestClient con `WORKER_ENABLED=false`, `OP_CLIENT=fake`, `OP_FAKE_AUTO_COMPLETE=false` y `TRUST_REVENUE_WALLET_ADDRESS=https://ilp.interledger-test.dev/trust-revenue`), `fake_op` (el FakeOpClient de la app, para inspeccionar llamadas; se hace `fake_op.reset()` entre tests y `client` vacía `fake_op.calls` después del arranque, porque el lifespan resuelve la wallet de Trust, 03 R1), `make_merchant(...)`, `make_lender(...)`, `auth(user)` (headers) y `freeze(dt)` (congela `clock.now()`).
 - Los jobs del worker son funciones (`run_once(db, op, now, reconcile=True)`, spec 08) que los tests llaman directo.
 
 ## Criterios de aceptación

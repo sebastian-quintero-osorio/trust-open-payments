@@ -33,8 +33,10 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 | 00-core | ☑ | ver log |
 | 01-data-model | ☑ | ver log |
 | 02-op-client | ☑ | ver log |
-| 03-platform-dev | ◐ | — |
-| 04 → 16 | ☐ | — |
+| 03-platform-dev | ◐ (faltan AC-6, AC-8, AC-11) | ver log |
+| 04-users | ☑ | ver log |
+| 05-policies | ◐ | — |
+| 06 → 16 | ☐ | — |
 
 ## Decisiones
 
@@ -55,9 +57,26 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - (02) Al arrancar con el fake se adoptan las cuentas de recaudo y el seq del simulador continúa sobre el máximo BREB-SIM guardado (evita referencias duplicadas tras reinicio).
 - (02) HttpOpClient convierte cualquier httpx.HTTPError (incl. DecodingError) en OpUnavailable.
 
+- (03) El seed agrega historial solo a negocios con recaudo activo y sin ventas seed; reejecutar no duplica. La calibración del ≈ 58 % / 12 % / 32 % pagado asume que el crédito se siembra el mismo día que el historial.
+- (03) Simular venta: orden de validación id → cuenta (404/409, revocada → 409 sin llamar a Go) → asset (422) → valor > 0 (422) → Go.
+- (03) `POST /dev/seed` con cuerpo malformado da 422 `validation_error` (regla general de 00-core AC-2); el YAML no lo lista por endpoint, no se cambió.
+- (04) PATCH /me ignora `business_name` y `email`; `lender_range` de un no prestamista → 422 (aunque sea null). Cambio de wallet deja evento `payout_wallet_set`. Login con email inexistente corre bcrypt sobre un hash dummy (mismo tiempo que contraseña errada).
+- (00) El fixture `client` limpia `fake_op.calls` después del arranque, porque el arranque ahora llama `resolve_wallet_address` para verificar el asset.
+
 ## Cambios de contrato
 
 (ninguno)
+
+## Pendientes por dependencia (cerrar antes de la fase final)
+
+- **03 AC-6** (historial del seed vía `ensure_collection_account`) → al terminar 06.
+- **03 AC-8** (simular venta procesada con el fake) → al terminar 06 y 07.
+- **03 AC-11** y seed de créditos R9/R10 → al terminar 05, 09 y 11. El seed (`app/modules/platform/seed.py`, `_seed_loan`, `_loan_tools`) asume estas interfaces; 05/09/11 deben cumplirlas o ajustar el seed:
+  - `build_terms(principal, pct, fee_bps, term_months, request_pct_bps, cfg)` con `cfg` = `get_settings()` (campos en minúscula: `trust_share_bps`, `reprice_max_delta_bps`), `Terms` con sus campos y `.to_dict()`;
+  - `get_credit_profile(db, merchant_id).assessment.id`;
+  - `SplitLoanState(pct_bps, total_repayable, allocated_total, fee_amount, trust_share_bps)` posicional y `split_sale(amount, state, policy=...)`;
+  - `modules.loans.service.close_period(db, loan_id, now)`.
+- 00-core `test_ac6_all_contract_routes_implemented` → fase final.
 
 ## Bloqueos
 
@@ -68,3 +87,4 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - 2026-10-17 01:45 · Iteración 1: Docker (OrbStack) arriba, Postgres en `backend/docker-compose.yml`, bases creadas, LOOP.md creado. Empiezan 00-core + 01-data-model.
 - 2026-10-17 02:40 · Specs 00-core y 01-data-model ☑: proyecto uv, core, 15 tablas, arnés de tests con `assert_contract`. 14 tests pasan, 1 skip planificado (rutas completas, fase final). Revisor encontró 8 fallas; todas corregidas.
 - 2026-10-17 02:47 · Spec 02-op-client ☑: OpClient Protocol, HttpOpClient (según op-service.openapi.yaml) y FakeOpClient con controles. 48 tests pasan. El revisor encontró 3 fallas; corregidas.
+- 2026-10-17 03:32 · Spec 04-users ☑ y spec 03-platform-dev parcial (health completo con verificación del asset de mercado, config, guardas dev, wallet falsa, seed de usuarios/ofertas/historial, simulador cableado). 94 tests pasan, 4 skips por dependencia. El revisor encontró 4 fallas; corregidas (incl. seed sin floats).

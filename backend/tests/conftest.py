@@ -103,6 +103,9 @@ def client(fake_op: FakeOpClient) -> Iterator[TestClient]:
     app = create_app()
     app.dependency_overrides[get_op_client] = lambda: fake_op
     with TestClient(app) as test_client:
+        # Las llamadas del arranque (03 R1: el lifespan resuelve TRUST_REVENUE_WALLET_ADDRESS) no cuentan: cada test
+        # empieza con `fake_op.calls` vacío.
+        fake_op.calls.clear()
         yield test_client
 
 
