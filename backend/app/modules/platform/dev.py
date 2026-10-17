@@ -1,26 +1,29 @@
 """Atajos de demo `/dev/*` (03 R3, R11–R13): guarda, simular venta, cerrar periodo y wallet falsa."""
 
 import html
+import json
 import logging
 import uuid
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.core import clock
 from app.core.config import get_settings
 from app.core.deps import parse_id
-from app.core.errors import AppError
-from app.core.money import format_es, require_market_asset
+from app.core.errors import AppError, error_response
+from app.core.money import BIGINT_MAX, TOO_BIG, format_es, require_market_asset
 from app.integrations.op.client import OpClient, OpClientDep, OpError, OpUnavailable
 from app.integrations.op.fake import FakeOpClient
 from app.integrations.op.schemas import CreateSimQrPaymentRequest, Payment, PositiveAmount
 from app.modules.loans.models import Loan
 from app.modules.loans.schemas import LoanPctChangeOut, pct_change_out
 from app.modules.platform.lazy import optional_attr
-from app.modules.platform.schemas import SimulateSaleRequest, SimulateSaleResponse
+from app.modules.platform.schemas import SeedRequest, SimulateSaleRequest, SimulateSaleResponse
 from app.modules.recaudo.models import CollectionAccount, CollectionAccountStatus
 
 logger = logging.getLogger(__name__)
@@ -33,6 +36,38 @@ def require_dev() -> None:
     """404 `not_found` si `DEV_ENDPOINTS_ENABLED` es false (se lee en cada petición)."""
     if not get_settings().dev_endpoints_enabled:
         raise AppError(404, "not_found")
+
+
+class DevGuardMiddleware:
+    """R3 antes de leer el cuerpo: con `DEV_ENDPOINTS_ENABLED=false`, `{prefix}/*` es 404 `not_found` siempre.
+
+    La dependencia `require_dev` del router corre después de que FastAPI decodifica el JSON, así que un cuerpo
+    malformado daba 422 en vez de 404. Este middleware (ASGI puro, por dentro de CORS) responde antes.
+    """
+
+    def __init__(self, app: ASGIApp, prefix: str) -> None:
+        self.app = app
+        self.prefix = prefix.rstrip("/")
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and not get_settings().dev_endpoints_enabled:
+            path: str = scope.get("path", "")
+            if path == self.prefix or path.startswith(self.prefix + "/"):
+                await error_response(404, "not_found")(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
+
+
+async def seed_options(request: Request) -> SeedRequest:
+    """R4: cuerpo opcional y tolerante (el YAML de `devSeed` no declara 422). Vacío, JSON ilegible o que no es un
+    objeto → sin opciones; `with_active_loan_for_marta` solo cuenta si es exactamente `true`."""
+    raw = await request.body()
+    try:
+        data = json.loads(raw) if raw.strip() else {}
+    except (ValueError, RecursionError):
+        data = {}
+    flag = isinstance(data, dict) and data.get("with_active_loan_for_marta") is True
+    return SeedRequest(with_active_loan_for_marta=flag)
 
 
 def require_fake_op(op: OpClientDep) -> FakeOpClient:
@@ -85,6 +120,8 @@ def simulate_sale(db: Session, op: OpClient, body: SimulateSaleRequest) -> Simul
     amount = require_market_asset(body.amount.to_money())  # 422 `asset_mismatch` sin llamar a Go
     if amount.value <= 0:
         raise _validation_error("amount.value", "El monto debe ser mayor que 0.")
+    if amount.value > BIGINT_MAX:  # 00-core "Dinero": Go no debe crear un pago que la venta no podría guardar
+        raise _validation_error("amount.value", TOO_BIG)
     op_account_id = account.op_collection_account_id
     db.rollback()  # fin de la lectura: nunca se llama a Go con una transacción abierta
 

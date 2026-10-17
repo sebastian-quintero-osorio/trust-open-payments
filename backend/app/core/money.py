@@ -4,13 +4,15 @@ import re
 from dataclasses import dataclass
 from typing import Any, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.config import get_settings
 from app.core.errors import AppError
 
 VALUE_PATTERN = r"^(0|[1-9][0-9]*)$"
 BIGINT_MAX = 2**63 - 1  # tope de las columnas de dinero (`bigint`): un `value` mayor es 422, nunca 500
+VALUE_MAX_DIGITS = len(str(BIGINT_MAX))  # 19: más dígitos nunca cabe, e `int()` falla sobre 4300 (sería un 500)
+TOO_BIG = "El monto es demasiado grande."
 _VALUE_RE = re.compile(VALUE_PATTERN)
 
 
@@ -40,6 +42,8 @@ class Money:
         value, code, scale = data.get("value"), data.get("asset_code"), data.get("asset_scale")
         if not isinstance(value, str) or not _VALUE_RE.fullmatch(value):
             raise _invalid(f"{field}.value", "Debe ser un entero no negativo en texto, en unidades mínimas.")
+        if len(value) > VALUE_MAX_DIGITS:
+            raise _invalid(f"{field}.value", TOO_BIG)
         if not isinstance(code, str) or not code.strip():
             raise _invalid(f"{field}.asset_code", "Falta el código del asset.")
         if isinstance(scale, bool) or not isinstance(scale, int) or not 0 <= scale <= 255:
@@ -95,6 +99,14 @@ class MoneySchema(BaseModel):
     value: str = Field(pattern=VALUE_PATTERN, examples=["4800000"])
     asset_code: str = Field(min_length=1, examples=["COP"])
     asset_scale: int = Field(ge=0, le=255, examples=[2])
+
+    @field_validator("value")
+    @classmethod
+    def _bounded(cls, value: str) -> str:
+        """Más de 19 dígitos → 422 aquí; hasta 19 dígitos, el tope exacto (`BIGINT_MAX`) lo revisa cada service."""
+        if len(value) > VALUE_MAX_DIGITS:
+            raise ValueError(TOO_BIG)
+        return value
 
     @classmethod
     def of(cls, m: Money) -> Self:

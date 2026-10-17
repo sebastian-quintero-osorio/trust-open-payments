@@ -9,6 +9,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.requests import ClientDisconnect
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ DEFAULT_MESSAGES = {
     "forbidden": "No tienes permiso para hacer esto.",
     "not_found": "No encontramos lo que buscas.",
     "validation_error": "Revisa los datos enviados.",
+    "payload_too_large": "La solicitud es demasiado grande.",
     "rate_limited": "Demasiadas solicitudes. Intenta de nuevo en un momento.",
     "op_unavailable": "El servicio de pagos no responde. Intenta de nuevo más tarde.",
     "internal_error": "Ocurrió un error inesperado. Intenta de nuevo más tarde.",
@@ -28,6 +30,7 @@ _HTTP_STATUS_CODES = {
     401: "unauthorized",
     403: "forbidden",
     404: "not_found",
+    413: "payload_too_large",
     422: "validation_error",
     429: "rate_limited",
 }
@@ -90,6 +93,10 @@ async def _unhandled_error(_: Request, exc: Exception) -> JSONResponse:
 async def _catch_unhandled_errors(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
     try:
         return await call_next(request)
+    except ClientDisconnect:
+        # El cliente cortó, o `BodySizeLimitMiddleware` dejó de leer un cuerpo enorme (y manda su 413): no es un error
+        # de la app ni merece un traceback en el log; nadie lee esta respuesta.
+        return error_response(400, "bad_request")
     except Exception as exc:
         return await _unhandled_error(request, exc)
 

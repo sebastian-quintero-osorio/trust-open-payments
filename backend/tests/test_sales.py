@@ -737,3 +737,112 @@ def test_today_summary_counts_seed_sales(db, make_merchant):
     summary = service.today_summary(db, merchant.id, clock.today_local())
     assert summary == service.TodaySummary(cop(12_500), 1, cop(12_500), cop(0))
     assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}Z", service.format_cursor(NOW))
+
+
+# ── Revisión final ────────────────────────────────────────────────────────────
+
+EXTREME_OFFSETS = ("9999-12-31T23:59:59-14:00", "0001-01-01T00:00:00+14:00")  # en UTC caen fuera de 1..9999
+
+
+def test_since_out_of_utc_range_is_422(client, db, make_merchant, auth):
+    """(revisión final) R9: un `since` válido con zona pero que en UTC desborda daba 500 (`OverflowError` al armar el
+    cursor); es ilegible → 422 `validation_error`. Con `Z` las mismas fechas siguen sirviendo."""
+    merchant = make_merchant()
+    for since in EXTREME_OFFSETS:
+        response = client.get("/api/v1/sales/today", params={"since": since}, headers=auth(merchant))
+        _error(response, 422, "validation_error", "getSalesToday")
+    for since in ("9999-12-31T23:59:59Z", "0001-01-01T00:00:00Z"):
+        response = client.get("/api/v1/sales/today", params={"since": since}, headers=auth(merchant))
+        assert response.status_code == 200, response.text
+        assert_contract(response, "getSalesToday")
+
+
+def test_webhook_unstorable_payloads_never_500(client, db, make_merchant):
+    """(revisión final) R2/R3: `occurred_at` que desborda en UTC y montos de miles de dígitos → `unmatched`
+    (`invalid_payload`); JSON anidado a más de 64 niveles → 400 `bad_request`. Antes los tres daban 500 y Go
+    reintentaría para siempre."""
+    account = _account(db, make_merchant())
+    unmatched = []
+    for occurred_at in EXTREME_OFFSETS:
+        event = _event(account, cop(48_000))
+        event["occurred_at"] = occurred_at
+        unmatched.append(event)
+    digits = _event(account, cop(48_000))
+    digits["data"]["amount"]["value"] = "9" * 5000
+    unmatched.append(digits)
+    for event in unmatched:
+        _ok(_post(client, event), "unmatched")
+
+    for depth in (65, 900, 20_000):  # 20.000 niveles: RecursionError en json.loads (y < 64 KiB)
+        raw = b'{"event_id": "profundo", "type": "x", "d": ' + b"[" * depth + b"]" * depth + b"}"
+        _error(_post(client, raw), 400, "bad_request", OP)
+    _ok(_post(client, b'{"event_id": "e64", "type": "x", "d": ' + b"[" * 63 + b"]" * 63 + b"}"), "ignored")
+
+    db.expire_all()
+    assert _count(db, Sale) == 0
+    errors = {w.event_id: (w.status, w.error) for w in db.scalars(select(WebhookEvent))}
+    for event in unmatched:
+        assert errors[event["event_id"]] == ("unmatched", "invalid_payload")
+    assert "profundo" not in errors
+
+
+def _legs_total(db: Session, account_id) -> int:
+    return db.scalar(
+        select(func.coalesce(func.sum(Payout.amount), 0))
+        .join(Sale, Sale.id == Payout.sale_id)
+        .where(Sale.collection_account_id == account_id)
+    )
+
+
+def _process(db: Session, account: CollectionAccount, amount: Money) -> uuid.UUID:
+    result = service.process_puntored_event(db, _event(account, amount), "puntored")
+    db.commit()
+    assert result.status == "processed"
+    return result.sale_id
+
+
+def test_trust_pending_stays_on_its_account(client, db, make_merchant, make_lender):
+    """(revisión final) R3.9: `trust_pending` acumulado en la cuenta A nunca se debita de la cuenta B. Antes, tras
+    revocar A y crear B, la primera venta en B barría lo pendiente de A en una pata Trust de B (B pedía a Go más de lo
+    que había recibido y A quedaba con plata sin pata). Invariante por cuenta: Σ patas + pendiente acumulado en esa
+    cuenta = `ledger_in`."""
+    ct = _ct(db, make_merchant, make_lender)
+    a = ct.account
+
+    def cut(sale_id) -> int:
+        return db.scalar(select(Repayment.trust_cut_amount).where(Repayment.sale_id == sale_id))
+
+    first = _process(db, a, cop(20_000))  # abono $3.000, parte Trust ≈ $54,54 < TRUST_LEG_MIN: queda pendiente
+    db.expire_all()
+    assert db.get(Loan, ct.loan.id).trust_pending == cut(first) == 5454
+
+    a.status, a.revoked_at = "revoked", clock.now()
+    db.commit()
+    b = _account(db, ct.merchant)
+    second = _process(db, b, cop(20_000))
+
+    db.expire_all()
+    a, b, loan = db.get(CollectionAccount, a.id), db.get(CollectionAccount, b.id), db.get(Loan, ct.loan.id)
+    swept = db.scalar(select(Payout).where(Payout.sale_id == first, Payout.leg == "trust"))
+    assert (swept.amount, swept.status, swept.loan_id) == (cut(first), "held", loan.id)  # retenida en A (revocada)
+    assert swept.receiver_wallet_url == "https://ilp.interledger-test.dev/trust-revenue"
+    assert swept.description.startswith("Parte Trust venta 10:42 a. m.")
+    assert db.scalar(select(Payout).where(Payout.sale_id == second, Payout.leg == "trust")) is None
+    assert loan.trust_pending == cut(second)  # solo lo de la venta en B
+    assert _legs_total(db, a.id) == a.ledger_in == cop(20_000).value
+    assert _legs_total(db, b.id) + loan.trust_pending == b.ledger_in == cop(20_000).value
+    event = db.scalar(select(Event).where(Event.entity_id == swept.id, Event.type == "created"))
+    assert event.data["reason"] == "trust_pending_account_changed"
+
+    # Al revés: una venta `held` que llega a A (revocada) con lo pendiente acumulado en B (activa): lo de B sale como
+    # pata `pending` de la venta de B y la venta de A acumula aparte.
+    third = _process(db, a, cop(20_000))
+    db.expire_all()
+    a, b, loan = db.get(CollectionAccount, a.id), db.get(CollectionAccount, b.id), db.get(Loan, ct.loan.id)
+    from_b = db.scalar(select(Payout).where(Payout.sale_id == second, Payout.leg == "trust"))
+    assert (from_b.amount, from_b.status) == (cut(second), "pending")
+    assert db.get(Sale, third).status == "held"
+    assert _legs_total(db, b.id) == b.ledger_in
+    assert _legs_total(db, a.id) + loan.trust_pending == a.ledger_in == cop(40_000).value
+    assert loan.trust_pending == cut(third)
+    assert loan.trust_earned == cut(first) + cut(second) + cut(third)

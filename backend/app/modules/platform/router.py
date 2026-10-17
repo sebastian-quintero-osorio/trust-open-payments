@@ -1,6 +1,6 @@
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Body, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Response
 
 from app.core.db import DbSession
 from app.integrations.op.client import OpClientDep
@@ -42,9 +42,18 @@ def get_config() -> Config:
 dev_router = APIRouter(prefix="/dev", tags=["dev"], dependencies=[Depends(dev.require_dev)])
 
 
-@dev_router.post("/seed", response_model=SeedResult, summary="Sembrar datos de demo (idempotente)")
-def dev_seed(db: DbSession, op: OpClientDep, body: Annotated[SeedRequest | None, Body()] = None) -> SeedResult:
-    return seed.run_seed(db, op, with_active_loan_for_marta=bool(body and body.with_active_loan_for_marta))
+@dev_router.post(
+    "/seed",
+    response_model=SeedResult,
+    summary="Sembrar datos de demo (idempotente)",
+    openapi_extra={
+        "requestBody": {"required": False, "content": {"application/json": {"schema": SeedRequest.model_json_schema()}}}
+    },
+)
+def dev_seed(
+    db: DbSession, op: OpClientDep, options: Annotated[SeedRequest, Depends(dev.seed_options)]
+) -> SeedResult:
+    return seed.run_seed(db, op, with_active_loan_for_marta=options.with_active_loan_for_marta)
 
 
 @dev_router.post(
