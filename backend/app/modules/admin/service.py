@@ -28,7 +28,7 @@ from app.modules.recaudo.schemas import CollectionAccountOut
 from app.modules.sales.models import Payout, PayoutLeg, PayoutStatus, Sale
 from app.modules.users.models import User
 from app.modules.users.schemas import merchant_ref
-from app.worker import LEG_RANK
+from app.worker import pending_legs_to_hold
 
 logger = logging.getLogger(__name__)
 
@@ -206,16 +206,10 @@ def retry_payout(db: Session, admin: User, payout_id: str) -> AdminPayoutOut:
 
 
 def _revoke_locally(db: Session, admin: User, account: CollectionAccount) -> int:
-    """R6.1 (cuenta ya bloqueada): `revoked` y sus patas `pending` → `held`. Las `processing` no se tocan."""
+    """R6.1 (cuenta ya bloqueada): `revoked` y sus patas `pending` → `held`, salvo las de envío ambiguo (08 R4: siguen
+    `pending` y el worker repite su clave). Las `processing` no se tocan. Mismo orden de bloqueo que el worker."""
     account.status, account.revoked_at = CollectionAccountStatus.REVOKED, clock.now()
-    pending = db.scalars(
-        select(Payout)
-        .join(Sale, Sale.id == Payout.sale_id)
-        .where(Sale.collection_account_id == account.id, Payout.status == PayoutStatus.PENDING)
-        .order_by(Payout.created_at, LEG_RANK, Payout.id)  # mismo orden que el worker: sin deadlocks
-        .with_for_update(of=Payout)
-        .execution_options(populate_existing=True)
-    ).all()
+    pending = pending_legs_to_hold(db, account.id)
     for payout in pending:
         payout.status, payout.next_attempt_at = PayoutStatus.HELD, None
         record_event(

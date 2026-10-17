@@ -1,5 +1,6 @@
 """00-core: un test por criterio de aceptación."""
 
+import logging
 import re
 import uuid
 from datetime import UTC, date, datetime, timedelta
@@ -320,3 +321,38 @@ def test_ac6_all_contract_routes_implemented(client):
     assert set(yaml_routes) - set(app_routes) == set(), "rutas del YAML sin implementar"
     assert set(app_routes) - set(yaml_routes) == set(), "rutas de la app que no están en el YAML"
     assert app_routes == yaml_routes
+
+
+# ── Revisión final ────────────────────────────────────────────────────────────
+
+
+def test_body_size_limit(client, db, caplog):
+    """(revisión final) Un cuerpo enorme se rechaza con 413 `payload_too_large` antes de leerlo entero (antes se
+    leía completo en memoria y recién después daba 401/422): 64 KiB en el webhook y la lista de espera (públicos),
+    1 MiB en el resto. Sin `Content-Length` (chunked) se corta al pasar el tope."""
+    def chunks(total: int):
+        for _ in range(total // 8192):
+            yield b" " * 8192
+
+    cases = (
+        ("/api/v1/webhooks/puntored/payments", 64 * 1024 + 1),
+        ("/api/v1/waitlist", 64 * 1024 + 1),
+        ("/api/v1/auth/register", 1024 * 1024 + 1),
+    )
+    for path, size in cases:
+        for content in (b" " * size, chunks(size + 8192)):
+            response = client.post(path, content=content, headers={"Content-Type": "application/json"})
+            assert response.status_code == 413, (path, response.text)
+            assert response.json()["error"]["code"] == "payload_too_large"
+    # Cortar un cuerpo chunked no deja un 500 con traceback en el log (un atacante podría llenarlo).
+    assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+    # Por debajo del tope todo sigue igual (aquí: JSON inválido → 422 del registro).
+    response = client.post(
+        "/api/v1/auth/register", content=b"{" + b" " * 70_000, headers={"Content-Type": "application/json"}
+    )
+    assert response.status_code == 422, response.text
+
+
+def test_engine_hides_sql_parameters():
+    """(revisión final) Un error de SQL que llega al log del 500 no lleva los valores enlazados (hash, correo)."""
+    assert engine.hide_parameters is True

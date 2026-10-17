@@ -1,10 +1,9 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Query, Request
-from pydantic import AwareDatetime
 from starlette.concurrency import run_in_threadpool
 
-from app.core.clock import LocalDate
+from app.core.clock import LocalDate, UtcDateTime
 from app.core.db import DbSession
 from app.core.deps import Pagination, require_role
 from app.core.errors import error_body
@@ -28,7 +27,7 @@ def get_sales_today(
     user: Merchant,
     db: DbSession,
     since: Annotated[
-        AwareDatetime | None,
+        UtcDateTime | None,  # sin zona o fuera de rango en UTC → 422 (R9)
         Query(description="El `next_since` de la respuesta anterior, tal cual (con microsegundos)."),
     ] = None,
 ) -> SalesToday:

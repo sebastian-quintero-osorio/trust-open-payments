@@ -390,3 +390,49 @@ def test_payout_wallet_revalidates_loan_after_go(client, db, make_merchant, make
     _error(response, 409, "active_loan_exists", "setPayoutWallet")
     db.refresh(merchant)
     assert merchant.payout_wallet_url == previous
+
+
+# ── Revisión final ────────────────────────────────────────────────────────────
+
+
+def test_text_fields_reject_nul_and_overlong(client, db, make_merchant, auth):
+    """(revisión final) 00-core: Postgres no guarda `\\u0000` en text (el insert daba 500); nombres y negocio ≤ 120,
+    ciudad ≤ 80 → 422 `validation_error` en register y en PATCH /me."""
+    invalid = [{field: "a\u0000b"} for field in ("first_name", "last_name", "city", "business_name")]
+    invalid += [{"first_name": "n" * 121}, {"last_name": "n" * 121}, {"business_name": "n" * 121}, {"city": "c" * 81}]
+    for fields in invalid:
+        _error(client.post("/api/v1/auth/register", json=_register_body(**fields)), 422, "validation_error", "register")
+    assert db.scalar(select(User.id)) is None
+
+    ok = client.post("/api/v1/auth/register", json=_register_body(first_name="n" * 120, city="c" * 80))
+    assert ok.status_code == 201, ok.text
+    assert_contract(ok, "register")
+
+    merchant = make_merchant()
+    for fields in ({"first_name": "x\u0000y"}, {"last_name": "x\u0000"}, {"city": "\u0000"}, {"city": "c" * 81}):
+        _error(client.patch("/api/v1/me", json=fields, headers=auth(merchant)), 422, "validation_error", "updateMe")
+    db.expire_all()
+    assert db.get(User, merchant.id).city == "Bucaramanga"
+
+
+def test_payout_wallet_rejects_nul_and_overlong_without_go(client, db, make_lender, auth, fake_op):
+    """(revisión final) R7: una dirección con `\\u0000` o de más de 2048 caracteres nunca es una URL válida → 422
+    `invalid_url` sin llamar a Go (con el fake se resolvía y el evento `payout_wallet_set` daba 500)."""
+    lender = make_lender(wallet=False)
+    for address in ("$ilp.interledger-test.dev/\u0000", "https://x.dev/a\u0000b", "https://x.dev/" + "a" * 2048):
+        response = client.put("/api/v1/me/payout-wallet", json={"wallet_address": address}, headers=auth(lender))
+        _error(response, 422, "invalid_url", "setPayoutWallet")
+    assert fake_op.calls_to("resolve_wallet_address") == []
+    db.expire_all()
+    assert db.get(User, lender.id).payout_wallet_url is None
+
+
+def test_money_input_with_too_many_digits_is_422(client, make_merchant, make_lender, auth):
+    """(revisión final) 00-core "Dinero": un `value` de miles de dígitos hacía fallar `int()` (500); más de 19
+    dígitos nunca cabe en bigint → 422 `validation_error`."""
+    huge = {"value": "9" * 5000, "asset_code": "COP", "asset_scale": 2}
+    lender = make_lender()
+    response = client.patch("/api/v1/me", json={"lender_range": {"min": cop(1).to_api(), "max": huge}},
+                            headers=auth(lender))
+    error = _error(response, 422, "validation_error", "updateMe")
+    assert "demasiado grande" in str(error["details"])

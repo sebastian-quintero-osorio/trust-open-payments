@@ -70,11 +70,15 @@ def format_hora(dt: datetime) -> str:
 def _as_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         raise ValueError("datetime sin zona horaria")
-    return dt.astimezone(UTC)
+    try:
+        return dt.astimezone(UTC)
+    except OverflowError:  # `0001-01-01T00:00:00+14:00` o `9999-12-31T23:59:59-14:00`: en UTC cae fuera de 1..9999
+        raise ValueError("La fecha está fuera del rango válido.") from None
 
 
 UtcDateTime = Annotated[datetime, AfterValidator(_as_utc)]
-"""Tipo para schemas de respuesta: se normaliza a UTC y Pydantic lo serializa con `Z`."""
+"""Se normaliza a UTC y Pydantic lo serializa con `Z`. En la entrada (query `since`, `occurred_at` del webhook) una
+fecha sin zona o que en UTC desborda es un `ValueError` → 422 / `invalid_payload`, nunca un 500."""
 
 
 _ISO_DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")  # `\d` aceptaría dígitos no ASCII

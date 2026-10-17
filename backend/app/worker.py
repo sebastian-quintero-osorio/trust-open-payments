@@ -25,7 +25,7 @@ from sqlalchemy.orm import Session
 from app.core import clock
 from app.core.config import get_settings
 from app.core.db import SessionLocal
-from app.core.events import record_event
+from app.core.events import Event, record_event
 from app.core.money import Money
 from app.integrations.op.client import OpClient, OpError, OpUnavailable, get_op_client
 from app.integrations.op.schemas import CreateTransferRequest, PositiveAmount, Transfer
@@ -56,6 +56,7 @@ LOANS_SERVICE = "app.modules.loans.service"  # 11-loans: on_disbursement_update,
 
 ACCOUNT_NOT_ACTIVE = "collection_account_not_active"
 GRANT_REVOKED = "grant_revoked"
+SUBMIT_UNKNOWN = "submit_unknown"  # evento de pata: el intento N se mandó a Go sin respuesta definitiva (R4)
 LEG_LABELS = {PayoutLeg.LENDER: "prestamista", PayoutLeg.MERCHANT: "negocio", PayoutLeg.TRUST: "Trust"}
 DELIVERED_LEGS = (PayoutLeg.LENDER, PayoutLeg.TRUST)  # suman a `loans.delivered_total` (R5)
 LEG_RANK = case(
@@ -168,22 +169,65 @@ def _hold(db: Session, payout: Payout, reason: str) -> None:
     record_event(db, "payout", payout.id, "held", {"reason": reason, "attempt": payout.attempt})
 
 
-def _revoke_account(db: Session, account: CollectionAccount, reason: str, now: datetime) -> list[Payout]:
-    """Cuenta `revoked` (si seguía activa) y todas sus patas `pending` → `held`. La cuenta ya está bloqueada."""
-    if account.status == CollectionAccountStatus.ACTIVE:
-        account.status, account.revoked_at = CollectionAccountStatus.REVOKED, now
-        record_event(db, "collection_account", account.id, "revoked", {"reason": reason, "source": "worker"})
+def _mark_submit_unknown(db: Session, payout: Payout) -> None:
+    """R4: el intento actual se mandó a Go y no hubo respuesta definitiva (Go pudo crear la transferencia). Un evento
+    por (pata, intento); deja de contar cuando la pata sale de `pending` o cambia de intento."""
+    marked = db.scalar(
+        select(Event.id)
+        .where(
+            Event.entity_type == "payout",
+            Event.entity_id == payout.id,
+            Event.type == SUBMIT_UNKNOWN,
+            Event.data["attempt"].as_integer() == payout.attempt,
+        )
+        .limit(1)
+    )
+    if marked is None:
+        record_event(db, "payout", payout.id, SUBMIT_UNKNOWN, {"attempt": payout.attempt})
+
+
+def _submit_unknown_ids(db: Session, payouts: Iterable[Payout]) -> set[uuid.UUID]:
+    """De estas patas, las que tienen su intento actual marcado `submit_unknown`."""
+    attempts = {payout.id: payout.attempt for payout in payouts}
+    if not attempts:
+        return set()
+    rows = db.execute(
+        select(Event.entity_id, Event.data["attempt"].as_integer()).where(
+            Event.entity_type == "payout", Event.type == SUBMIT_UNKNOWN, Event.entity_id.in_(attempts)
+        )
+    ).all()
+    return {payout_id for payout_id, attempt in rows if attempts.get(payout_id) == attempt}
+
+
+def pending_legs_to_hold(db: Session, account_id: uuid.UUID) -> list[Payout]:
+    """Patas `pending` de la cuenta que pasan a `held` al revocarla (aquí y en 16 R6), bloqueadas en el orden de J1.
+
+    Quedan fuera las de envío ambiguo (`submit_unknown`): Go pudo haber creado su transferencia (una respuesta
+    perdida) y revocar no cancela un pago ya creado. Siguen `pending` y J1 repite la misma clave: un 201 repetido →
+    `processing` (J2 la contabiliza); una 409 `collection_account_not_active` → no se creó nada → `held`.
+    """
     pending = db.scalars(
         select(Payout)
         .join(Sale, Sale.id == Payout.sale_id)
-        .where(Sale.collection_account_id == account.id, Payout.status == PayoutStatus.PENDING)
+        .where(Sale.collection_account_id == account_id, Payout.status == PayoutStatus.PENDING)
         .order_by(Payout.created_at, LEG_RANK, Payout.id)
         .with_for_update(of=Payout)
         .execution_options(populate_existing=True)
     ).all()
-    for payout in pending:
+    unknown = _submit_unknown_ids(db, pending)
+    return [payout for payout in pending if payout.id not in unknown]
+
+
+def _revoke_account(db: Session, account: CollectionAccount, reason: str, now: datetime) -> list[Payout]:
+    """Cuenta `revoked` (si seguía activa) y sus patas `pending` → `held` (salvo las de envío ambiguo). La cuenta ya
+    está bloqueada."""
+    if account.status == CollectionAccountStatus.ACTIVE:
+        account.status, account.revoked_at = CollectionAccountStatus.REVOKED, now
+        record_event(db, "collection_account", account.id, "revoked", {"reason": reason, "source": "worker"})
+    held = pending_legs_to_hold(db, account.id)
+    for payout in held:
         _hold(db, payout, reason)
-    return list(pending)
+    return held
 
 
 def _fail_final(db: Session, payout: Payout, failure_code: str, last_error: str) -> None:
@@ -303,9 +347,11 @@ def _apply_submitted(db: Session, leg: _Leg, transfer: Transfer) -> None:
 
 
 def _apply_deferred(db: Session, leg: _Leg, now: datetime) -> None:
+    """Misma clave en 10 s; el intento queda marcado `submit_unknown` (Go pudo haberlo creado)."""
     payout = _locked(db, Payout, leg.id)
     if _unchanged(payout, leg):
         payout.next_attempt_at = now + SUBMIT_RETRY_DELAY
+        _mark_submit_unknown(db, payout)
 
 
 def _apply_rejected(db: Session, leg: _Leg, exc: OpError) -> None:
@@ -325,7 +371,12 @@ def _submit_one(db: Session, op: OpClient, leg: _Leg, now: datetime, blocked: se
             blocked.add(leg.account_id)
             account = _locked(db, CollectionAccount, leg.account_id)
             if account is not None:
-                _revoke_account(db, account, ACCOUNT_NOT_ACTIVE, now)
+                held = {payout.id for payout in _revoke_account(db, account, ACCOUNT_NOT_ACTIVE, now)}
+                # Para la clave de esta pata la 409 es definitiva (Go repetiría un 201 guardado): retenerla es seguro
+                # aunque su intento estuviera marcado `submit_unknown`.
+                payout = _locked(db, Payout, leg.id)
+                if payout is not None and payout.id not in held and _unchanged(payout, leg):
+                    _hold(db, payout, ACCOUNT_NOT_ACTIVE)
         elif exc.retryable or exc.status == 401 or (exc.status == 409 and exc.code == "request_in_progress"):
             # R4 / 02 R3: retryable, 401 y request_in_progress = Go caído
             logger.warning("worker: %s al enviar %s; misma clave en 10 s", exc, leg.key)
@@ -527,7 +578,13 @@ def job_expire_pending(db: Session, op: OpClient, now: datetime) -> None:
 
 
 def job_reconcile(db: Session, op: OpClient, now: datetime) -> None:
-    """J5: pagos del simulador desde el cursor → `process_puntored_event(…, "reconciliation")` y cursor nuevo."""
+    """J5: pagos del simulador desde el cursor → `process_puntored_event(…, "reconciliation")`, uno por transacción.
+
+    Commit por item: la cuenta y el crédito que bloquea un item se sueltan antes del siguiente (con una sola
+    transacción, un webhook en vivo del mismo evento esperaba la cuenta mientras J5 esperaba su `webhook_events`:
+    deadlock). El cursor avanza solo por el tramo inicial de items terminados sin error: un item que lanzó o que sigue
+    `processing` se repite en la próxima reconciliación (el dedup por `event_id` y referencia lo hace seguro).
+    """
     cursor = _get_cursor(db, SIM_QR_CURSOR) or 0
     db.commit()  # sin transacción abierta durante la llamada a Go
     try:
@@ -535,22 +592,34 @@ def job_reconcile(db: Session, op: OpClient, now: datetime) -> None:
     except OpUnavailable as exc:
         logger.warning("worker: op-service no disponible para reconciliar (%s); se reintenta en 30 s", exc)
         return
-    counts = {"processed": 0, "duplicate": 0, "unmatched": 0, "ignored": 0, "skipped": 0, "error": 0}
+    counts = {"processed": 0, "duplicate": 0, "unmatched": 0, "ignored": 0, "skipped": 0, "pending": 0, "error": 0}
+    new_cursor, contiguous = cursor, True
     for item in page.items:
-        if item.status != "completed" or item.webhook_event is None:
+        done = True
+        if item.status == "processing":  # sin resultado todavía: el cursor no lo pasa
+            counts["pending"] += 1
+            done = False
+        elif item.status != "completed" or item.webhook_event is None:
             counts["skipped"] += 1
-            continue
-        try:
-            with db.begin_nested():
+        else:
+            try:
                 result = process_puntored_event(db, item.webhook_event, WebhookSource.RECONCILIATION)
-            counts[result.status] += 1
-        except Exception:
-            counts["error"] += 1
-            logger.exception("worker: falló la reconciliación del pago simulado %s (seq %s)", item.id, item.seq)
-    _set_cursor(db, SIM_QR_CURSOR, max(cursor, page.next_after), now)
+                db.commit()
+                counts[result.status] += 1
+            except Exception:
+                db.rollback()
+                counts["error"] += 1
+                done = False
+                logger.exception("worker: falló la reconciliación del pago simulado %s (seq %s)", item.id, item.seq)
+        contiguous = contiguous and done
+        if contiguous and item.seq is not None:
+            new_cursor = max(new_cursor, item.seq)
+    if contiguous:
+        new_cursor = max(new_cursor, page.next_after)
+    _set_cursor(db, SIM_QR_CURSOR, new_cursor, now)
     db.commit()
     if page.items:
-        logger.info("worker: reconciliación desde %d hasta %d: %s", cursor, page.next_after, counts)
+        logger.info("worker: reconciliación desde %d hasta %d: %s", cursor, new_cursor, counts)
 
 
 # ── J6 · cierre diario (R9) ───────────────────────────────────────────────────

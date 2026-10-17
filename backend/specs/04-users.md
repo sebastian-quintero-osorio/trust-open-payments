@@ -28,7 +28,7 @@ Registro, login con JWT (web y móvil), el perfil `/me` que pinta los encabezado
 ```
 
 ## Reglas
-- **R1.** Email se guarda y se compara en minúsculas (login insensible a mayúsculas). Contraseña de 8 a 72 bytes UTF-8, con bcrypt (`core/security.py`); fuera de ese rango, 422 `validation_error` en register. En login, una contraseña de más de 72 bytes responde 401 `invalid_credentials` sin llamar a bcrypt.
+- **R1.** Email se guarda y se compara en minúsculas (login insensible a mayúsculas). `first_name`, `last_name` y `business_name` de 1 a 120 caracteres y `city` de 1 a 80 (tras `strip()`), sin `\u0000`; si no, 422 `validation_error` (register y PATCH). Contraseña de 8 a 72 bytes UTF-8, con bcrypt (`core/security.py`); fuera de ese rango, 422 `validation_error` en register. En login, una contraseña de más de 72 bytes responde 401 `invalid_credentials` sin llamar a bcrypt.
 - **R2.** Register: `role` solo `merchant` o `lender` (`admin` → 422 `validation_error`); `business_name` obligatorio si es `merchant` (422) e ignorado si es `lender`; email repetido → 409 `already_exists`. Devuelve token, igual que login.
 - **R3.** Login: email inexistente o contraseña errada → 401 `invalid_credentials`, mismo mensaje en los dos casos. JWT según `00-core` (`sub`, `role`, `exp`).
 - **R4. `initials`**: negocio → regla de `MerchantRef` sobre `business_name`; prestamista y admin → inicial de `first_name` + inicial de `last_name`, en mayúscula. **`public_name`**: regla de `LenderRef` para todos los roles.
@@ -37,7 +37,7 @@ Registro, login con JWT (web y móvil), el perfil `/me` que pinta los encabezado
 - **R7. PUT payout-wallet**, en este orden:
   1. Rol `admin` → 403 `forbidden`.
   2. Si el usuario tiene un crédito no terminal (como `merchant_id` o `lender_id`) → 409 `active_loan_exists`, **sin** llamar a Go.
-  3. Commit/cierre de la transacción y `op.resolve_wallet_address(wallet_address)` (acepta `https://…` o `$host/path`).
+  3. Una dirección con `\u0000` o de más de 2048 caracteres → 422 `invalid_url` sin llamar a Go. Si no, commit/cierre de la transacción y `op.resolve_wallet_address(wallet_address)` (acepta `https://…` o `$host/path`).
   4. Negocio: `asset_code` y `asset_scale` deben ser los de mercado (COP/2; una wallet COP con escala 0 también es `asset_mismatch`) → 422 `asset_mismatch`. Prestamista: cualquier asset.
   5. En una transacción nueva, revalida el paso 2 y guarda `payout_wallet_url` (= `url` exacta que devuelve Go), `payout_wallet_public_name`, `payout_asset_code`, `payout_asset_scale`; si cambió, `record_event(db, "user", id, "payout_wallet_set", {url, asset_code, asset_scale}, actor_id=id)`.
 - **R8. Errores de Go**: `OpError` 422 `wallet_not_found` / `invalid_url` → 422 con el mismo código; otro `OpError` → 502 `op_unavailable`; `OpUnavailable` → 503 `op_unavailable`. Ante cualquier error no se guarda nada.

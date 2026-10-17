@@ -6,6 +6,7 @@ urlencoded con `tipo, nombre, correo, ciudad, website` (el honeypot llega vacío
 """
 
 import threading
+from types import SimpleNamespace
 from urllib.parse import urlencode
 
 import pytest
@@ -20,6 +21,7 @@ from app.modules.notifications.models import Notification
 from app.modules.users.models import User
 from app.modules.waitlist import service
 from app.modules.waitlist.models import WaitlistEntry
+from app.modules.waitlist.router import client_ip
 from app.modules.waitlist.schemas import WaitlistRequest
 from tests.helpers import assert_contract
 
@@ -33,8 +35,10 @@ MARTA = {"tipo": "comercio", "nombre": "Marta Rojas", "correo": "Marta@Ejemplo.c
 
 
 @pytest.fixture(autouse=True)
-def _fresh_limiter():
-    """Todos los envíos del TestClient salen de la misma IP: el límite empieza en cero en cada test."""
+def _fresh_limiter(settings, monkeypatch):
+    """Todos los envíos del TestClient salen de la misma IP: el límite empieza en cero en cada test. El TestClient
+    (`testclient`) hace de Caddy: su `X-Forwarded-For` se cree (R7, `TRUSTED_PROXIES`)."""
+    monkeypatch.setattr(settings, "trusted_proxies", ["testclient"])
     service.limiter.reset()
     yield
     service.limiter.reset()
@@ -129,7 +133,7 @@ def test_ac3_waitlist_validation(client, db):
     )
     for body in invalid:
         _error(_json(client, body, ip=next(ips)), 422, "validation_error")
-    for raw in (b"{no es json", b"", b"[1, 2]", b'"texto"', b"[" * 100000):  # el último: RecursionError
+    for raw in (b"{no es json", b"", b"[1, 2]", b'"texto"', b"[" * 20000):  # el último: RecursionError (< 64 KiB)
         headers = {**JSON_HEADERS, "X-Forwarded-For": next(ips)}
         _error(client.post(URL, content=raw, headers=headers), 422, "validation_error")
     assert _rows(db) == []
@@ -273,3 +277,41 @@ def test_r7_window_slides():
     assert limiter.hit("1.2.3.4") is not None
     limiter.reset()
     assert limiter.hit("1.2.3.4") is None
+
+
+# ── Revisión final ────────────────────────────────────────────────────────────
+
+
+def test_r7_forwarded_for_only_from_trusted_proxy(client, db, settings, monkeypatch):
+    """(revisión final) R7: sin proxy de confianza, `X-Forwarded-For` no cuenta (antes cada petición inventaba una IP
+    y nunca llegaba el 429); detrás de un proxy de `TRUSTED_PROXIES` (IP o CIDR) se usa su primer valor."""
+    monkeypatch.setattr(settings, "trusted_proxies", [])
+    for n in range(10):
+        response = _json(client, {**MARTA, "correo": f"spoof{n}@ejemplo.com"}, ip=f"10.0.0.{n}")
+        assert response.status_code == 201, (n, response.text)
+    _error(_json(client, {**MARTA, "correo": "spoof10@ejemplo.com"}, ip="10.0.0.10"), 429, "rate_limited")
+
+    request = SimpleNamespace(headers={"x-forwarded-for": "203.0.113.9, 10.0.0.1"}, client=SimpleNamespace(host=""))
+    for peer, trusted, expected in (
+        ("172.18.0.5", [], "172.18.0.5"),
+        ("172.18.0.5", ["172.16.0.0/12"], "203.0.113.9"),
+        ("172.18.0.5", ["172.18.0.5"], "203.0.113.9"),
+        ("8.8.8.8", ["172.16.0.0/12", "no-es-ip"], "8.8.8.8"),
+    ):
+        monkeypatch.setattr(settings, "trusted_proxies", trusted)
+        request.client.host = peer
+        assert client_ip(request) == expected, (peer, trusted)
+
+
+def test_r7_limiter_memory_is_bounded():
+    """(revisión final) R7: con muchas IPs distintas dentro de la ventana, el limitador recuerda a lo sumo `max_keys`
+    (olvida las menos recientes) y borra las que salieron de la ventana."""
+    now = [1000.0]
+    limiter = service.RateLimiter(limit=2, window=60, now=lambda: now[0], max_keys=100)
+    for n in range(1000):
+        assert limiter.hit(f"10.0.{n // 256}.{n % 256}") is None
+    assert len(limiter) == 100
+    assert limiter.hit("10.0.3.231") is None and limiter.hit("10.0.3.231") is not None  # la más reciente sigue
+    now[0] += 61
+    assert limiter.hit("1.1.1.1") is None
+    assert len(limiter) == 1

@@ -40,10 +40,12 @@ class Base(DeclarativeBase):
     }
 
 
-# Las sesiones de Postgres van en UTC: los timestamptz vuelven con tzinfo UTC.
+# Las sesiones de Postgres van en UTC: los timestamptz vuelven con tzinfo UTC. `hide_parameters`: el mensaje de un
+# error de SQL (que el handler de 500 loguea) no lleva los valores enlazados (hashes, correos, wallets).
 engine = create_engine(
     get_settings().database_url,
     pool_pre_ping=True,
+    hide_parameters=True,
     connect_args={"options": "-c timezone=UTC"},
 )
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)

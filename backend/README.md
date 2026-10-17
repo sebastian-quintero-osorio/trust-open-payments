@@ -91,8 +91,9 @@ Con `DEV_ENDPOINTS_ENABLED=true` existen los atajos `/api/v1/dev/*` (con false r
 | `GET /dev/fake-wallet/authorize/{payment_id}` | Wallet falsa del prestamista (solo `OP_CLIENT=fake`): Aprobar / Rechazar el desembolso |
 
 Usuarios del seed (contraseña `DEMO_PASSWORD`, por defecto `trust2026`): `marta@demo.trust` (Tienda La Esquina, grado A,
-cupo $6.000.000), `trigal@demo.trust`, `nova@demo.trust`, `camilo@demo.trust` (prestamista, rango $1.000.000–$2.500.000)
-y `admin@demo.trust`.
+cupo $6.000.000), `trigal@demo.trust`, `nova@demo.trust`, `camilo@demo.trust` (prestamista, rango $1.000.000–$2.500.000).
+`admin@demo.trust` entra solo con `DEMO_ADMIN_PASSWORD` (secreta, ≥ 12 caracteres; el seed no la devuelve). Sin ella el
+admin del seed no puede entrar: `DEMO_PASSWORD` es pública y la cuenta sigue viva aunque se apague `/dev`.
 
 Flujo de la demo (lo que recorre el smoke, paso a paso):
 
@@ -171,8 +172,11 @@ docker compose logs -f api
 - `docker compose up -d db` funciona sin `.env`; la API no arranca sin `JWT_SECRET`.
 - HTTPS: descomenta el servicio `caddy` de `docker-compose.yml` (certificados automáticos de Let's Encrypt), apunta el
   DNS del dominio a la instancia, abre 80/443 en el security group y deja de publicar el 8000. El rate limit de la
-  lista de espera toma la IP de `X-Forwarded-For`, que pone Caddy.
-- Security group: no abras 5433 (Postgres usa `trust`/`trust`) ni 8000 si usas Caddy.
+  lista de espera toma la IP de `X-Forwarded-For` solo si la conexión viene de `TRUSTED_PROXIES` (con el Caddy de
+  compose, `TRUSTED_PROXIES=172.16.0.0/12`); sin proxy usa la IP de la conexión.
+- Postgres se publica solo en `127.0.0.1:5433`; en un servidor define `POSTGRES_PASSWORD` antes del primer
+  `docker compose up` (y la misma clave en `TRUST_API_DATABASE_URL` si la cambias). No abras 8000 si usas Caddy.
+- Cuerpos de más de 1 MiB (64 KiB en el webhook y la lista de espera) → 413 `payload_too_large`.
 - Si op-service corre en la misma máquina fuera de compose, la API lo alcanza en `http://host.docker.internal:<puerto>`.
 - Actualizar: `git pull && docker compose up -d --build api`. Las tablas nuevas se crean al arrancar, pero
   `create_all` no altera tablas existentes: un cambio de columnas pide recrear la base (no hay migraciones en el MVP).

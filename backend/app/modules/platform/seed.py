@@ -10,6 +10,7 @@ posteriores se activan solos cuando sus módulos existen (`optional_attr`):
 
 import logging
 import random
+import secrets
 import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -82,6 +83,18 @@ def seed_wallet_url(spec: SeedUserSpec) -> str | None:
     return f"{PLACEHOLDER_WALLET_PREFIX}{spec.slug}"
 
 
+def _sync_admin_password(user: User) -> None:
+    """R5: admin@demo.trust entra con DEMO_ADMIN_PASSWORD (secreta, nunca en la respuesta). Sin ella, una contraseña
+    aleatoria que nadie conoce; si quedó con DEMO_PASSWORD (seed anterior), se cambia: ningún admin con clave pública.
+    """
+    settings = get_settings()
+    if settings.demo_admin_password:
+        if not security.verify_password(settings.demo_admin_password, user.password_hash):
+            user.password_hash = security.hash_password(settings.demo_admin_password)
+    elif security.verify_password(settings.demo_password, user.password_hash):
+        user.password_hash = security.hash_password(secrets.token_urlsafe(32))
+
+
 def _ensure_users(db: Session) -> dict[str, User]:
     """Crea los que faltan (buscando por email) y completa wallet y rango si no los tienen. No hace commit."""
     settings = get_settings()
@@ -89,9 +102,10 @@ def _ensure_users(db: Session) -> dict[str, User]:
     for spec in SEED_USERS:
         user = db.scalar(select(User).where(User.email == spec.email))
         if user is None:
+            password = settings.demo_password if spec.role != UserRole.ADMIN else secrets.token_urlsafe(32)
             user = User(
                 email=spec.email,
-                password_hash=security.hash_password(settings.demo_password),
+                password_hash=security.hash_password(password),
                 role=spec.role,
                 first_name=spec.first_name,
                 last_name=spec.last_name,
@@ -99,6 +113,8 @@ def _ensure_users(db: Session) -> dict[str, User]:
                 city=spec.city,
             )
             db.add(user)
+        if spec.role == UserRole.ADMIN:
+            _sync_admin_password(user)
         wallet = seed_wallet_url(spec)
         if wallet is not None and user.payout_wallet_url is None:
             # Directo en `users`, sin llamar a Go, en el asset de mercado (R5).
@@ -547,6 +563,7 @@ def run_seed(db: Session, op: OpClient, with_active_loan_for_marta: bool = False
                 label=spec.label,
             )
             for spec in SEED_USERS
+            if spec.role != UserRole.ADMIN  # su contraseña no se publica (R5)
         ],
         seed_sales=seed_sales or 0,
         open_offers=open_offers or 0,

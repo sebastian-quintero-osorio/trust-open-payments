@@ -4,7 +4,7 @@ import json
 import math
 import threading
 import time
-from collections import deque
+from collections import OrderedDict, deque
 from collections.abc import Callable
 from typing import Any
 from urllib.parse import parse_qs
@@ -21,19 +21,28 @@ from app.modules.waitlist.schemas import WaitlistRequest
 
 RATE_LIMIT = 10  # peticiones
 RATE_WINDOW_SECONDS = 60.0
-_PRUNE_ABOVE = 10_000  # IPs guardadas antes de limpiar las que ya salieron de la ventana
+MAX_KEYS = 10_000  # IPs recordadas a la vez: tope de memoria aunque lleguen muchas IPs distintas en la ventana
 
 
 class RateLimiter:
-    """Ventana deslizante por clave (IP), en memoria: hay un solo proceso (00-core, "Concurrencia")."""
+    """Ventana deslizante por clave (IP), en memoria: hay un solo proceso (00-core, "Concurrencia").
+
+    Las claves van en orden de último uso: las que salieron de la ventana se borran desde el frente y, si aun así
+    hay más de `max_keys`, se olvidan las menos recientes (la memoria queda acotada).
+    """
 
     def __init__(
-        self, limit: int = RATE_LIMIT, window: float = RATE_WINDOW_SECONDS, now: Callable[[], float] = time.monotonic
+        self,
+        limit: int = RATE_LIMIT,
+        window: float = RATE_WINDOW_SECONDS,
+        now: Callable[[], float] = time.monotonic,
+        max_keys: int = MAX_KEYS,
     ):
         self.limit = limit
         self.window = window
         self.now = now
-        self._hits: dict[str, deque[float]] = {}
+        self.max_keys = max_keys
+        self._hits: OrderedDict[str, deque[float]] = OrderedDict()
         self._lock = threading.Lock()
 
     def hit(self, key: str) -> int | None:
@@ -42,18 +51,25 @@ class RateLimiter:
         now = self.now()
         with self._lock:
             hits = self._hits.setdefault(key, deque())
+            self._hits.move_to_end(key)
             while hits and hits[0] <= now - self.window:
                 hits.popleft()
             if len(hits) >= self.limit:
                 return max(1, math.ceil(hits[0] + self.window - now))
             hits.append(now)
-            if len(self._hits) > _PRUNE_ABOVE:
-                self._prune(now)
+            self._prune(now)
             return None
 
     def _prune(self, now: float) -> None:
-        for key in [k for k, hits in self._hits.items() if not hits or hits[-1] <= now - self.window]:
-            del self._hits[key]
+        while self._hits:
+            oldest_key, oldest = next(iter(self._hits.items()))
+            expired = not oldest or oldest[-1] <= now - self.window
+            if not expired and len(self._hits) <= self.max_keys:
+                break
+            del self._hits[oldest_key]
+
+    def __len__(self) -> int:
+        return len(self._hits)
 
     def reset(self) -> None:
         """Olvida todas las peticiones (tests)."""
