@@ -34,11 +34,7 @@ func (s *Service) callback(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = tx.Rollback(r.Context()) }()
 	claim, e := s.Work.VerifyAndConsume(r.Context(), tx, id, q.Get("interact_ref"), q.Get("hash"), q.Get("result"))
 	if e != nil {
-		code := 400
-		if errors.Is(e, pgx.ErrNoRows) {
-			code = 400
-		}
-		http.Error(w, "Invalid callback", code)
+		http.Error(w, "Invalid callback", http.StatusBadRequest)
 		return
 	}
 	var kind string

@@ -86,7 +86,8 @@ func TestReplayConflictRollbackExpiryAndRestart(t *testing.T) {
 	if transientCalls != 2 {
 		t.Fatal("transient response cached")
 	}
-	if _, e = s.GetResource(ctx, "payment", transientID); e != pgx.ErrNoRows {
+	var payload []byte
+	if e = s.Pool.QueryRow(ctx, "SELECT payload FROM resources WHERE kind=$1 AND id=$2", "payment", transientID).Scan(&payload); e != pgx.ErrNoRows {
 		t.Fatal("transient mutation committed", e)
 	}
 	if _, e = s.Pool.Exec(ctx, "UPDATE idempotency_records SET expires_at=now()-interval '1 second' WHERE scope=$1 AND key=$2", "POST /v1/transfers", key); e != nil {
@@ -95,8 +96,8 @@ func TestReplayConflictRollbackExpiryAndRestart(t *testing.T) {
 	r, e = s.Execute(ctx, "POST /v1/transfers", key, sha256.Sum256([]byte(`{"a":2}`)), func(context.Context, pgx.Tx) (Response, error) {
 		return Response{Status: 422, Body: []byte(`{"error":{"code":"invalid_amount"}}`)}, nil
 	})
-	if e != nil || r.Replayed || r.Status != 422 {
-		t.Fatal("expired key not reusable", r, e)
+	if e != ErrConflict {
+		t.Fatal("financial intent lost after cache expiry", r, e)
 	}
 	t.Cleanup(func() {
 		_, e := s.Pool.Exec(context.Background(), "DELETE FROM resources WHERE id=$1", id)
@@ -172,7 +173,8 @@ func TestDefinitiveErrorsNeverCommitResources(t *testing.T) {
 	if e != nil || !r.Replayed || r.Status != 400 {
 		t.Fatal("definitive response not replayed", r, e)
 	}
-	if _, e := s.GetResource(ctx, "payment", id); e != pgx.ErrNoRows {
+	var payload []byte
+	if e := s.Pool.QueryRow(ctx, "SELECT payload FROM resources WHERE kind=$1 AND id=$2", "payment", id).Scan(&payload); e != pgx.ErrNoRows {
 		t.Fatal("error response committed a resource", e)
 	}
 }

@@ -72,7 +72,7 @@ func (s *Service) startSim(ctx context.Context, tx pgx.Tx, input domain.CreateSi
 	if _, e = tx.Exec(ctx, "INSERT INTO sim_entries(resource_id) VALUES($1)", id); e != nil {
 		return persistence.Response{}, e
 	}
-	f := Flow{Kind: "sim_payment", Stage: "incoming", Source: source, Receiver: receiver, GrantID: grantID, AccountID: input.CollectionAccountID, Amount: op.Wire(amount), UseQuote: true, ExternalRef: "sim:" + id, BreReference: reference}
+	f := Flow{Kind: "sim_payment", Stage: "incoming", Source: source, Receiver: receiver, AccountID: input.CollectionAccountID, Amount: op.Wire(amount), UseQuote: true, ExternalRef: "sim:" + id, BreReference: reference}
 	if _, e = s.Work.Enqueue(ctx, tx, id, grantID, "start", f, time.Now()); e != nil {
 		return persistence.Response{}, e
 	}

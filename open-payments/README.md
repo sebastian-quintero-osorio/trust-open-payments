@@ -46,7 +46,10 @@ Se rechazan claves JSON duplicadas y documentos adicionales.
 
 La idempotencia usa locks transaccionales no bloqueantes por método/ruta/clave.
 La creación del recurso y su respuesta se guardan en una misma transacción.
-Se conservan 72 horas los 2xx y errores definitivos 400/404/409 de estado/422;
+La caché conserva 72 horas los 2xx y errores definitivos 400/404/409 de estado/422;
+los 2xx financieros tienen además recibos durables por método/ruta/clave sin vencimiento,
+para que limpiar la caché no permita repetir dinero. La migración recupera los recibos
+todavía presentes, incluidos los vencidos que no se hayan limpiado;
 los 401, 5xx y `request_in_progress` no se guardan. Los errores tampoco confirman
 mutaciones del recurso. Los replays conservan status, bytes y headers seguros.
 Un callback de repositorio **solo puede efectuar cambios locales**: los efectos
@@ -76,8 +79,11 @@ ejecutan localmente. No se ha configurado protección remota ni ejecutado Action
 
 Las pruebas reales de Open Payments requieren una wallet Trust, clave Ed25519
 registrada y wallets de usuarios separados para recaudo, ingresos y pagador demo.
-El backend FastAPI aún no existe en este repositorio; la integración final requiere
-su API y receptor de webhooks. Las pruebas locales no certifican el comportamiento de la wallet real.
+El backend FastAPI está en `../backend/` e incluye cliente HTTP, receptor de webhooks
+y workers para desembolsos, repartición y conciliación. Por defecto usa `OP_CLIENT=fake`;
+la conexión con este servicio requiere `OP_CLIENT=http`. Ver la configuración de
+dominio y red interna en [la guía operativa](docs/operations.md).
+Las pruebas locales no certifican el comportamiento de la wallet real.
 
 Referencias: [Open Payments](https://openpayments.dev/),
 [pgx](https://github.com/jackc/pgx),
@@ -133,6 +139,10 @@ Cada salida incluye metadata.external_ref y un op_operation_id único. El checkp
 previo al POST evita repetir salidas tras un reinicio o una respuesta perdida. En
 ese caso se busca el outgoing por metadata y se mantiene processing mientras su
 resultado siga incierto. **La ausencia en un listado no autoriza un nuevo envío**.
+Una revocación, error de rotación o expiración del incoming después de intentar la
+salida mantiene `processing` con `retryable=false`; el log indica
+`reconciliation_required`. No se publica un fallo financiero por perder acceso al
+resultado. Los grants nuevos solicitan `list` además de `create` y `read`.
 Si no puede encontrarse, se necesita conciliación del operador, no un reintento de
 pago. La aplicación nunca modifica montos ni reenvía automáticamente dinero.
 

@@ -29,13 +29,15 @@ info:
     ## Convenciones
     - **Autenticación**: header `X-Internal-Api-Key` en todo `/v1/*`, salvo `/v1/health` y `/v1/interact/finish/*`.
     - **Idempotencia**: `Idempotency-Key` es obligatorio en todo POST de `/v1/*`; su alcance es (método, ruta).
-      op-service guarda por 72 h solo las respuestas 2xx y las 4xx definitivas (400, 404, 409 de estado, 422). Nunca
+      La caché de respuestas dura 72 h para 2xx y 4xx definitivas (400, 404, 409 de estado, 422). Las respuestas
+      2xx que crean pagos, transferencias o pagos simulados tienen además un recibo durable, sin vencimiento,
+      para impedir repetir el mismo intento financiero después de limpiar la caché. Nunca
       guarda 5xx, 401 ni `409 request_in_progress`: con esas, un reintento con la misma clave vuelve a ejecutar.
       Misma clave + mismo cuerpo = se repite la respuesta guardada con su **status original** (por ejemplo 201) y el header
       `Idempotent-Replayed: true`. El cuerpo se compara como JSON canónico (claves ordenadas, sin espacios). Misma clave
       + otro cuerpo = `409 idempotency_conflict`. Si la primera petición sigue en curso = `409 request_in_progress`
       (`retryable: true`). Ante timeout, 5xx o `request_in_progress`, Trust reintenta con la **misma** clave.
-      Claves de Trust: `merchant:{uuid}:recaudo`, `payout:{uuid}:{intento}`, `loan:{uuid}:disb:{intento}`, `sim:{uuid}`.
+      Claves de Trust (opacas para Go): `merchant:{uuid}:recaudo` (o `merchant:{uuid}:recaudo:{n}` si la cuenta anterior fue revocada), `payout:{uuid}:{intento}`, `loan:{uuid}:disb:{intento}`, `sim:{uuid}`.
       El `external_ref` NO es único entre intentos (todos los intentos de una pata comparten `payout:{uuid}`).
     - **Montos**: `{value, asset_code, asset_scale}` como en Open Payments. `value` es un entero en unidades mínimas
       serializado como string. Ejemplo: `{"value":"4800","asset_code":"USD","asset_scale":2}` = 48,00 USD. Nunca floats.
@@ -532,7 +534,7 @@ paths:
       tags: [browser, puntored-sim]
       operationId: qrPage
       summary: Página pública "Pagar con Bre-B (simulado)"
-      description: Es el `qr_payload` de cada cuenta de recaudo. Muestra el `display_name` del negocio y un campo de monto. Solo si `SIM_ENABLED=true`.
+      description: Es el `qr_payload` de cada cuenta de recaudo. Muestra el `display_name` del negocio y un campo de monto solo si `SIM_ENABLED=true`. Con el canal desactivado, devuelve una página de indisponibilidad (503), sin formulario.
       security: []
       parameters:
         - $ref: '#/components/parameters/CollectionAccountId'
@@ -543,7 +545,12 @@ paths:
             text/html:
               schema: { type: string }
         '404':
-          description: Cuenta inexistente o simulador apagado
+          description: Cuenta inexistente o revocada
+          content:
+            text/html:
+              schema: { type: string }
+        '503':
+          description: Canal de pago no disponible; página HTML sin formulario de pago
           content:
             text/html:
               schema: { type: string }
@@ -579,6 +586,11 @@ paths:
               schema: { type: string }
         '429':
           description: Demasiados pagos desde esta IP
+          content:
+            text/html:
+              schema: { type: string }
+        '503':
+          description: Canal de pago no disponible; no se ejecuta ningún pago
           content:
             text/html:
               schema: { type: string }

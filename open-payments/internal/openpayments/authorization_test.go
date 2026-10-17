@@ -46,6 +46,13 @@ func TestInteractiveContinueRotateAndCancelUseOpaqueURLs(t *testing.T) {
 				t.Error("incorrect interaction finish")
 			}
 			access := p["access_token"].(map[string]any)["access"].([]any)[0].(map[string]any)
+			permissions := map[string]bool{}
+			for _, action := range access["actions"].([]any) {
+				permissions[action.(string)] = true
+			}
+			if !permissions["create"] || !permissions["read"] || !permissions["list"] {
+				t.Error("outgoing grant cannot create, read and reconcile payments")
+			}
 			if access["limits"].(map[string]any)["debitAmount"].(map[string]any)["value"] != "123" {
 				t.Error("missing debit limit")
 			}

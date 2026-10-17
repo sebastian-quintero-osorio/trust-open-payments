@@ -162,7 +162,6 @@ func (s *Service) beginConsent(ctx context.Context, tx pgx.Tx, id string, w op.W
 		return consent{}, e
 	}
 	flow.Source = w
-	flow.GrantID = sessionID
 	if e = s.saveFlow(ctx, tx, id, flow); e != nil {
 		return consent{}, e
 	}

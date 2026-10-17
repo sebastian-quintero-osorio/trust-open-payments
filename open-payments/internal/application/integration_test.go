@@ -42,6 +42,7 @@ type protocolFixture struct {
 	extraDebit, rejectDirect      bool
 	failBalance, lostResponse     bool
 	webhookFailures               int
+	outgoingActions               map[string]bool
 	webhooks                      [][]byte
 	signatures                    []string
 }
@@ -76,6 +77,11 @@ func (f *protocolFixture) serve(w http.ResponseWriter, r *http.Request) {
 		id := uuid.NewString()
 		grant := map[string]any{"continue": map[string]any{"uri": f.base + "/opaque/c/" + id, "access_token": map[string]string{"value": "continuation"}, "wait": 0}}
 		if body["interact"] != nil {
+			f.outgoingActions = map[string]bool{}
+			access := body["access_token"].(map[string]any)["access"].([]any)[0].(map[string]any)
+			for _, action := range access["actions"].([]any) {
+				f.outgoingActions[action.(string)] = true
+			}
 			grant["interact"] = map[string]string{"redirect": f.base + "/consent/" + id, "finish": "server-nonce"}
 		} else {
 			grant["access_token"] = map[string]any{"value": "incoming-token", "manage": f.base + "/opaque/m/" + id, "expires_in": 600}
@@ -140,6 +146,10 @@ func (f *protocolFixture) serve(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.HasSuffix(path, "/outgoing-payments") {
 		if r.Method == "GET" {
+			if !f.outgoingActions["list"] {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
 			items := []op.Outgoing{}
 			for _, o := range f.outgoing {
 				items = append(items, o)

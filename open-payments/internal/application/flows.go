@@ -15,17 +15,16 @@ import (
 
 // Flow is encrypted execution state. Stage is persisted before creating an outgoing.
 type Flow struct {
-	Kind, Stage, GrantID, AccountID, ExternalRef, Description, BreReference string
-	Source, Receiver                                                        op.Wallet
-	IncomingGrant                                                           op.Grant
-	IncomingTokenExpires                                                    time.Time
-	Incoming                                                                op.Incoming
-	QuoteGrant                                                              op.Grant
-	Quote                                                                   op.Quote
-	Outgoing                                                                op.Outgoing
-	Amount                                                                  op.Amount
-	DebitLimit                                                              op.Amount
-	FixedSend, UseQuote                                                     bool
+	Kind, Stage, AccountID, ExternalRef, Description, BreReference string
+	Source, Receiver                                               op.Wallet
+	IncomingGrant                                                  op.Grant
+	IncomingTokenExpires                                           time.Time
+	Incoming                                                       op.Incoming
+	Quote                                                          op.Quote
+	Outgoing                                                       op.Outgoing
+	Amount                                                         op.Amount
+	DebitLimit                                                     op.Amount
+	FixedSend, UseQuote                                            bool
 }
 
 // Control is the encrypted body of a callback or cancellation job.
@@ -121,7 +120,6 @@ func (s *Service) prepareQuote(ctx context.Context, f *Flow) error {
 	if e != nil {
 		return e
 	}
-	f.QuoteGrant = g
 	var debit *op.Amount
 	if f.FixedSend {
 		debit = &f.Amount
@@ -187,7 +185,7 @@ func (s *Service) createTransfer(ctx context.Context, tx pgx.Tx, r httpapi.Reque
 		return problem(409, "collection_account_not_active")
 	}
 	id := newID()
-	f := Flow{Kind: "transfer", Stage: "incoming", GrantID: grantID, Source: source, Receiver: receiver, Amount: op.Wire(amount), FixedSend: true, AccountID: input.CollectionAccountID, ExternalRef: input.ExternalRef}
+	f := Flow{Kind: "transfer", Stage: "incoming", Source: source, Receiver: receiver, Amount: op.Wire(amount), FixedSend: true, AccountID: input.CollectionAccountID, ExternalRef: input.ExternalRef}
 	if input.Description != nil {
 		f.Description = *input.Description
 	}
