@@ -15,5 +15,42 @@ services:
       timeout: 3s
       retries: 30
 
+  # API Trust (Dockerfile de esta carpeta). Configuración desde .env (copia de .env.example); si no existe, la API no
+  # arranca porque JWT_SECRET es obligatorio. `docker compose up -d db` sigue funcionando sin .env.
+  api:
+    build: .
+    image: trust-api:local
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Dentro de la red de compose Postgres es db:5432 (el DATABASE_URL de .env apunta a localhost:5433 para correr
+      # la API fuera de Docker). Para otra base (RDS, etc.) define TRUST_API_DATABASE_URL en el shell o en .env.
+      DATABASE_URL: ${TRUST_API_DATABASE_URL:-postgresql+psycopg://trust:trust@db:5432/trust_dev}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${TRUST_API_PORT:-8000}:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # op-service (o su mock) corriendo en el host
+    restart: unless-stopped
+
+  # HTTPS con Caddy delante de la API (EC2). Descomenta este servicio y el volumen caddy_data, apunta el DNS del
+  # dominio a la IP pública y abre 80/443 en el security group. Con Caddy, quita `ports` de api (o publícalo solo en
+  # 127.0.0.1) para que nadie salte el proxy, y pon PUBLIC_API_URL=https://<dominio> en .env.
+  # caddy:
+  #   image: caddy:2.8-alpine
+  #   command: caddy reverse-proxy --from api.trustservices.com.co --to api:8000
+  #   depends_on:
+  #     - api
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - caddy_data:/data
+  #   restart: unless-stopped
+
 volumes:
   trust_pg: {}
+  # caddy_data: {}

@@ -108,6 +108,10 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 
 - (16) Reintento guarda la wallet completada en receiver_wallet_url; pata lender sin receptor → 409 invalid_state. Revocación bloquea patas en el mismo orden que el worker (sin deadlocks).
 
+- (final) Smoke E2E `scripts/smoke_e2e.py`: recrea `trust_smoke`, arranca uvicorn en un cwd temporal (sin `.env`) con el worker cada 1 s y valida cada respuesta con `assert_contract` (29 pasos). `--with-mock` (o `scripts/smoke_http.sh`) arranca antes el mock en un puerto libre con API key y secreto aleatorios, corre con `OP_CLIENT=http`, aprueba en `/mock/consent/{id}` y en el paso 30 comprueba en el mock que los 5 webhooks quedaron entregados (si la firma fallara, las ventas llegarían por reconciliación y el paso falla).
+- (final) Mock de op-service `tools/mock_op_service/` (en memoria): el simulador completa en el mismo POST y envía el webhook desde un hilo (reintentos 1, 5, 30, 120 s; un replay no lo reenvía); transferencias y pagos aprobados quedan `completed` en el siguiente GET tras `MOCK_SETTLE_SECONDS` (0); consentimiento en `{PUBLIC_BASE_URL}/mock/consent/{id}?decision=approve|reject` → 302 al `return_url` conservando su query; sin comisiones ni tasa de cambio; toda wallet resuelve COP/2 salvo `/mock/wallets`; reiniciarlo pierde todo (recrear `trust_dev` o `MOCK_SIM_SEQ_START`); sin `/v1/admin/pool-wallets*` ni `/qr/{id}`; controles `/mock/*` fuera del contrato.
+- (final) Docker: `python:3.12-slim` + uv 0.12.19, `uv sync --locked --no-dev`, usuario uid 10001, `HEALTHCHECK` con urllib (503 → unhealthy). En compose la API usa `db:5432` (`TRUST_API_DATABASE_URL` para otra base) y publica `${TRUST_API_PORT:-8000}`; `.env` es opcional (`required: false`) para que `docker compose up -d db` no dependa de él; servicio Caddy comentado.
+
 ## Cambios de contrato
 
 (ninguno)
@@ -144,3 +148,4 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - 2026-10-17 07:16 · Spec 14-notifications ☑: lista con unread_count, leer todas y una; todos los emisores usan el catálogo y su data cumple NotificationData.
 - 2026-10-17 07:16 · Spec 15-waitlist ☑: JSON y urlencoded (sin python-multipart), upsert sin 409, honeypot, 303 para formularios, rate limit por IP y CORS.
 - 2026-10-17 07:16 · Spec 16-admin ☑: dashboard de ingresos y fondos retenidos por asset, reintento de patas y revocación de cuentas (commit local antes de Go). Se activó 00-core AC-6 completo: todas las rutas del YAML implementadas, sin extras. Suite completa sin skips.
+- 2026-10-17 07:53 · Fase final (sin commit todavía): smoke E2E verde con el fake (29 pasos) y con `OP_CLIENT=http` contra el mock (30 pasos, `scripts/smoke_http.sh`), mock HTTP de op-service con sus tests, Dockerfile + servicio `api` en compose (verificado con `docker compose up`: healthy y `/api/v1/health` ok), `.env.example` completo y `backend/README.md`. 298 tests, ruff limpio, sin bugs nuevos en la app.
