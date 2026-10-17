@@ -84,3 +84,21 @@ su API y receptor de webhooks. No se sustituyen estas validaciones con mocks.
 Referencias: [Open Payments](https://openpayments.dev/),
 [pgx](https://github.com/jackc/pgx),
 [JSON Schema validator](https://github.com/santhosh-tekuri/jsonschema).
+
+
+## Cliente Open Payments (fase 2)
+
+Se usa el SDK oficial `interledger/open-payments-go` v0.5.0 para firmar peticiones.
+Los adaptadores usan `DoSigned` y tipos de montos propios para conservar precisión
+arbitraria y las URLs opacas de continuación/rotación sin las restricciones de ruta
+de algunos métodos de alto nivel del SDK. El transporte exige HTTPS, bloquea IPs
+privadas/especiales, valida DNS al conectar y no sigue redirects ni usa proxies del
+entorno. Cada respuesta tiene un límite de 1 MiB y cada llamada tiene timeout.
+Los POST financieros no se reintentan automáticamente.
+
+Pruebas locales de protocolo verifican las firmas con la clave pública, además de
+los recursos y errores. La validación con Test Wallet se difiere al final por
+instrucción del usuario: sus credenciales no son requisito para desarrollar el resto.
+Referencias consultadas: [grants](https://openpayments.dev/identity/grants/),
+[firmas](https://openpayments.dev/identity/http-signatures/),
+[SDK Go](https://github.com/interledger/open-payments-go).
