@@ -1,0 +1,231 @@
+---
+// Comercios (COPY.md §6). Protagonist: the "Solicitar crédito" screen, annotated. Each benefit points at the
+// part of the app that delivers it (cupo, range, percentage, abono preview); notes alternate sides so their
+// text never collides, while the DOM keeps the reading order.
+// Anchors are percentages of the device frame (measured from the 390×844pt mock), so the leader lines are
+// pure CSS and stay attached at any width. Below 1100px the notes become a plain list under the phone.
+import Section from '../ui/Section.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import Button from '../ui/Button.astro';
+import DeviceFrame from '../ui/DeviceFrame.astro';
+import SolicitudScreen from '../screens/SolicitudScreen.astro';
+import { formatCOP, pct } from '../../scripts/format';
+import { nowrapParts } from '../../scripts/nowrap';
+
+// ax/ay: where the leader line ends on the device frame, in % (the edge of the control the note talks about)
+const notes = [
+  {
+    side: 'start',
+    ax: 7,
+    ay: 21.6,
+    title: 'Tu cupo, claro',
+    text: 'Trust calcula tu cupo y te lo muestra. Sabes cuánto puedes pedir antes de pedir.',
+  },
+  {
+    side: 'end',
+    ax: 93,
+    ay: 40,
+    title: 'Tú eliges el rango',
+    text: 'Define entre cuánto y cuánto necesitas. Trust te muestra las ofertas que encajan con tu cupo.',
+  },
+  {
+    side: 'start',
+    ax: 7,
+    ay: 57,
+    title: 'Según lo que vendes',
+    text: 'El abono es un porcentaje de cada venta: si un día vendes menos, abonas menos.',
+  },
+  {
+    side: 'end',
+    ax: 93,
+    ay: 68,
+    title: 'Pagas mientras vendes',
+    text: 'Un porcentaje de cada venta con Bre-B abona a tu crédito. Automático, sin filas ni consignaciones.',
+  },
+] as const;
+
+const NoteText = ({ text }: { text: string }) =>
+  nowrapParts(text).map((p) => (p.nowrap ? `<span class="nw">${p.text}</span>` : p.text)).join('');
+---
+
+<Section id="comercios" theme="dark" aria-labelledby="comercios-title" class="com">
+  <div class="container">
+    <div class="com__head">
+      <SectionHeading
+        id="comercios-title"
+        title="Crédito para el negocio que levantaste."
+        lead="Pide crédito según tu cupo o acepta ofertas de prestamistas. Tú eliges el rango y lo pagas con un porcentaje de tus ventas."
+      />
+      <Button href="#lista-de-espera" variant="violet" size="lg" class="com__cta" data-preselect="comercio">
+        Únete como comercio
+      </Button>
+    </div>
+
+    <div class="com__stage">
+      <div class="com__device" data-reveal="fade">
+        <DeviceFrame
+          screenId="solicitud-credito"
+          alt={`App de Trust: solicitud de crédito con un rango de ${formatCOP(1_500_000)} a ${formatCOP(3_000_000)} y un abono del ${pct(15)} de cada venta.`}
+          width="var(--com-pw)"
+          sizes="320px"
+        >
+          <SolicitudScreen />
+        </DeviceFrame>
+      </div>
+
+      <ul class="com__notes" role="list">
+        {
+          notes.map((n) => (
+            <li class:list={['note', `note--${n.side}`]} style={`--ax: ${n.ax / 100}; --ay: ${n.ay}%`}>
+              <h3 class="note__title">{n.title}</h3>
+              <p class="note__text" set:html={NoteText({ text: n.text })} />
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+    <p class="com__caption">Pantalla ilustrativa con datos de ejemplo.</p>
+  </div>
+</Section>
+
+<style>
+  .com {
+    --com-pw: clamp(256px, 22vw, 320px);
+    --com-gap: clamp(40px, 4vw, 64px);
+  }
+
+  .com__head {
+    display: grid;
+    gap: clamp(28px, 3vw, 36px);
+    justify-items: start;
+    max-inline-size: 720px;
+  }
+
+  .com__stage {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: clamp(48px, 7vw, 64px);
+    margin-block-start: clamp(64px, 8vw, 104px);
+  }
+  .com__device {
+    position: relative;
+    inline-size: var(--com-pw);
+  }
+
+  /* notes: plain list under the phone (mobile / tablet) */
+  .com__notes {
+    display: grid;
+    gap: 0;
+    inline-size: 100%;
+    max-inline-size: 640px;
+    margin: 0;
+  }
+  .note {
+    display: grid;
+    gap: 6px;
+    padding-block: 20px;
+    border-block-start: 1px solid var(--border);
+  }
+  .note__title {
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+  }
+  .note__text {
+    color: var(--text-muted);
+    text-wrap: pretty;
+  }
+  .note__text :global(.nw) {
+    white-space: nowrap;
+  }
+
+  .com__caption {
+    margin-block-start: 28px;
+    font-size: 0.8125rem;
+    color: var(--text-subtle);
+    text-align: center;
+  }
+
+  /* desktop: notes sit beside the phone, each tied to its control by a hairline */
+  @media (min-width: 1100px) {
+    .com__stage {
+      grid-template-columns: minmax(0, 1fr) var(--com-pw) minmax(0, 1fr);
+      column-gap: var(--com-gap);
+      align-items: start;
+    }
+    .com__device {
+      grid-column: 2;
+      grid-row: 1;
+    }
+    .com__notes {
+      display: contents;
+    }
+    .note {
+      position: absolute;
+      inset-block-start: var(--ay);
+      inline-size: calc((100% - var(--com-pw)) / 2 - var(--com-gap));
+      max-inline-size: 300px;
+      padding-block: 0;
+      border: 0;
+      transform: translateY(-11px);
+    }
+    .note--start {
+      inset-inline-end: calc(50% + var(--com-pw) / 2 + var(--com-gap));
+      text-align: end;
+    }
+    .note--end {
+      inset-inline-start: calc(50% + var(--com-pw) / 2 + var(--com-gap));
+    }
+    /* leader line from the note to the control's edge; drawn on with transform when it scrolls in */
+    .note::after {
+      content: '';
+      position: absolute;
+      inset-block-start: 11px;
+      block-size: 1px;
+      background: linear-gradient(90deg, var(--border-strong), var(--trust-lavender));
+      transform-origin: left center;
+    }
+    .note--start::after {
+      inset-inline-start: calc(100% + 16px);
+      inline-size: calc(var(--com-gap) - 16px + var(--ax) * var(--com-pw));
+    }
+    .note--end::after {
+      inset-inline-end: calc(100% + 16px);
+      inline-size: calc(var(--com-gap) - 16px + (1 - var(--ax)) * var(--com-pw));
+      background: linear-gradient(270deg, var(--border-strong), var(--trust-lavender));
+      transform-origin: right center;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      @supports (animation-timeline: view()) {
+        .com__stage {
+          view-timeline: --com-stage block;
+        }
+        .note::after {
+          animation: note-draw linear both;
+          animation-timeline: --com-stage;
+          animation-range: entry 35% entry 85%;
+        }
+        .note {
+          animation: note-in linear both;
+          animation-timeline: --com-stage;
+          animation-range: entry 45% entry 95%;
+        }
+      }
+    }
+  }
+
+  @keyframes note-draw {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  @keyframes note-in {
+    from {
+      opacity: 0;
+    }
+  }
+</style>

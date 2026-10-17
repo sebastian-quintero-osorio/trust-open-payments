@@ -1,0 +1,363 @@
+---
+// Mock of the app screen "Match encontrado" (screenId detalle-match), COPY.md §13e. Section Match.
+// Rendered inside <DeviceFrame> (390×844pt canvas, sizes in var(--pt)). Decorative: no focusable elements.
+import './screen-kit.css';
+import StatusBar from './StatusBar.astro';
+import Num from './Num.astro';
+import ChevronLeft from '@lucide/astro/icons/chevron-left';
+import ChevronRight from '@lucide/astro/icons/chevron-right';
+import Handshake from '@lucide/astro/icons/handshake';
+import Store from '@lucide/astro/icons/store';
+import UserRound from '@lucide/astro/icons/user-round';
+import ArrowRight from '@lucide/astro/icons/arrow-right';
+
+// Overlap strip scale: $1.000.000 → $3.000.000. Request 1,5–3,0 M; offer 1,0–2,5 M; overlap 1,5–2,5 M.
+---
+
+<div class="sk-screen match" data-screen="detalle-match">
+  <StatusBar />
+
+  <div class="sk-body match__body">
+    <div class="match__nav">
+      <div class="sk-iconbtn"><span class="sk-ico" style="--s: 22"><ChevronLeft stroke-width={2} /></span></div>
+      <span class="sk-title">Match encontrado</span>
+      <span></span>
+    </div>
+
+    
+
+    <div class="sk-card match__parties">
+      <div class="match__party">
+        <span class="match__party-ico"><span class="sk-ico" style="--s: 16"><Store stroke-width={1.9} /></span></span>
+        <div class="sk-stack sk-grow match__party-body">
+          <div class="sk-row">
+            <span class="sk-overline">Tu solicitud</span>
+            <span class="sk-micro">Cupo <span class="match__val">$6.000.000</span></span>
+          </div>
+          <span class="match__name">Tienda La Esquina</span>
+          <span class="sk-cap">Rango <span class="match__val">$1.500.000 – $3.000.000</span></span>
+        </div>
+      </div>
+      <div class="match__party">
+        <span class="match__party-ico match__party-ico--b"><span class="sk-ico" style="--s: 16"><UserRound stroke-width={1.9} /></span></span>
+        <div class="sk-stack sk-grow match__party-body">
+          <div class="sk-row">
+            <span class="sk-overline">Oferta</span>
+            <span class="sk-micro">Oferta recibida: 1 oct 2026</span>
+          </div>
+          <span class="match__name">Camilo P.</span>
+          <span class="sk-cap">Rango <span class="match__val">$1.000.000 – $2.500.000</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="match__overlap">
+      <div class="match__lanes">
+        <span class="match__cross" data-anim="fade" style="--d: 1150ms; --t: 700ms"></span>
+        <span class="match__lane match__lane--req" data-anim="fill-x-end" style="--d: 350ms"></span>
+        <span class="match__lane match__lane--off" data-anim="fill-x" style="--d: 550ms"></span>
+      </div>
+      <span class="sk-cap match__overlap-text">Rangos que se cruzan: <span class="sk-accent match__val">$1.500.000 – $2.500.000</span></span>
+    </div>
+
+    <div class="sk-card sk-card--hero match__deal">
+      <span class="sk-sheen sk-loop"></span>
+      <span class="sk-label">Monto</span>
+      <Num value={2000000} delay={300} class="sk-amt sk-amt--lg match__amount" />
+      <span class="sk-chip sk-chip--accent match__chip">15&nbsp;% de cada venta con Bre-B</span>
+      <span class="sk-divider match__div"></span>
+      <p class="match__preview">
+        Una venta de <span class="sk-money">$48.000</span>
+        <span class="sk-ico match__arrow" style="--s: 13"><ArrowRight stroke-width={2.25} /></span>
+        <span class="sk-money">$40.800</span> para ti · <span class="sk-money sk-accent">$7.200</span> para Camilo P.
+      </p>
+    </div>
+
+    <div class="sk-link match__terms">
+      Ver condiciones completas
+      <span class="sk-ico" style="--s: 16"><ChevronRight stroke-width={2} /></span>
+    </div>
+
+    <p class="match__note">Al aceptar, el porcentaje acordado se aplicará a tus ventas cobradas con Bre-B a través de Puntored.</p>
+
+    <div class="sk-bottom match__actions">
+      <div class="sk-btn sk-btn--sm">Aceptar oferta</div>
+      <div class="sk-btn sk-btn--sm sk-btn--ghost">Ver otras ofertas</div>
+    </div>
+  </div>
+  <span class="sk-home"></span>
+</div>
+
+<style>
+  .match__body {
+    padding-block: calc(var(--pt) * 6) calc(var(--pt) * 34);
+  }
+
+  .match__nav {
+    display: grid;
+    grid-template-columns: calc(var(--pt) * 40) 1fr calc(var(--pt) * 40);
+    align-items: center;
+    text-align: center;
+  }
+
+  /* ---- seal ---- */
+  .match__seal {
+    position: relative;
+    display: grid;
+    place-items: center;
+    block-size: calc(var(--pt) * 108);
+    margin-block-start: calc(var(--pt) * 4);
+  }
+
+  .match__seal > span {
+    position: absolute;
+    border-radius: 50%;
+  }
+
+  .match__orbit {
+    inline-size: calc(var(--pt) * 134);
+    block-size: calc(var(--pt) * 134);
+    border: 1px solid rgb(180 153 254 / 0.16);
+    -webkit-mask: linear-gradient(180deg, transparent 18%, #000 62%);
+    mask: linear-gradient(180deg, transparent 18%, #000 62%);
+  }
+
+  .match__orbit--outer {
+    inline-size: calc(var(--pt) * 190);
+    block-size: calc(var(--pt) * 190);
+    border-color: rgb(180 153 254 / 0.1);
+  }
+
+  .match__glow {
+    inline-size: calc(var(--pt) * 170);
+    block-size: calc(var(--pt) * 170);
+    background: radial-gradient(closest-side, rgb(180 153 254 / 0.55), rgb(157 103 251 / 0.25) 45%, rgb(105 48 249 / 0) 100%);
+    opacity: 0.8;
+  }
+
+  @keyframes match-breathe {
+    0%,
+    100% {
+      opacity: 0.55;
+      transform: scale(0.92);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.06);
+    }
+  }
+
+  .match__ring {
+    inline-size: calc(var(--pt) * 104);
+    block-size: calc(var(--pt) * 104);
+    background: conic-gradient(from 0deg, rgb(241 233 253 / 0) 0deg, rgb(241 233 253 / 0.95) 70deg, rgb(180 153 254 / 0.5) 140deg, rgb(105 48 249 / 0) 220deg, rgb(105 48 249 / 0) 360deg);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--pt) * 1.6), #000 calc(100% - var(--pt) * 1.5));
+    mask: radial-gradient(farthest-side, transparent calc(100% - var(--pt) * 1.6), #000 calc(100% - var(--pt) * 1.5));
+    transform: rotate(-30deg);
+  }
+
+  @keyframes match-spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  .match__core {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--pt) * 3);
+    inline-size: calc(var(--pt) * 88);
+    block-size: calc(var(--pt) * 88);
+    background:
+      radial-gradient(90% 70% at 50% 110%, rgb(241 233 253 / 0.7), rgb(157 103 251 / 0.55) 35%, rgb(105 48 249 / 0) 72%),
+      linear-gradient(180deg, var(--violet-900), var(--trust-violet));
+    box-shadow:
+      inset 0 0 0 1px rgb(241 233 253 / 0.3),
+      inset 0 calc(var(--pt) * 1) 0 rgb(255 255 255 / 0.35),
+      0 0 calc(var(--pt) * 30) rgb(180 153 254 / 0.55);
+    color: #fff;
+  }
+
+  .match__word {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: calc(var(--pt) * 20);
+    line-height: 1;
+    letter-spacing: 0.01em;
+  }
+
+  /* ---- parties ---- */
+  .match__parties {
+    margin-block-start: calc(var(--pt) * 10);
+    padding: calc(var(--pt) * 4) calc(var(--pt) * 16);
+  }
+
+  .match__party {
+    display: flex;
+    gap: calc(var(--pt) * 12);
+    padding-block: calc(var(--pt) * 11);
+  }
+
+  .match__party + .match__party {
+    border-block-start: 1px solid var(--sk-line);
+  }
+
+  .match__party-ico {
+    display: grid;
+    place-items: center;
+    flex: none;
+    inline-size: calc(var(--pt) * 34);
+    block-size: calc(var(--pt) * 34);
+    border-radius: 50%;
+    background: rgb(241 233 253 / 0.07);
+    border: 1px solid var(--sk-line-strong);
+    color: var(--trust-lilac);
+  }
+
+  .match__party-ico--b {
+    background: rgb(105 48 249 / 0.35);
+    border-color: rgb(180 153 254 / 0.35);
+  }
+
+  .match__party-body {
+    gap: calc(var(--pt) * 3);
+  }
+
+  .match__name {
+    font-size: calc(var(--pt) * 15);
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .match__val {
+    font-weight: 600;
+    color: var(--sk-text);
+    white-space: nowrap;
+  }
+
+  .sk-accent.match__val {
+    color: var(--sk-accent);
+  }
+
+  /* ---- overlap strip ---- */
+  .match__overlap {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--pt) * 8);
+    margin-block-start: calc(var(--pt) * 12);
+    padding-inline: calc(var(--pt) * 4);
+  }
+
+  .match__lanes {
+    position: relative;
+    display: grid;
+    gap: calc(var(--pt) * 6);
+    padding-block: calc(var(--pt) * 6);
+  }
+
+  .match__lanes::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block: calc(var(--pt) * 6);
+    background:
+      linear-gradient(var(--sk-track), var(--sk-track)) top / 100% calc(var(--pt) * 6) no-repeat,
+      linear-gradient(var(--sk-track), var(--sk-track)) bottom / 100% calc(var(--pt) * 6) no-repeat;
+    border-radius: 999px;
+  }
+
+  .match__lane {
+    position: relative;
+    display: block;
+    block-size: calc(var(--pt) * 6);
+    border-radius: 999px;
+  }
+
+  .match__lane--req {
+    margin-inline-start: 25%;
+    background: var(--sk-split-a);
+  }
+
+  .match__lane--off {
+    inline-size: 75%;
+    background: linear-gradient(90deg, var(--trust-violet), var(--trust-violet-400));
+    box-shadow: 0 0 calc(var(--pt) * 10) rgb(105 48 249 / 0.8);
+  }
+
+  .match__cross {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 25%;
+    inline-size: 50%;
+    border-radius: calc(var(--pt) * 8);
+    background: linear-gradient(180deg, rgb(180 153 254 / 0.22), rgb(105 48 249 / 0.14));
+    box-shadow:
+      inset 0 0 0 1px rgb(180 153 254 / 0.45),
+      0 0 calc(var(--pt) * 18) rgb(157 103 251 / 0.45);
+  }
+
+  .match__overlap-text {
+    font-size: calc(var(--pt) * 12.5);
+    text-align: center;
+  }
+
+  /* ---- proposal ---- */
+  .match__deal {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-block-start: calc(var(--pt) * 12);
+    padding: calc(var(--pt) * 16) calc(var(--pt) * 18);
+  }
+
+  .match__deal :global(.match__amount) {
+    margin-block: calc(var(--pt) * 4) calc(var(--pt) * 8);
+  }
+
+  .match__div {
+    align-self: stretch;
+    margin-block: calc(var(--pt) * 12) calc(var(--pt) * 10);
+  }
+
+  .match__preview {
+    font-size: calc(var(--pt) * 13);
+    line-height: 1.5;
+    color: var(--sk-muted);
+  }
+
+  .match__arrow {
+    display: inline-grid;
+    vertical-align: calc(var(--pt) * -2);
+    color: var(--sk-accent);
+  }
+
+  .match__terms {
+    align-self: center;
+    margin-block-start: calc(var(--pt) * 12);
+    font-size: calc(var(--pt) * 13.5);
+  }
+
+  .match__note {
+    margin-block-start: calc(var(--pt) * 8);
+    padding-inline: calc(var(--pt) * 8);
+    font-size: calc(var(--pt) * 11.5);
+    line-height: 1.4;
+    color: var(--sk-subtle);
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  .match__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: calc(var(--pt) * 10);
+    padding-block-start: calc(var(--pt) * 12);
+  }
+
+  .match__actions .sk-btn {
+    padding-inline: calc(var(--pt) * 10);
+    font-size: calc(var(--pt) * 14.5);
+  }
+</style>

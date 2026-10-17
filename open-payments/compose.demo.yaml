@@ -1,0 +1,22 @@
+# Run through scripts/demo.py so PUBLIC_BASE_URL is supplied by the tunnel.
+services:
+  caddy:
+    profiles: [production]
+  op-service:
+    environment:
+      DEMO_MODE: 'true'
+      TRUSTED_PROXY_CIDRS: ''
+    ports:
+      - '127.0.0.1:8080:8080'
+  demo-gateway:
+    image: caddy:2
+    ports:
+      - '127.0.0.1:8081:8080'
+    volumes:
+      - ./Caddy.demo:/etc/caddy/Caddyfile:ro
+    depends_on:
+      op-service:
+        condition: service_healthy
+    networks:
+      payments:
+        ipv4_address: 172.30.0.2

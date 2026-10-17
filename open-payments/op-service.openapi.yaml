@@ -1,0 +1,948 @@
+openapi: 3.1.0
+info:
+  title: Trust op-service API
+  version: 0.1.0
+  summary: Contrato entre la Trust API (FastAPI) y op-service (Go), el servicio que hace todo lo de Open Payments y simula Puntored.
+  description: |
+    Este archivo es la fuente de verdad del contrato. Cualquier cambio se hace por PR aprobado por los dos equipos.
+    Diseño completo del backend: `backend/docs/diseno-backend.md`.
+
+    ## Quién hace qué
+    - **Trust API (FastAPI)**: negocio y contabilidad (créditos, ventas, división de cada venta, saldos por negocio).
+      Llama a op-service con `X-Internal-Api-Key` y consulta estados por polling (GET).
+    - **op-service (Go)**: dueño de todo Open Payments (cliente "Trust", llave Ed25519, grants GNAP, tokens y rotación,
+      incoming payments, quotes, outgoing payments, callback de consentimiento) y del **simulador de Puntored**.
+      Nunca devuelve tokens, continue tokens ni manage URLs a Trust.
+    - Para el hackathon, las wallets de Puntored son wallets de la test wallet de Interledger (https://wallet.interledger-test.dev).
+
+    ## Flujos
+    1. **Cuenta de recaudo**: cada negocio tiene una wallet de recaudo gestionada por Trust (su QR). op-service asigna una
+       del pool pre-autorizado (`POST /v1/collection-accounts`). Cada wallet del pool tiene un grant de salida permanente
+       aprobado una sola vez por el operador de Trust (`/v1/admin/pool-wallets/{id}/authorize`).
+    2. **Venta**: el cliente paga el QR → op-service (simulando Puntored) mueve la plata de la wallet "Cliente demo" a la
+       cuenta de recaudo y envía el webhook `puntoredPayment` a Trust → Trust calcula la división y pide hasta 3
+       `POST /v1/transfers` (prestamista, negocio, Trust).
+    3. **Desembolso**: Trust pide `POST /v1/payments` (prestamista → cuenta propia del negocio). El prestamista aprueba en su
+       wallet (`authorization_url`) → la wallet redirige a `/v1/interact/finish/{attempt_id}` → op-service ejecuta y
+       redirige al `return_url`.
+
+    ## Convenciones
+    - **Autenticación**: header `X-Internal-Api-Key` en todo `/v1/*`, salvo `/v1/health` y `/v1/interact/finish/*`.
+    - **Idempotencia**: `Idempotency-Key` es obligatorio en todo POST de `/v1/*`; su alcance es (método, ruta).
+      op-service guarda por 72 h solo las respuestas 2xx y las 4xx definitivas (400, 404, 409 de estado, 422). Nunca
+      guarda 5xx, 401 ni `409 request_in_progress`: con esas, un reintento con la misma clave vuelve a ejecutar.
+      Misma clave + mismo cuerpo = se repite la respuesta guardada con su **status original** (por ejemplo 201) y el header
+      `Idempotent-Replayed: true`. El cuerpo se compara como JSON canónico (claves ordenadas, sin espacios). Misma clave
+      + otro cuerpo = `409 idempotency_conflict`. Si la primera petición sigue en curso = `409 request_in_progress`
+      (`retryable: true`). Ante timeout, 5xx o `request_in_progress`, Trust reintenta con la **misma** clave.
+      Claves de Trust: `merchant:{uuid}:recaudo`, `payout:{uuid}:{intento}`, `loan:{uuid}:disb:{intento}`, `sim:{uuid}`.
+      El `external_ref` NO es único entre intentos (todos los intentos de una pata comparten `payout:{uuid}`).
+    - **Montos**: `{value, asset_code, asset_scale}` como en Open Payments. `value` es un entero en unidades mínimas
+      serializado como string. Ejemplo: `{"value":"4800","asset_code":"USD","asset_scale":2}` = 48,00 USD. Nunca floats.
+    - **Fechas**: RFC 3339 en UTC.
+    - **`external_ref`**: referencia de negocio de Trust (`merchant:{uuid}`, `payout:{uuid}`, `loan:{uuid}:disb`, ...).
+      op-service la guarda y la devuelve en cada recurso; también la escribe en `metadata.external_ref` de los recursos OP.
+    - **Errores síncronos vs. asíncronos**. Un error en la respuesta de un POST significa que **no se creó nada**:
+      400 validación · 401 API key · 404 recurso inexistente · 409 conflicto de estado o idempotencia ·
+      422 `asset_mismatch` / `invalid_amount` / `invalid_url` / `wallet_not_found` / `return_url_not_allowed` (terminal) ·
+      502/503 error de la wallet o del servicio (reintentar con la misma clave). Todo lo que falle **después** de crear el
+      recurso aparece en el GET como `failed` + `failure_code`, nunca en el POST. Mapeo de Open Payments a `failure_code`:
+      `metadata.cancellationReason = "Insufficient funds"` → `insufficient_balance` · `InvalidAmount` → `invalid_amount` ·
+      `NonPositiveReceiveAmount` → `amount_too_small` · 401/403 al rotar o usar el token del grant de recaudo →
+      `grant_revoked` (la cuenta y su pool wallet pasan a `revoked`) · 4xx al pedir el grant o crear el incoming en el
+      receptor → `receiver_unreachable` · quote vencida cuyo nuevo debit supera el límite → `quote_expired` ·
+      5xx, timeout o incoming del receptor vencido → `upstream_error` · cualquier otro → `internal`.
+      Formato: `{"error":{"code","message","retryable"}}`.
+
+    ## Hechos de Open Payments / test wallet que op-service debe respetar (verificados)
+    1. El `client` de los grants es la wallet address "Trust" cuya llave pública está publicada (Developer Keys en la test
+       wallet). Los grants interactivos exigen client = wallet address (no jwk). Su `publicName` es lo que ve el usuario.
+    2. Grants de incoming payment y de quote: no interactivos. Grants de outgoing payment: **siempre interactivos**.
+    3. `authServer` y `resourceServer` vienen con tenant (`https://auth.interledger-test.dev/<tenant>`): usarlos tal cual
+       los devuelve la wallet address; `continue.uri` y `access_token.manage` también se usan tal cual.
+    4. Hash del finish: `base64(sha256(client_nonce + "\n" + interact.finish + "\n" + interact_ref + "\n" + authServer))`.
+       La test wallet usa base64 **estándar con padding**; aceptar también base64url sin padding. Si llega
+       `result=grant_rejected|grant_invalid|invalid_interaction` no hay `hash` ni `interact_ref`.
+    5. `Grant.Continue` antes de `continue.wait` (5 s) responde `too_fast`: esperar y reintentar. Un grant con
+       `interact.finish` no se puede consultar por polling: el callback es obligatorio.
+    6. Los access tokens duran 10 min (también los rotados). Rotar (`POST manage`) aunque esté vencido; la rotación revoca
+       el anterior y devuelve token **y manage URL nuevos**: guardar ambos atómicamente y serializar por grant.
+    7. El consentimiento expira a los 10 min sin redirect. `authorization_expires_at` = creación del grant interactivo +
+       `INTERACTION_TIMEOUT_SECONDS`. Un timer, en `authorization_expires_at` + 30 s, pasa el recurso a `expired` **solo si
+       el attempt no fue usado** (UPDATE condicional) y luego cancela el grant (`Grant.Cancel`: DELETE a `continue.uri`).
+       Los estados `completed`, `failed`, `rejected` y `expired` son terminales y nunca cambian.
+    8. Transferencia (fixed-send), ejecutada por el worker del grant al sacarla de la cola: incoming payment en el
+       receptor **sin** `incomingAmount` (expiresAt +15 min; grant no interactivo con `create`, `read`, `complete`) →
+       outgoing payment `{walletAddress, incomingPayment, debitAmount}` sin quote (plan B si la test wallet no lo acepta:
+       quote con `debitAmount` + outgoing con `quoteId`) → poll cada `POLL_INTERVAL_SECONDS` hasta `failed == true`, o
+       `sentAmount == debitAmount`, o `receivedAmount` del incoming del receptor ≥ `receiveAmount` del outgoing →
+       **`IncomingPayment.Complete` en el receptor** (sin esto la wallet receptora no acredita el saldo). Si el incoming
+       del receptor vence antes: `failed` con `upstream_error` (reintentable) y el `sent_amount` real. op-service nunca
+       reintenta ni ajusta montos por su cuenta.
+    9. Outgoing payments no tienen `completed`; solo `failed`, `sentAmount`, `debitAmount`, `receiveAmount`. La test wallet
+       cancela por saldo insuficiente con `metadata.cancellationReason = "Insufficient funds"`.
+    10. Las quotes duran 5 min: en el desembolso re-cotizar después del consentimiento si venció.
+    11. La pantalla de consentimiento solo muestra `limits.debitAmount`: usar `debitAmount` (no `receiveAmount`) en los límites.
+    12. Todas las wallet addresses de un mismo usuario y asset comparten **un solo saldo** (una cuenta por asset por usuario).
+        Por eso "Trust" (pool de recaudo), "Trust Ingresos" y "Cliente demo" deben ser usuarios distintos.
+    13. Montos de 0, o montos que la comisión deja en 0, son rechazados (`InvalidAmount` / `NonPositiveReceiveAmount`).
+
+    ## Variables de entorno de op-service
+    `INTERNAL_API_KEY`, `PUBLIC_BASE_URL` (https://pay.trustservices.com.co), `OP_CLIENT_WALLET_ADDRESS`, `OP_KEY_ID`,
+    `OP_PRIVATE_KEY`, `POOL_WALLET_ADDRESSES` (lista separada por comas), `SIM_PAYER_WALLET_ADDRESS`,
+    `TRUST_WEBHOOK_URL` (https://api.trustservices.com.co/api/v1/webhooks/puntored/payments), `TRUST_WEBHOOK_SECRET`,
+    `ALLOWED_RETURN_URL_PREFIXES` (https://app.trustservices.com.co/), `SIM_ENABLED`, `SIM_MAX_AMOUNT` (entero en unidades mínimas del asset de recaudo; ej. 50000 = 500,00 USD),
+    `INTERACTION_TIMEOUT_SECONDS=600`, `POLL_INTERVAL_SECONDS=2`, `DATABASE_URL`.
+servers:
+  - url: http://op-service:8080
+    description: Red interna de docker en el EC2 (Trust API → op-service)
+  - url: https://pay.trustservices.com.co
+    description: Público. Solo /v1/interact/finish/*, /qr/* y /v1/health deben quedar expuestos por Caddy
+  - url: http://localhost:8080
+    description: Desarrollo local
+security:
+  - InternalApiKey: []
+tags:
+  - name: wallets
+    description: Resolución de wallet addresses de Open Payments
+  - name: collection-accounts
+    description: Cuentas de recaudo Trust (simulan las cuentas Puntored de cada negocio)
+  - name: transfers
+    description: Salidas desde una cuenta de recaudo (cada parte de la división de una venta)
+  - name: payments
+    description: Pagos interactivos de una sola vez (desembolso del prestamista)
+  - name: puntored-sim
+    description: Simulador de Puntored / Bre-B (solo hackathon)
+  - name: admin
+    description: Preparación del pool de cuentas de recaudo (operador de Trust)
+  - name: browser
+    description: Rutas que visita el navegador del usuario, no Trust
+  - name: platform
+    description: Salud del servicio
+paths:
+  /v1/health:
+    get:
+      tags: [platform]
+      operationId: getHealth
+      summary: Estado del servicio
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+  /v1/wallet-addresses:
+    get:
+      tags: [wallets]
+      operationId: resolveWalletAddress
+      summary: Resuelve y valida una wallet address
+      description: |
+        GET público (sin firma ni grant) a la wallet address. Acepta `https://...` o `$host/path` (op-service cambia `$`
+        por `https://`). No prueba que el usuario sea dueño de la wallet. Trust lo usa al vincular la cuenta propia del
+        negocio o la wallet del prestamista.
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema: { type: string, examples: ['https://ilp.interledger-test.dev/tienda-la-esquina'] }
+      responses:
+        '200':
+          description: Wallet address resuelta
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WalletAddress' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '502': { $ref: '#/components/responses/UpstreamError' }
+  /v1/collection-accounts:
+    get:
+      tags: [collection-accounts]
+      operationId: listCollectionAccounts
+      summary: Busca cuentas de recaudo por external_ref
+      description: Para recuperar la cuenta de un negocio si Trust perdió el id. Incluye revocadas, la más reciente primero.
+      parameters:
+        - name: external_ref
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/CollectionAccount' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [collection-accounts]
+      operationId: createCollectionAccount
+      summary: Asigna una cuenta de recaudo a un negocio
+      description: |
+        Toma la siguiente wallet del pool con `role=collection`, `status=authorized` y el `asset_code` pedido
+        (`SELECT ... FOR UPDATE SKIP LOCKED`) y la asigna al negocio.
+        No hay consentimiento en este paso. Open Payments no permite crear wallet addresses, por eso el pool se crea a
+        mano en la test wallet y se carga en `POOL_WALLET_ADDRESSES`.
+        `qr_payload` es la URL de la página pública del QR simulado (`{PUBLIC_BASE_URL}/qr/{id}`), **no** la wallet cruda:
+        un pago directo a la wallet no dispara webhook ni división.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCollectionAccountRequest' }
+      responses:
+        '201':
+          description: Cuenta asignada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CollectionAccount' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: '`pool_exhausted` (no hay wallets autorizadas libres en ese asset), `already_assigned` (ese external_ref ya tiene una cuenta `active`; si la anterior está `revoked` se asigna una nueva) o conflicto de idempotencia'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/collection-accounts/{collection_account_id}:
+    parameters:
+      - $ref: '#/components/parameters/CollectionAccountId'
+    get:
+      tags: [collection-accounts]
+      operationId: getCollectionAccount
+      summary: Consulta una cuenta de recaudo
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CollectionAccount' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [collection-accounts]
+      operationId: revokeCollectionAccount
+      summary: Revoca el grant de la cuenta de recaudo (P1)
+      description: Cancela el grant (DELETE al `continue.uri`) y deja la cuenta en `revoked`. Idempotente.
+      responses:
+        '204': { description: Revocada (o ya lo estaba) }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/transfers:
+    post:
+      tags: [transfers]
+      operationId: createTransfer
+      summary: Envía plata desde una cuenta de recaudo a una wallet
+      description: |
+        Fixed-send: se debita exactamente `debit_amount` (en el asset de la cuenta de recaudo) y el receptor recibe
+        `receive_amount` (convertido si su wallet es de otro asset, menos comisiones).
+        **Asíncrono.** La parte síncrona solo valida (cuenta `active`, asset, monto > 0, receptor resoluble con GET
+        público), guarda y responde `201` con `status: processing` en menos de 2 s, sin esperar turno; mientras está en
+        cola, `incoming_payment_url` y `outgoing_payment_url` son `null`.
+        Hay un worker por grant (cada wallet del pool y la de "Cliente demo"). Cada uno toma su cola en orden FIFO y, bajo
+        un mutex de ese grant, rota el token si venció y crea el incoming del receptor y el outgoing (hecho 8). No espera a
+        que una transferencia termine para crear la siguiente; cada poll toma el mismo mutex solo durante la llamada.
+        El resultado se consulta con `GET /v1/transfers/{id}`. Cualquier rechazo de Open Payments (incluido un 500) aparece
+        ahí como `failed` + `failure_code`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTransferRequest' }
+      responses:
+        '201':
+          description: Transferencia creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Transfer' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: '`collection_account_not_active` o conflicto de idempotencia'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '502': { $ref: '#/components/responses/UpstreamError' }
+  /v1/transfers/{transfer_id}:
+    get:
+      tags: [transfers]
+      operationId: getTransfer
+      summary: Consulta una transferencia
+      parameters:
+        - name: transfer_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Transfer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/payments:
+    post:
+      tags: [payments]
+      operationId: createPayment
+      summary: Pago interactivo de una sola vez (desembolso)
+      description: |
+        Fixed-receive: el receptor recibe exactamente `receive_amount` (asset de su wallet); el emisor paga `debit_amount`
+        según la quote (incluye conversión y comisiones).
+        Pasos internos: incoming payment en el receptor con `incomingAmount = receive_amount` (expiresAt +1 h) → grant no
+        interactivo de quote en el emisor → quote con `receiver` = ese incoming → grant **interactivo** de outgoing
+        payment en el emisor con `identifier` = wallet del emisor y `limits = {debitAmount: quote.debitAmount, receiver:
+        incoming}` → responde `authorization_url` (= `interact.redirect`).
+        Después del consentimiento (`/v1/interact/finish/{attempt_id}`): verificar hash → `Grant.Continue` → si la quote
+        venció, re-cotizar (si el nuevo debit supera el límite: `failed` con `quote_expired`) → outgoing payment desde la
+        quote → `processing` → `completed` cuando el incoming del receptor queda `completed`.
+        `return_url` debe empezar por algún prefijo de `ALLOWED_RETURN_URL_PREFIXES` (si no, 422 `return_url_not_allowed`).
+        Idempotency-Key de Trust: `loan:{loan_id}:disb:{n}`. Un doble clic con el pago aún en `awaiting_authorization`
+        reutiliza `n` y recibe el mismo `authorization_url`. Después de `failed`, `rejected` o `expired`, Trust sube `n`.
+        `external_ref` = `loan:{loan_id}:disb`, igual en todos los intentos.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePaymentRequest' }
+      responses:
+        '201':
+          description: Pago creado, esperando autorización del emisor
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: Conflicto de idempotencia
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '502': { $ref: '#/components/responses/UpstreamError' }
+  /v1/payments/{payment_id}:
+    get:
+      tags: [payments]
+      operationId: getPayment
+      summary: Consulta un pago
+      description: Pasa a `expired` si el emisor no aprueba antes de `authorization_expires_at` (+30 s de gracia); en ese caso op-service también cancela el grant (hecho 7). Los estados terminales nunca cambian.
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/sim/puntored/qr-payments:
+    post:
+      tags: [puntored-sim]
+      operationId: createSimQrPayment
+      summary: Simula un pago Bre-B al QR de un negocio
+      description: |
+        Solo si `SIM_ENABLED=true`, y solo por la red interna. Mueve plata real de la wallet "Cliente demo"
+        (`SIM_PAYER_WALLET_ADDRESS`, con su propio grant de salida permanente) a la wallet de la cuenta de recaudo
+        (incoming payment con `incomingAmount = amount`). Cuando el incoming queda `completed`, envía el webhook
+        `puntoredPayment` a `TRUST_WEBHOOK_URL`, con reintentos a los 1 s, 5 s, 30 s y 2 min si no recibe 2xx.
+        `amount` debe estar en el asset de la cuenta de recaudo y ser menor o igual a `SIM_MAX_AMOUNT`.
+        Pasos (fixed-receive con quote; **no** usa el camino de las transferencias): grant no interactivo de incoming
+        payment (`create`, `read`) en el AS de la wallet de recaudo → incoming con `incomingAmount = amount`, expiresAt
+        +15 min y metadata `{external_ref: "sim:{id}", bre_b_reference}` → grant no interactivo de quote en el AS de
+        "Cliente demo" → quote con `receiver` = ese incoming → outgoing payment con `quoteId`, usando el token permanente
+        de "Cliente demo" bajo el mutex de su grant → poll del incoming hasta `completed` (Rafiki lo completa solo; no
+        llamar a Complete) → `completed` y envío del webhook. Si el outgoing falla o el incoming vence: `failed`, sin webhook.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSimQrPaymentRequest' }
+      responses:
+        '201':
+          description: Pago simulado en curso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SimQrPayment' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: '`sim_disabled`, `sim_payer_not_authorized`, `collection_account_not_active` o conflicto de idempotencia'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    get:
+      tags: [puntored-sim]
+      operationId: listSimQrPayments
+      summary: Lista pagos simulados (para reenviar webhooks perdidos)
+      description: Trust lo usa para reconciliar si estuvo caído cuando llegó un webhook. Solo incluye pagos en estado terminal (`completed` o `failed`), en orden ascendente por `seq`.
+      parameters:
+        - name: after
+          in: query
+          required: false
+          description: Devuelve los pagos con `seq` mayor que este valor
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SimQrPaymentList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/admin/pool-wallets:
+    get:
+      tags: [admin]
+      operationId: listPoolWallets
+      summary: Lista las wallets del pool de recaudo y su estado
+      description: |
+        Al arrancar, op-service hace upsert por wallet_address de cada URL de `POOL_WALLET_ADDRESSES` (`role=collection`)
+        y de `SIM_PAYER_WALLET_ADDRESS` (`role=sim_payer`), y resuelve cada una con `WalletAddress.Get` (id exacto, asset,
+        authServer, resourceServer). La wallet `sim_payer` nunca se asigna como cuenta de recaudo.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/PoolWallet' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/admin/pool-wallets/{pool_wallet_id}/authorize:
+    post:
+      tags: [admin]
+      operationId: authorizePoolWallet
+      summary: Inicia el consentimiento del operador para una wallet del pool
+      description: |
+        Pide un grant **interactivo** de outgoing payment **sin límites** (`identifier` = la wallet del pool, `actions` =
+        `create`, `read`). El grant no expira; solo rotan sus tokens. El operador abre `authorization_url` con la sesión
+        del usuario "Trust" iniciada en la test wallet y aprueba en menos de 10 min (la pantalla muestra un monto vacío,
+        es normal). Al volver, la wallet queda `authorized` y disponible para `POST /v1/collection-accounts`.
+        Se usa lo mismo para dar el grant permanente a la wallet "Cliente demo" del simulador; en ese caso el operador
+        inicia sesión como "Cliente demo". Pedir authorize de nuevo con la wallet en `awaiting_authorization` crea un grant
+        y un attempt nuevos e invalida el anterior. `return_url` pasa por la misma allowlist que en `/v1/payments`.
+      parameters:
+        - name: pool_wallet_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                return_url:
+                  type: string
+                  format: uri
+                  description: Opcional. Sin return_url, op-service muestra una página simple con el resultado
+      responses:
+        '201':
+          description: Consentimiento iniciado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PoolWallet' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: '`already_authorized` o conflicto de idempotencia'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/interact/finish/{attempt_id}:
+    get:
+      tags: [browser]
+      operationId: interactFinish
+      summary: Callback de consentimiento (lo visita el navegador, no Trust)
+      description: |
+        Es el `interact.finish.uri` de cada grant interactivo. `attempt_id` es aleatorio y de un solo uso.
+        Primero reclama el attempt con un UPDATE condicional (`used_at IS NULL`) y verifica que el recurso siga en
+        `awaiting_authorization`. Si el attempt ya estaba usado o el recurso ya no está esperando (por ejemplo, venció), no
+        llama a Open Payments: hace 302 al `return_url` con el `op_status` actual (así un refresh no muestra error).
+        Si aprueba: llega con `interact_ref` y `hash` → verificar hash (hecho 4) → `Grant.Continue` (hecho 5) → guardar
+        token y manage URL → ejecutar (pago) o activar (wallet del pool) → **302 inmediato**; lo lento sigue en segundo plano.
+        Si rechaza o falla: llega con `result`: `grant_rejected` o `request_denied` → `rejected`; `invalid_interaction` →
+        `expired`; otro → pago `failed` con `upstream_error`. Para una pool wallet, todos vuelven a `unauthorized`.
+        Los parámetros del 302 son solo pistas para la UI: Trust confirma el estado con `GET /v1/payments/{id}`.
+      security: []
+      parameters:
+        - name: attempt_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: interact_ref
+          in: query
+          required: false
+          schema: { type: string }
+        - name: hash
+          in: query
+          required: false
+          schema: { type: string }
+        - name: result
+          in: query
+          required: false
+          schema:
+            type: string
+            examples: [grant_rejected, grant_invalid, invalid_interaction, unknown_interaction, request_denied]
+        - name: message
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '302':
+          description: 'Redirige al `return_url` agregando a su query existente (sin borrar `loan_id`, `client`, etc.) `op_resource=payment|pool_wallet`, `op_id={id}` y `op_status=processing|authorized|rejected|expired|failed`. En Go: url.Parse, Query().Set y RawQuery = q.Encode(). Ejemplo: `https://app.trustservices.com.co/op/return?client=web&loan_id=5a9e...&op_id=...&op_resource=payment&op_status=processing`'
+          headers:
+            Location:
+              schema: { type: string, format: uri }
+        '400':
+          description: Attempt inexistente, hash que no coincide, o sin `result` ni `interact_ref`/`hash` (página de error HTML)
+          content:
+            text/html:
+              schema: { type: string }
+  /qr/{collection_account_id}:
+    get:
+      tags: [browser, puntored-sim]
+      operationId: qrPage
+      summary: Página pública "Pagar con Bre-B (simulado)"
+      description: Es el `qr_payload` de cada cuenta de recaudo. Muestra el `display_name` del negocio y un campo de monto. Solo si `SIM_ENABLED=true`.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CollectionAccountId'
+      responses:
+        '200':
+          description: Página HTML
+          content:
+            text/html:
+              schema: { type: string }
+        '404':
+          description: Cuenta inexistente o simulador apagado
+          content:
+            text/html:
+              schema: { type: string }
+  /qr/{collection_account_id}/pay:
+    post:
+      tags: [browser, puntored-sim]
+      operationId: qrPagePay
+      summary: Envío del formulario de la página del QR
+      description: |
+        Hace lo mismo que `POST /v1/sim/puntored/qr-payments`, con tope `SIM_MAX_AMOUNT` y rate limit por IP.
+        Genera internamente su `Idempotency-Key` (por ejemplo, un token oculto del formulario) para que un doble envío no pague dos veces.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CollectionAccountId'
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [amount, form_token]
+              properties:
+                amount:
+                  type: string
+                  description: Monto en unidades mayores tal como lo escribe el cliente (por ejemplo "48.00"); op-service lo convierte con el asset_scale de la cuenta
+                payer_bank: { type: string }
+                form_token: { type: string, description: Token de un solo uso que sirve de Idempotency-Key }
+      responses:
+        '200':
+          description: Página HTML con el resultado ("Pago enviado")
+          content:
+            text/html:
+              schema: { type: string }
+        '429':
+          description: Demasiados pagos desde esta IP
+          content:
+            text/html:
+              schema: { type: string }
+webhooks:
+  puntoredPayment:
+    post:
+      operationId: puntoredPaymentWebhook
+      summary: Pago recibido en el QR de un negocio (Puntored → Trust)
+      description: |
+        Lo **implementa la Trust API** en `POST https://api.trustservices.com.co/api/v1/webhooks/puntored/payments`.
+        En el hackathon lo envía op-service, simulando a Puntored; luego lo enviaría Puntored real, con el mismo formato.
+        Firma: `X-Puntored-Signature: t=<unix>,v1=<hex(HMAC-SHA256(TRUST_WEBHOOK_SECRET, t + "." + raw_body))>`, con hex
+        en minúsculas y `t` = hora de cada envío. El `event_id` y el body JSON se generan una sola vez al completar el pago
+        y se guardan: cada reintento y el listado de reconciliación usan exactamente esos bytes.
+        Trust verifica sobre el body crudo, en tiempo constante, y rechaza si |ahora − t| > 300 s.
+        Trust responde 200 después de guardar (también si es duplicado o la cuenta es desconocida). Cualquier otro status
+        hace que el emisor reintente (1 s, 5 s, 30 s, 2 min). Dedup en Trust por `event_id` y por
+        `(collection_account_id, bre_b_reference)`.
+      parameters:
+        - name: X-Puntored-Signature
+          in: header
+          required: true
+          schema: { type: string, examples: ['t=1792209720,v1=5f2b...'] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PuntoredPaymentEvent' }
+      responses:
+        '200': { description: 'Recibido (nuevo, duplicado o sin cuenta asociada)' }
+        '401': { description: Firma inválida o vencida }
+components:
+  securitySchemes:
+    InternalApiKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Api-Key
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Obligatorio en todo POST. Ver "Idempotencia" en la descripción general.
+      schema: { type: string, minLength: 1, maxLength: 255, examples: ['payout:3f6c2a7e-1b0d-4c55-9f7e-2a1c9d8e4b10:1'] }
+    CollectionAccountId:
+      name: collection_account_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    BadRequest:
+      description: Validación fallida
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: API key ausente o inválida
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unprocessable:
+      description: Rechazado por la wallet u Open Payments (por ejemplo `wallet_not_found`, `asset_mismatch`, `invalid_amount`)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    UpstreamError:
+      description: Error de la wallet o del servidor Open Payments (reintentable)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Amount:
+      type: object
+      required: [value, asset_code, asset_scale]
+      properties:
+        value:
+          type: string
+          pattern: '^(0|[1-9][0-9]*)$'
+          description: Entero en unidades mínimas, como string
+        asset_code: { type: string, examples: [USD, EUR, COP] }
+        asset_scale: { type: integer, minimum: 0, maximum: 255 }
+      examples:
+        - { value: '4800', asset_code: USD, asset_scale: 2 }
+    PositiveAmount:
+      allOf:
+        - $ref: '#/components/schemas/Amount'
+        - type: object
+          properties:
+            value:
+              type: string
+              pattern: '^[1-9][0-9]*$'
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, retryable]
+          properties:
+            code:
+              type: string
+              description: |
+                Códigos conocidos: validation_error, unauthorized, not_found, idempotency_conflict, request_in_progress,
+                pool_exhausted, already_assigned, already_authorized, collection_account_not_active, sim_disabled, sim_payer_not_authorized,
+                wallet_not_found, invalid_url, asset_mismatch, invalid_amount, return_url_not_allowed, upstream_error.
+            message: { type: string }
+            retryable: { type: boolean }
+    WalletAddress:
+      type: object
+      required: [url, asset_code, asset_scale]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: El `id` exacto que devuelve la wallet (sin slash final). Es el que se usa como `identifier` y `walletAddress`.
+        public_name: { type: [string, 'null'] }
+        asset_code: { type: string }
+        asset_scale: { type: integer }
+    CreateCollectionAccountRequest:
+      type: object
+      required: [external_ref, display_name, asset_code]
+      properties:
+        external_ref: { type: string, maxLength: 200, examples: ['merchant:8b1f0c3e-5d2a-4f7b-9c61-0e4d2a9b7c15'] }
+        display_name:
+          type: string
+          maxLength: 100
+          description: Nombre del negocio que muestra /qr/{id}. No cambia el publicName de la wallet (Open Payments no lo permite)
+          examples: ['Tienda La Esquina']
+        asset_code:
+          type: string
+          description: Asset de la cuenta propia del negocio. Se asigna una wallet del pool con ese asset; si no hay, 409 pool_exhausted
+          examples: [USD]
+    CollectionAccount:
+      type: object
+      required: [id, external_ref, display_name, wallet_address, qr_payload, asset_code, asset_scale, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        external_ref: { type: string }
+        display_name: { type: string }
+        wallet_address: { type: string, format: uri }
+        qr_payload:
+          type: string
+          format: uri
+          description: '`{PUBLIC_BASE_URL}/qr/{id}`'
+        asset_code: { type: string }
+        asset_scale: { type: integer }
+        status:
+          type: string
+          enum: [active, revoked]
+        ledger_balance:
+          $ref: '#/components/schemas/Amount'
+          description: |
+            Informativo: entradas del simulador − transferencias completadas de esta cuenta. Open Payments no tiene API
+            de saldo y las wallets del pool comparten un saldo real, así que el saldo de cada negocio lo lleva Trust.
+        created_at: { type: string, format: date-time }
+    CreateTransferRequest:
+      type: object
+      required: [collection_account_id, receiver_wallet_address, debit_amount, external_ref]
+      properties:
+        collection_account_id: { type: string, format: uuid }
+        receiver_wallet_address: { type: string, format: uri }
+        debit_amount:
+          $ref: '#/components/schemas/PositiveAmount'
+          description: |
+            En el asset de la cuenta de recaudo (si no, 422 asset_mismatch). op-service envía exactamente este monto y nunca
+            lo ajusta. En un reintento (nueva Idempotency-Key) Trust manda lo que falta de la pata.
+        description:
+          type: string
+          maxLength: 200
+          description: Trust la arma solo con datos guardados (hora de la venta, no now()), para que un reintento con la misma clave mande el mismo cuerpo
+          examples: ['Abono venta 10:42 a. m. · Tienda La Esquina']
+        external_ref:
+          type: string
+          maxLength: 200
+          description: 'No es único: todos los intentos de una pata comparten el mismo valor'
+          examples: ['payout:3f6c2a7e-1b0d-4c55-9f7e-2a1c9d8e4b10']
+    Transfer:
+      type: object
+      required: [id, external_ref, collection_account_id, receiver_wallet_address, debit_amount, status, retryable, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        external_ref: { type: string }
+        collection_account_id: { type: string, format: uuid }
+        receiver_wallet_address: { type: string, format: uri }
+        description: { type: [string, 'null'] }
+        debit_amount: { $ref: '#/components/schemas/Amount' }
+        sent_amount:
+          description: Lo efectivamente enviado (asset de recaudo). Si una transferencia falla con sent_amount > 0, Trust cuenta esa parte como entregada.
+          oneOf:
+            - $ref: '#/components/schemas/Amount'
+            - type: 'null'
+        receive_amount:
+          description: Lo que recibe el receptor, en el asset de su wallet (puede diferir por conversión o comisiones)
+          oneOf:
+            - $ref: '#/components/schemas/Amount'
+            - type: 'null'
+        status:
+          type: string
+          enum: [processing, completed, failed]
+          description: |
+            `completed` = (sentAmount == debitAmount, o receivedAmount del incoming del receptor ≥ receiveAmount del
+            outgoing) **y** `IncomingPayment.Complete` respondió OK. Trust cuenta como entregado todo el `debit_amount` si
+            `completed`, o el `sent_amount` si `failed`.
+        failure_code:
+          type: [string, 'null']
+          enum: [insufficient_balance, receiver_unreachable, invalid_amount, amount_too_small, grant_revoked, upstream_error, internal, null]
+          description: |
+            Reintentables: insufficient_balance, receiver_unreachable, upstream_error, internal.
+            Terminales: invalid_amount, amount_too_small, grant_revoked (la cuenta pasa a `revoked`).
+        retryable: { type: boolean }
+        incoming_payment_url: { type: [string, 'null'], format: uri }
+        outgoing_payment_url: { type: [string, 'null'], format: uri }
+        created_at: { type: string, format: date-time }
+        completed_at: { type: [string, 'null'], format: date-time }
+    CreatePaymentRequest:
+      type: object
+      required: [sender_wallet_address, receiver_wallet_address, receive_amount, external_ref, return_url]
+      properties:
+        sender_wallet_address: { type: string, format: uri, description: Wallet del prestamista }
+        receiver_wallet_address: { type: string, format: uri, description: Cuenta propia del negocio }
+        receive_amount:
+          $ref: '#/components/schemas/PositiveAmount'
+          description: Principal del crédito, en el asset de la wallet receptora (si no, 422 asset_mismatch)
+        description: { type: string, maxLength: 200, examples: ['Desembolso crédito Trust · Tienda La Esquina'] }
+        external_ref: { type: string, maxLength: 200, examples: ['loan:5a9e1d2c-7b34-4e8f-a0c6-91d2e3f4a5b6:disb'] }
+        return_url:
+          type: string
+          format: uri
+          examples: ['https://app.trustservices.com.co/op/return?loan_id=5a9e1d2c-7b34-4e8f-a0c6-91d2e3f4a5b6&client=web']
+    Payment:
+      type: object
+      required: [id, external_ref, sender_wallet_address, receiver_wallet_address, receive_amount, status, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        external_ref: { type: string }
+        sender_wallet_address: { type: string, format: uri }
+        receiver_wallet_address: { type: string, format: uri }
+        receive_amount: { $ref: '#/components/schemas/Amount' }
+        debit_amount:
+          description: Lo que paga el emisor según la quote vigente (asset del emisor)
+          oneOf:
+            - $ref: '#/components/schemas/Amount'
+            - type: 'null'
+        sent_amount:
+          oneOf:
+            - $ref: '#/components/schemas/Amount'
+            - type: 'null'
+        status:
+          type: string
+          enum: [awaiting_authorization, processing, completed, failed, rejected, expired]
+          description: |
+            awaiting_authorization → processing (aprobó y se creó el outgoing) → completed (el receptor recibió todo).
+            rejected = el emisor rechazó en su wallet. expired = no aprobó en 10 min. failed = ver failure_code.
+        authorization_url:
+          type: [string, 'null']
+          format: uri
+          description: Solo mientras está en awaiting_authorization. El frontend la abre en primer plano (nunca en iframe)
+        authorization_expires_at: { type: [string, 'null'], format: date-time }
+        failure_code:
+          type: [string, 'null']
+          enum: [insufficient_balance, quote_expired, receiver_unreachable, upstream_error, internal, null]
+        incoming_payment_url: { type: [string, 'null'], format: uri }
+        outgoing_payment_url: { type: [string, 'null'], format: uri }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    CreateSimQrPaymentRequest:
+      type: object
+      required: [collection_account_id, amount]
+      properties:
+        collection_account_id: { type: string, format: uuid }
+        amount: { $ref: '#/components/schemas/PositiveAmount' }
+        payer_bank: { type: string, maxLength: 60, examples: ['Bancolombia'] }
+    SimQrPayment:
+      type: object
+      required: [id, seq, collection_account_id, amount, bre_b_reference, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        seq: { type: [integer, 'null'], description: 'Secuencia global creciente; se asigna cuando el pago llega a estado terminal (para listar con `after`)' }
+        collection_account_id: { type: string, format: uuid }
+        amount: { $ref: '#/components/schemas/Amount' }
+        payer_bank: { type: [string, 'null'] }
+        bre_b_reference: { type: string, description: 'Referencia simulada del pago Bre-B, única' }
+        status:
+          type: string
+          enum: [processing, completed, failed]
+          description: completed = la plata llegó a la cuenta de recaudo y se intentó enviar el webhook
+        incoming_payment_url: { type: [string, 'null'], format: uri }
+        webhook_event:
+          description: Solo si status=completed. Es exactamente el body del webhook, con el mismo event_id en cada reintento
+          oneOf:
+            - $ref: '#/components/schemas/PuntoredPaymentEvent'
+            - type: 'null'
+        webhook_delivered_at: { type: [string, 'null'], format: date-time }
+        created_at: { type: string, format: date-time }
+    SimQrPaymentList:
+      type: object
+      required: [items, next_after]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/SimQrPayment' }
+        next_after: { type: integer, description: 'seq del último item devuelto, o el mismo `after` si no hay items' }
+    PoolWallet:
+      type: object
+      required: [id, wallet_address, role, asset_code, asset_scale, status]
+      properties:
+        id: { type: string, format: uuid }
+        wallet_address: { type: string, format: uri }
+        role:
+          type: string
+          enum: [collection, sim_payer]
+        asset_code: { type: string }
+        asset_scale: { type: integer }
+        status:
+          type: string
+          enum: [unauthorized, awaiting_authorization, authorized, assigned, revoked]
+          description: |
+            unauthorized → awaiting_authorization → authorized → assigned (solo collection) · revoked.
+            Si el operador rechaza o el consentimiento vence, vuelve a `unauthorized` (authorization_url = null).
+        collection_account_id: { type: [string, 'null'], format: uuid }
+        authorization_url: { type: [string, 'null'], format: uri }
+        authorization_expires_at: { type: [string, 'null'], format: date-time }
+    PuntoredPaymentEvent:
+      type: object
+      required: [event_id, type, occurred_at, data]
+      properties:
+        event_id: { type: string, format: uuid }
+        type:
+          type: string
+          enum: [qr_payment.received, qr_payment.reversed]
+          description: Trust solo procesa qr_payment.received; qr_payment.reversed se guarda y se ignora (fuera de alcance)
+        occurred_at: { type: string, format: date-time }
+        data:
+          type: object
+          required: [collection_account_id, collection_wallet_address, amount, bre_b_reference]
+          properties:
+            collection_account_id: { type: string, format: uuid }
+            collection_wallet_address: { type: string, format: uri }
+            amount: { $ref: '#/components/schemas/PositiveAmount' }
+            bre_b_reference: { type: string }
+            payer_bank: { type: [string, 'null'] }
+            incoming_payment_url: { type: [string, 'null'], format: uri }
+      examples:
+        - event_id: 0f8e7d6c-5b4a-4392-8170-6e5d4c3b2a19
+          type: qr_payment.received
+          occurred_at: '2026-10-17T15:42:00Z'
+          data:
+            collection_account_id: 2c4e6a80-1b3d-4f5a-8c7e-9d0f1a2b3c4d
+            collection_wallet_address: https://ilp.interledger-test.dev/trust-recaudo-01
+            amount: { value: '4800', asset_code: USD, asset_scale: 2 }
+            bre_b_reference: BREB-SIM-000123
+            payer_bank: Bancolombia
+            incoming_payment_url: https://ilp.interledger-test.dev/f537937b-7016-481b-b655-9f0d1014822c/incoming-payments/7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        client_wallet_address: { type: string, format: uri }
+        version: { type: string }

@@ -1,0 +1,45 @@
+[project]
+name = "trust-backend"
+version = "0.1.0"
+description = "Backend Trust: créditos para MiPymes pagados con sus ventas vía Open Payments"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy>=2",
+    "psycopg[binary]",
+    "pydantic[email]",
+    "pydantic-settings",
+    "httpx",
+    "pyjwt",
+    "bcrypt",
+    "pyyaml",
+    "jsonschema",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "rfc3339-validator",
+    "httpx2>=2.13.1",
+    "rfc3986-validator>=0.1.1",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Header", "fastapi.Body", "fastapi.Path"]

@@ -1,0 +1,21 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { chrome, mainSections } from '../sections';
+
+const { nav: Nav, footer: Footer } = chrome;
+const sections = Object.values(mainSections);
+---
+
+<Layout
+  title="Trust | Crédito que pagas con tus ventas"
+  description="Pide crédito según tu cupo y págalo con un porcentaje de cada venta con Bre-B. Si prestas, recibe tu parte venta a venta, clara y trazable."
+  ogTitle="Trust: cada venta paga un poco de tu crédito"
+  ogDescription="Crédito para comercios que se paga con sus propias ventas, a través de Bre-B y Puntored. Si prestas, recibes tu parte con cada venta."
+  ogImageAlt="Logo de Trust sobre fondo negro con un brillo morado suave."
+>
+  <Nav />
+  <main id="contenido">
+    {sections.map((Section) => <Section />)}
+  </main>
+  <Footer />
+</Layout>

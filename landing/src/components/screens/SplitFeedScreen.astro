@@ -1,0 +1,315 @@
+---
+// Mock of the app screen "Ventas de hoy" (screenId division-en-vivo), COPY.md §13c. Section Cómo funciona.
+// Rendered inside <DeviceFrame> (390×844pt canvas, sizes in var(--pt)). Decorative: no focusable elements.
+import './screen-kit.css';
+import StatusBar from './StatusBar.astro';
+import Num from './Num.astro';
+import { NBSP, formatCOP, pct } from '../../scripts/format';
+import Split from '@lucide/astro/icons/split';
+import ArrowDownLeft from '@lucide/astro/icons/arrow-down-left';
+import Wallet from '@lucide/astro/icons/wallet';
+import ChevronRight from '@lucide/astro/icons/chevron-right';
+
+// COPY.md 13c movements: each sale splits 85 % for the shop / 15 % to the credit (example data)
+const SHARE = 0.15;
+const rows = [
+  { time: '10:42 a. m.', total: 48000 },
+  { time: '10:31 a. m.', total: 26000 },
+  { time: '10:05 a. m.', total: 12500 },
+  { time: '9:47 a. m.', total: 85000 },
+].map((r) => ({
+  time: r.time.replaceAll(' ', NBSP),
+  total: formatCOP(r.total),
+  you: formatCOP(r.total * (1 - SHARE)),
+  credit: formatCOP(r.total * SHARE),
+}));
+---
+
+<div class="sk-screen feed" data-screen="division-en-vivo">
+  <StatusBar />
+
+  <div class="sk-body feed__body">
+    <div class="sk-row feed__head">
+      <span class="sk-h1">Ventas de hoy</span>
+    </div>
+    <span class="sk-cap feed__date">Viernes, 16 oct 2026</span>
+
+    <div class="sk-card sk-card--hero feed__summary">
+      <span class="sk-sheen sk-loop"></span>
+      <div class="sk-row">
+        <span class="sk-label">Ventas</span>
+        <span class="sk-micro">14 ventas</span>
+      </div>
+      <Num value={612000} class="sk-amt sk-amt--lg feed__total" />
+      <div class="feed__cols">
+        <div class="sk-stack feed__col">
+          <span class="feed__col-label">Para ti</span>
+          <Num value={520200} delay={150} class="sk-money feed__col-val" />
+        </div>
+        <div class="sk-stack feed__col">
+          <span class="feed__col-label">Abonado a tu crédito</span>
+          <Num value={91800} delay={300} class="sk-money sk-accent feed__col-val" />
+        </div>
+      </div>
+    </div>
+
+    <div class="sk-card feed__list">
+      <div class="feed__rule">
+        <span class="sk-ico" style="--s: 15"><Split stroke-width={2} /></span>
+        <span>{pct(85)} para ti · {pct(15)} a tu crédito</span>
+      </div>
+      <div class="feed__rows">
+        {
+          rows.map((r, i) => (
+            <div class:list={['feed__row', i === 0 && 'feed__row--new']} data-anim={i === 0 ? 'enter' : 'push'}>
+              <div class="feed__line">
+                <span class="feed__ico">
+                  <span class="sk-ico" style="--s: 14">
+                    <ArrowDownLeft stroke-width={2.25} />
+                  </span>
+                </span>
+                <span class="feed__what">Venta Bre-B</span>
+                <span class="sk-micro feed__time">{r.time}</span>
+                <span class="sk-money feed__amt">{r.total}</span>
+              </div>
+              <div class="sk-split feed__split">
+                <span class="sk-split__a" data-anim="fill-x" style={`--d: ${700 + i * 120}ms; --t: 900ms`}></span>
+                <span class="sk-split__b" data-anim="fill-x-end" style={`--d: ${1050 + i * 120}ms; --t: 700ms`}></span>
+              </div>
+              <div class="feed__parts">
+                <span>
+                  Para ti <span class="feed__part-val">{r.you}</span>
+                </span>
+                <span>
+                  Crédito <span class="feed__part-val feed__part-val--b">{r.credit}</span>
+                </span>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+      <div class="sk-link feed__more">
+        Ver las 14 ventas
+        <span class="sk-ico" style="--s: 16"><ChevronRight stroke-width={2} /></span>
+      </div>
+    </div>
+
+    <div class="sk-bottom feed__actions">
+      <div class="feed__wallet">
+        <span class="sk-ico" style="--s: 16"><Wallet stroke-width={1.9} /></span>
+        <span>En tu wallet Puntored hoy: <span class="sk-money">$520.200</span></span>
+      </div>
+      <div class="sk-btn">Ver detalle del crédito</div>
+    </div>
+  </div>
+  <span class="sk-home"></span>
+</div>
+
+<style>
+  .feed {
+    --row: calc(var(--pt) * 76);
+  }
+
+  .feed__body {
+    padding-block: calc(var(--pt) * 8) calc(var(--pt) * 36);
+  }
+
+  .feed__date {
+    margin-block-start: calc(var(--pt) * 4);
+    font-size: calc(var(--pt) * 13);
+  }
+
+  .feed__summary {
+    display: flex;
+    flex-direction: column;
+    margin-block-start: calc(var(--pt) * 16);
+    padding: calc(var(--pt) * 16) calc(var(--pt) * 18) calc(var(--pt) * 18);
+  }
+
+  .feed__summary :global(.feed__total) {
+    margin-block: calc(var(--pt) * 6) calc(var(--pt) * 14);
+  }
+
+  .feed__cols {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: calc(var(--pt) * 12);
+    padding-block-start: calc(var(--pt) * 14);
+    border-block-start: 1px solid var(--sk-line);
+  }
+
+  .feed__col {
+    gap: calc(var(--pt) * 5);
+  }
+
+  .feed__col-label {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--pt) * 6);
+    font-size: calc(var(--pt) * 12);
+    color: var(--sk-muted);
+    white-space: nowrap;
+  }
+
+  .feed__col :global(.feed__col-val) {
+    font-size: calc(var(--pt) * 17);
+  }
+
+  .feed__list {
+    margin-block-start: calc(var(--pt) * 14);
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .feed__rule {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--pt) * 8);
+    block-size: calc(var(--pt) * 38);
+    padding-inline: calc(var(--pt) * 16);
+    background: linear-gradient(90deg, rgb(105 48 249 / 0.24), rgb(105 48 249 / 0.06));
+    border-block-end: 1px solid var(--sk-line);
+    font-size: calc(var(--pt) * 12.5);
+    font-weight: 600;
+    color: var(--sk-accent);
+  }
+
+  .feed__rows {
+    position: relative;
+  }
+
+  .feed__row {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: calc(var(--pt) * 7);
+    block-size: var(--row);
+    padding-inline: calc(var(--pt) * 16);
+  }
+
+  .feed__row + .feed__row::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: calc(var(--pt) * 16);
+    block-size: 1px;
+    background: var(--sk-line);
+  }
+
+  .feed__row--new {
+    background: linear-gradient(90deg, rgb(105 48 249 / 0.14), rgb(105 48 249 / 0) 75%);
+  }
+
+  .feed__row--new::after {
+    content: '';
+    position: absolute;
+    inset-block: calc(var(--pt) * 14);
+    inset-inline-start: 0;
+    inline-size: calc(var(--pt) * 3);
+    border-radius: 0 999px 999px 0;
+    background: var(--trust-violet-400);
+    box-shadow: 0 0 calc(var(--pt) * 10) rgb(157 103 251 / 0.9);
+  }
+
+  .feed__line {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--pt) * 8);
+  }
+
+  .feed__ico {
+    display: grid;
+    place-items: center;
+    flex: none;
+    inline-size: calc(var(--pt) * 22);
+    block-size: calc(var(--pt) * 22);
+    border-radius: 50%;
+    background: rgb(105 48 249 / 0.28);
+    color: var(--trust-lilac);
+  }
+
+  .feed__what {
+    font-size: calc(var(--pt) * 14);
+    font-weight: 600;
+  }
+
+  .feed__time {
+    flex: 1 1 auto;
+  }
+
+  .feed__amt {
+    font-size: calc(var(--pt) * 15);
+  }
+
+  .feed__split {
+    block-size: calc(var(--pt) * 4);
+  }
+
+  .feed__parts {
+    display: flex;
+    justify-content: space-between;
+    font-size: calc(var(--pt) * 12);
+    color: var(--sk-muted);
+  }
+
+  .feed__part-val {
+    font-weight: 600;
+    color: var(--sk-text);
+  }
+
+  .feed__part-val--b {
+    color: var(--sk-accent);
+  }
+
+  .feed__more {
+    display: flex;
+    justify-content: center;
+    block-size: calc(var(--pt) * 42);
+    border-block-start: 1px solid var(--sk-line);
+    font-size: calc(var(--pt) * 13.5);
+  }
+
+  .feed__actions {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--pt) * 12);
+  }
+
+  .feed__wallet {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--pt) * 8);
+    font-size: calc(var(--pt) * 13);
+    color: var(--sk-muted);
+  }
+
+  .feed__wallet .sk-ico {
+    color: var(--sk-accent);
+  }
+
+  /* one-shot: a new sale enters at the top and pushes the list down by one row */
+  .feed [data-anim='enter'],
+  .feed [data-anim='push'] {
+    transition:
+      transform 900ms var(--sk-ease) 250ms,
+      opacity 700ms var(--sk-ease) 350ms;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :global(.js) .feed:not(.is-played) [data-anim='push'] {
+      transform: translateY(calc(var(--row) * -1));
+    }
+
+    :global(.js) .feed:not(.is-played) [data-anim='enter'] {
+      opacity: 0;
+      transform: translateY(calc(var(--row) * -0.35)) scale(0.97);
+    }
+  }
+
+  /* no 'new item' marker (no testigos) */
+  .feed__row--new::after {
+    display: none;
+  }
+</style>

@@ -1,0 +1,153 @@
+---
+/**
+ * Phone frame for app screenshots.
+ * - With `screenshot` (an imported image from src/assets/screens/): renders the optimized capture.
+ * - Without it: renders the slot, an HTML/CSS mock of the screen (placeholder until the real capture exists).
+ * Slots are listed in docs/SCREENSHOTS.md by `screenId`.
+ *
+ * Inside the screen, mocks are laid out on a 390pt-wide canvas: use `calc(var(--pt) * N)` for sizes
+ * so the mock scales with the frame (the screen is an inline-size container).
+ * The mock branch also loads the screens' motion controller (screens/screen-anim.ts) once per page.
+ * Extra attributes (data-*, aria-*, the parent's scoped-style attribute) pass through to the <figure>.
+ */
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import type { HTMLAttributes } from 'astro/types';
+
+interface Props extends Omit<HTMLAttributes<'figure'>, 'class' | 'style'> {
+  screenId: string;
+  /** describes what the screen shows (used as the image alt / mock label) */
+  alt: string;
+  screenshot?: ImageMetadata;
+  /** CSS width of the device, e.g. "clamp(240px, 26vw, 340px)" */
+  width?: string;
+  tilt?: 'none' | 'left' | 'right';
+  glow?: boolean;
+  priority?: boolean;
+  /** `sizes` for the screenshot srcset; match it to `width` */
+  sizes?: string;
+  class?: string;
+}
+
+const {
+  screenId,
+  alt,
+  screenshot,
+  width = 'clamp(240px, 26vw, 340px)',
+  tilt = 'none',
+  glow = false,
+  priority = false,
+  sizes = '(min-width: 1024px) 340px, 70vw',
+  class: className,
+  ...rest
+} = Astro.props;
+const showBadge = import.meta.env.DEV && !screenshot;
+---
+
+<figure
+  {...rest}
+  class:list={['device', `device--tilt-${tilt}`, glow && 'device--glow', className]}
+  style={`--device-w: ${width};`}
+  data-screen-id={screenId}
+>
+  <div class="device__frame lit-edge">
+    <div class="device__screen">
+      {
+        screenshot ? (
+          <Image src={screenshot} alt={alt} widths={[320, 480, 640, 960, 1170]} sizes={sizes} priority={priority} class="device__img" />
+        ) : (
+          <>
+            <div class="device__mock" role="img" aria-label={alt}>
+              <slot />
+            </div>
+            <script>
+              import '../screens/screen-anim';
+            </script>
+          </>
+        )
+      }
+      <span class="device__island" aria-hidden="true"></span>
+    </div>
+  </div>
+  {showBadge && <figcaption class="device__badge">Captura pendiente · {screenId}</figcaption>}
+</figure>
+
+<style>
+  .device {
+    position: relative;
+    inline-size: var(--device-w);
+    margin: 0;
+    flex: none;
+  }
+  .device--tilt-left {
+    transform: perspective(1400px) rotateY(10deg) rotateX(2deg) rotateZ(-2deg);
+  }
+  .device--tilt-right {
+    transform: perspective(1400px) rotateY(-10deg) rotateX(2deg) rotateZ(2deg);
+  }
+  .device--glow::before {
+    content: '';
+    position: absolute;
+    inset: 12% -8% -6%;
+    z-index: -1;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(105 48 249 / 0.55), rgb(105 48 249 / 0));
+    pointer-events: none;
+  }
+  .device__frame {
+    position: relative;
+    padding: calc(var(--device-w) * 0.032);
+    border-radius: calc(var(--device-w) * 0.165);
+    background: linear-gradient(160deg, var(--frame-hi) 0%, var(--ink-900) 45%, var(--frame-lo) 100%);
+    box-shadow:
+      0 0 0 1px rgb(0 0 0 / 0.6),
+      inset 0 0 0 1px rgb(241 233 253 / 0.08),
+      0 40px 80px -30px rgb(0 0 0 / 0.8),
+      0 30px 120px -40px rgb(105 48 249 / 0.6);
+  }
+  .device__screen {
+    position: relative;
+    aspect-ratio: 1170 / 2532;
+    overflow: hidden;
+    border-radius: calc(var(--device-w) * 0.135);
+    background: var(--ink-950);
+    container-type: inline-size;
+  }
+  .device__img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+  .device__mock {
+    --pt: calc(100cqi / 390);
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    font-family: var(--font-body);
+    font-size: calc(var(--pt) * 15);
+    line-height: 1.35;
+    color: var(--trust-lilac);
+  }
+  .device__island {
+    position: absolute;
+    inset-block-start: 2.2%;
+    inset-inline-start: 50%;
+    inline-size: 31%;
+    block-size: 3.6%;
+    border-radius: 999px;
+    background: #000;
+    transform: translateX(-50%);
+  }
+  .device__badge {
+    position: absolute;
+    inset-block-end: -14px;
+    inset-inline-start: 50%;
+    transform: translateX(-50%);
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #ffd166;
+    color: #191919;
+    font: 600 11px/1.4 var(--font-body);
+    white-space: nowrap;
+  }
+</style>

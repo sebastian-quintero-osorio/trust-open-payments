@@ -1,0 +1,516 @@
+---
+/**
+ * Fixed header (COPY.md §2).
+ * - Transparent over the hero; becomes a glass bar after ~40px of scroll: CSS scroll() timeline driving the
+ *   opacity of a background layer. Fallback (no scroll timelines, or reduced motion): passive class toggle.
+ * - Desktop (>= 64em, i.e. 1024px at the default text size): centered links with a gliding active-section pill
+ *   (transform only, IntersectionObserver). em breakpoints: with a larger default font the mobile layout stays
+ *   until the links and the CTA fit on one centered row.
+ * - Mobile: full-screen sheet with staggered Qontra links; Escape / link click close it; focus is trapped
+ *   (rest of the page is `inert`) and restored to the toggle; page scroll is locked while open.
+ *   Without JS the menu button is hidden and the CTA takes its place.
+ * - The wordmark is the static logo image (no looping sheen: docs/DESIGN.md).
+ */
+import Logo from '../ui/Logo.astro';
+import Button from '../ui/Button.astro';
+
+const links = [
+  { label: 'Cómo funciona', href: '#como-funciona' },
+  { label: 'Comercios', href: '#comercios' },
+  { label: 'Prestamistas', href: '#prestamistas' },
+  { label: 'Confianza', href: '#confianza' },
+  { label: 'Preguntas', href: '#preguntas' },
+];
+const cta = { label: 'Únete a la lista', href: '#lista-de-espera' };
+const labels = {
+  logo: 'Trust, ir al inicio',
+  open: 'Abrir menú',
+  close: 'Cerrar menú',
+};
+---
+
+<header class="nav" data-nav>
+  <div class="nav__glass" aria-hidden="true"></div>
+
+  <div class="nav__bar container-wide">
+    <a href="#inicio" class="nav__logo" aria-label={labels.logo}>
+      <Logo width={92} priority class="nav__mark" />
+    </a>
+
+    <nav class="nav__links" aria-label="Principal">
+      <ul role="list" class="nav__list" data-nav-list>
+        {
+          links.map((l) => (
+            <li>
+              <a href={l.href} class="nav__link" data-nav-link>{l.label}</a>
+            </li>
+          ))
+        }
+      </ul>
+      <span class="nav__pill" aria-hidden="true" data-nav-pill></span>
+    </nav>
+
+    <div class="nav__cta">
+      <Button href={cta.href} variant="violet" size="md">{cta.label}</Button>
+    </div>
+
+    <button
+      type="button"
+      class="nav__toggle"
+      aria-expanded="false"
+      aria-controls="nav-sheet"
+      aria-label={labels.open}
+      data-label-open={labels.open}
+      data-label-close={labels.close}
+      data-nav-toggle
+    >
+      <span class="nav__burger" aria-hidden="true"><i></i><i></i></span>
+    </button>
+  </div>
+
+  <div class="nav__sheet" id="nav-sheet" data-nav-sheet>
+    <nav aria-label="Menú" class="sheet__nav">
+      <ul role="list" class="sheet__list">
+        {
+          links.map((l, i) => (
+            <li class="sheet__item" style={`--i: ${i}`}>
+              <a href={l.href} class="sheet__link" data-sheet-link>
+                {l.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+    <div class="sheet__item sheet__cta" style={`--i: ${links.length}`}>
+      <Button href={cta.href} variant="violet" size="lg" data-sheet-link>{cta.label}</Button>
+    </div>
+  </div>
+</header>
+
+<script>
+  import { prefersReducedMotion } from '../../scripts/motion';
+
+  const header = document.querySelector<HTMLElement>('[data-nav]');
+
+  if (header) {
+
+    /* ---------- glass bar fallback (no scroll-driven animations, or reduced motion) ---------- */
+    if (!CSS.supports('animation-timeline: scroll()') || prefersReducedMotion()) {
+      let ticking = false;
+      const update = () => {
+        header.classList.toggle('is-scrolled', scrollY > 40);
+        ticking = false;
+      };
+      addEventListener(
+        'scroll',
+        () => {
+          if (!ticking) {
+            ticking = true;
+            requestAnimationFrame(update);
+          }
+        },
+        { passive: true },
+      );
+      update();
+    }
+
+    /* ---------- active-section pill (desktop) ---------- */
+    const list = header.querySelector<HTMLElement>('[data-nav-list]');
+    const pill = header.querySelector<HTMLElement>('[data-nav-pill]');
+    const navLinks = [...header.querySelectorAll<HTMLAnchorElement>('[data-nav-link]')];
+    if (list && pill && navLinks.length) {
+      const byId = new Map(navLinks.map((a) => [a.hash.slice(1), a]));
+      let active: HTMLAnchorElement | undefined;
+      let placed = false;
+      const place = () => {
+        if (!active) {
+          pill.classList.remove('is-on');
+          return;
+        }
+        if (!placed) pill.classList.add('is-instant'); // first placement: no glide from 0
+        pill.style.transform = `translate3d(${active.offsetLeft}px, 0, 0) scaleX(${active.offsetWidth / 100})`;
+        pill.classList.add('is-on');
+        if (!placed) {
+          placed = true;
+          requestAnimationFrame(() => requestAnimationFrame(() => pill.classList.remove('is-instant')));
+        }
+      };
+      const setActive = (id: string) => {
+        const next = byId.get(id);
+        if (next === active) return;
+        active?.removeAttribute('aria-current');
+        active = next;
+        active?.setAttribute('aria-current', 'true');
+        place();
+      };
+      // a section is "current" while it crosses the middle line of the viewport
+      const io = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) if (e.isIntersecting) setActive(e.target.id);
+        },
+        { rootMargin: '-50% 0px -50% 0px' },
+      );
+      document.querySelectorAll('main > section[id]').forEach((s) => io.observe(s));
+      new ResizeObserver(place).observe(list);
+      document.fonts?.ready.then(place);
+    }
+
+    /* ---------- mobile sheet ---------- */
+    const toggle = header.querySelector<HTMLButtonElement>('[data-nav-toggle]');
+    const sheet = header.querySelector<HTMLElement>('[data-nav-sheet]');
+    if (toggle && sheet) {
+      const desktop = matchMedia('(min-width: 64em)');
+      let open = false;
+      let outside: Element[] = [];
+
+      const focusables = () =>
+        [...header.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')].filter((el) =>
+          el.checkVisibility ? el.checkVisibility({ visibilityProperty: true }) : el.offsetParent !== null,
+        );
+
+      const setOpen = (next: boolean, restoreFocus = true) => {
+        if (next === open) return;
+        open = next;
+        header.classList.toggle('is-open', open);
+        document.documentElement.classList.toggle('nav-open', open);
+        toggle.setAttribute('aria-expanded', String(open));
+        toggle.setAttribute('aria-label', (open ? toggle.dataset.labelClose : toggle.dataset.labelOpen) ?? '');
+        if (open) {
+          // everything outside the header becomes inert (works on / and on /preview where the header sits in main)
+          outside = [...(header.parentElement?.children ?? [])].filter((el) => el !== header && !el.hasAttribute('inert'));
+          outside.forEach((el) => el.setAttribute('inert', ''));
+          sheet.querySelector<HTMLElement>('[data-sheet-link]')?.focus({ preventScroll: true });
+        } else {
+          outside.forEach((el) => el.removeAttribute('inert'));
+          outside = [];
+          if (restoreFocus) toggle.focus({ preventScroll: true });
+        }
+      };
+
+      toggle.addEventListener('click', () => setOpen(!open));
+      header.addEventListener('click', (e) => {
+        const a = (e.target as Element).closest('a[href^="#"]');
+        if (open && a) setOpen(false, false); // let the anchor take focus/scroll
+      });
+      document.addEventListener('keydown', (e) => {
+        if (!open) return;
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setOpen(false);
+        } else if (e.key === 'Tab') {
+          const items = focusables();
+          const first = items[0];
+          const last = items[items.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last?.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first?.focus();
+          }
+        }
+      });
+      desktop.addEventListener('change', (e) => e.matches && setOpen(false, false));
+    }
+  }
+</script>
+
+<style>
+  .nav {
+    --nav-h: 72px;
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 50;
+    block-size: var(--nav-h);
+    /* no transform/filter here: the sheet below is position:fixed and must resolve against the viewport */
+  }
+
+  /* glass layer: its opacity is the only thing that changes with scroll */
+  .nav__glass {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(14 13 18 / 0.82), rgb(20 19 23 / 0.7));
+    border-block-end: 1px solid var(--border);
+    box-shadow: 0 10px 30px -18px rgb(0 0 0 / 0.8);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    backdrop-filter: blur(18px) saturate(150%);
+    opacity: 0;
+    transition: opacity var(--dur-2) var(--ease-out);
+  }
+  .nav.is-scrolled .nav__glass {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: scroll()) {
+      .nav__glass {
+        transition: none;
+        animation: nav-glass linear both;
+        animation-timeline: scroll(root block);
+        animation-range: 12px 56px;
+      }
+    }
+  }
+
+  @keyframes nav-glass {
+    to {
+      opacity: 1;
+    }
+  }
+
+  .nav__bar {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    block-size: 100%;
+  }
+
+  .nav__logo {
+    justify-self: start; /* in the desktop grid: hug the wordmark instead of stretching across the column */
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 44px;
+    padding-inline: 2px;
+    border-radius: 8px;
+  }
+  .nav__logo :global(.nav__mark) {
+    display: block;
+  }
+  @media (max-width: 63.99em) {
+    .nav__logo :global(.nav__mark) {
+      inline-size: 80px;
+      block-size: auto;
+    }
+  }
+
+  /* ---------- desktop links ---------- */
+  .nav__links,
+  .nav__cta {
+    display: none;
+  }
+
+  @media (min-width: 64em) {
+    .nav__bar {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+    }
+    .nav__links {
+      position: relative;
+      display: block;
+    }
+    .nav__cta {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+  }
+
+  /* no JS: the menu button could not open anything, so the CTA takes its place */
+  @media (max-width: 63.99em) {
+    :global(html:not(.js)) .nav__cta {
+      display: flex;
+    }
+  }
+  :global(html:not(.js)) .nav__toggle {
+    display: none;
+  }
+
+  .nav__list {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 2px;
+    margin: 0;
+  }
+
+  .nav__link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 44px;
+    padding-inline: 14px;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-weight: 400;
+    letter-spacing: 0.005em;
+    color: var(--text-muted);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color var(--dur-2) var(--ease-out);
+  }
+  /* just above the breakpoint: tighten so the links stay centered */
+  @media (min-width: 64em) and (max-width: 67.99em) {
+    .nav__bar {
+      gap: 16px;
+    }
+    .nav__link {
+      padding-inline: 10px;
+    }
+  }
+  .nav__link:hover,
+  .nav__link[aria-current] {
+    color: var(--text);
+  }
+
+  /* gliding indicator: 100px base box moved/stretched with transform only */
+  .nav__pill {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 0;
+    inline-size: 100px;
+    block-size: 36px;
+    margin-block-start: -18px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgb(241 233 253 / 0.1), rgb(241 233 253 / 0.04));
+    box-shadow:
+      inset 0 0 0 1px rgb(180 153 254 / 0.2),
+      inset 0 1px 0 rgb(255 255 255 / 0.06);
+    transform-origin: 0 50%;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      transform 620ms var(--ease-out),
+      opacity var(--dur-2) var(--ease-out);
+  }
+  .nav__pill:global(.is-on) {
+    opacity: 1;
+  }
+  .nav__pill:global(.is-instant) {
+    transition: none;
+  }
+
+  /* ---------- mobile toggle ---------- */
+  .nav__toggle {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: rgb(241 233 253 / 0.05);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .nav__burger {
+    position: relative;
+    inline-size: 18px;
+    block-size: 10px;
+  }
+  .nav__burger i {
+    position: absolute;
+    inset-inline: 0;
+    block-size: 1.5px;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform 480ms var(--ease-out);
+  }
+  .nav__burger i:first-child {
+    inset-block-start: 0;
+  }
+  .nav__burger i:last-child {
+    inset-block-end: 0;
+  }
+  .nav.is-open .nav__burger i:first-child {
+    transform: translateY(4.25px) rotate(45deg);
+  }
+  .nav.is-open .nav__burger i:last-child {
+    transform: translateY(-4.25px) rotate(-45deg);
+  }
+
+  /* ---------- mobile sheet ---------- */
+  .nav__sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding: calc(var(--nav-h) + 20px) var(--gutter) calc(28px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--bg-deep);
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      opacity 360ms var(--ease-out),
+      visibility 0s linear 360ms;
+  }
+  .nav.is-open .nav__sheet {
+    visibility: visible;
+    opacity: 1;
+    transition:
+      opacity 420ms var(--ease-out),
+      visibility 0s;
+  }
+
+  .sheet__list {
+    margin: 0;
+  }
+
+  .sheet__item {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0);
+    transition:
+      transform 200ms var(--ease-out),
+      opacity 200ms var(--ease-out);
+  }
+  .nav.is-open .sheet__item {
+    opacity: 1;
+    transform: none;
+    transition:
+      transform 760ms var(--ease-out) calc(90ms + var(--i) * 55ms),
+      opacity 560ms var(--ease-out) calc(90ms + var(--i) * 55ms);
+  }
+
+  .sheet__link {
+    display: flex;
+    align-items: center;
+    min-block-size: 64px;
+    padding-block: 10px;
+    border-block-end: 1px solid var(--border);
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(2rem, 8.4vw, 2.75rem);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .sheet__cta {
+    margin-block-start: auto;
+  }
+  .sheet__cta :global(.btn) {
+    inline-size: 100%;
+  }
+
+  :global(html.nav-open) {
+    overflow: hidden;
+  }
+
+  /* last so it wins over the base display rules above */
+  @media (min-width: 64em) {
+    .nav__toggle,
+    .nav__sheet {
+      display: none;
+    }
+  }
+
+  /* active section: colour + a hairline underline, no gliding box (docs/DESIGN.md) */
+  .nav__pill {
+    display: none;
+  }
+  .nav__link[aria-current] {
+    text-decoration: underline;
+    text-decoration-color: var(--trust-lavender);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 8px;
+  }
+</style>
