@@ -86,7 +86,8 @@ func TestReplayConflictRollbackExpiryAndRestart(t *testing.T) {
 	if transientCalls != 2 {
 		t.Fatal("transient response cached")
 	}
-	if _, e = s.GetResource(ctx, "payment", transientID); e != pgx.ErrNoRows {
+	var payload []byte
+	if e = s.Pool.QueryRow(ctx, "SELECT payload FROM resources WHERE kind=$1 AND id=$2", "payment", transientID).Scan(&payload); e != pgx.ErrNoRows {
 		t.Fatal("transient mutation committed", e)
 	}
 	if _, e = s.Pool.Exec(ctx, "UPDATE idempotency_records SET expires_at=now()-interval '1 second' WHERE scope=$1 AND key=$2", "POST /v1/transfers", key); e != nil {
@@ -172,7 +173,8 @@ func TestDefinitiveErrorsNeverCommitResources(t *testing.T) {
 	if e != nil || !r.Replayed || r.Status != 400 {
 		t.Fatal("definitive response not replayed", r, e)
 	}
-	if _, e := s.GetResource(ctx, "payment", id); e != pgx.ErrNoRows {
+	var payload []byte
+	if e := s.Pool.QueryRow(ctx, "SELECT payload FROM resources WHERE kind=$1 AND id=$2", "payment", id).Scan(&payload); e != pgx.ErrNoRows {
 		t.Fatal("error response committed a resource", e)
 	}
 }

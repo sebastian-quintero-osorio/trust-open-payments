@@ -44,6 +44,48 @@ La configuración opcional TRUSTED_PROXY_CIDRS reconoce únicamente el Caddy de 
 Compose (172.30.0.2/32). Las direcciones X-Forwarded-For de otros clientes se ignoran.
 Si se cambia la subred Docker, actualizar las IPs fijas y ese CIDR conjuntamente.
 
+### Conectar el backend con un dominio HTTPS
+
+`OP_CLIENT=http` selecciona el cliente de red tanto para HTTP como para HTTPS.
+El dominio no cambia este valor. Por ejemplo, para `pay.tudominio.com`, configurar
+en el entorno de op-service:
+
+```dotenv
+PAY_DOMAIN=pay.tudominio.com
+PUBLIC_BASE_URL=https://pay.tudominio.com
+```
+
+El DNS debe apuntar al servidor de Caddy y sus puertos 80/443 deben estar disponibles.
+El Caddy incluido publica health, callbacks y QR; las rutas privadas `/v1/payments`,
+`/v1/transfers` y de administración devuelven 404 a través del dominio público.
+El backend accede a ellas por la red Docker, autenticándose con la misma clave:
+
+```dotenv
+# backend/.env
+OP_CLIENT=http
+OP_SERVICE_BASE_URL=http://op-service:8080
+OP_SERVICE_API_KEY=<mismo valor que INTERNAL_API_KEY de op-service>
+```
+
+Tras levantar el Compose de op-service, desde `backend/` ejecutar:
+
+```bash
+docker compose -f docker-compose.yml -f compose.op-service.yaml up --build -d
+```
+
+El override une la API a `trust-payments` y conserva su conexión a PostgreSQL.
+Si el backend corre directamente en el host, usar `compose.local.yaml` para
+op-service y `OP_SERVICE_BASE_URL=http://127.0.0.1:8080` en el backend.
+Si están en servidores distintos, hace falta conectividad privada entre ellos o
+un proxy HTTPS que permita explícitamente las rutas privadas; el dominio público
+con el Caddy incluido no basta para esa conexión.
+
+Para el simulador, `TRUST_WEBHOOK_URL` apunta al endpoint HTTPS del backend y
+`TRUST_WEBHOOK_SECRET` coincide con uno de sus `PUNTORED_WEBHOOK_SECRETS`.
+`OP_CLIENT_WALLET_ADDRESS` sigue siendo la dirección de la wallet Open Payments
+de Trust, independiente del dominio del servicio. Los ejemplos de dominio deben
+reemplazarse por los del despliegue real.
+
 Desde `open-payments/`:
 
 ```bash
@@ -84,7 +126,7 @@ El script de demo usa una cuenta de humo nueva, sin asociarla a un comercio real
 Trust, y distribuye 20%/75%/5% únicamente para probar op-service. No usar distribución
 manual junto con un backend que ya distribuye automáticamente ese mismo recaudo.
 Para comprobar la lógica real de créditos y reparto de Trust, ejecutar además las
-pruebas del backend propietario; este repositorio no contiene su implementación.
+pruebas del backend de negocio, cuya implementación está en `../../backend/`.
 
 Configurar DEMO_LENDER_WALLET_ADDRESS, DEMO_MERCHANT_WALLET_ADDRESS y
 DEMO_TRUST_INCOME_WALLET_ADDRESS. DEMO_CREDIT_VALUE (10000 por defecto) y

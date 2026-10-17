@@ -335,13 +335,6 @@ func (c *Client) CreateQuote(ctx context.Context, w Wallet, t config.Secret, inc
 	return q, e
 }
 
-// GetQuote reads an existing quote.
-func (c *Client) GetQuote(ctx context.Context, target string, t config.Secret) (Quote, error) {
-	var q Quote
-	e := c.request(ctx, "GET", target, t, nil, &q)
-	return q, e
-}
-
 // CreateOutgoing sends exactly the supplied quote or debit amount, without retries.
 func (c *Client) CreateOutgoing(ctx context.Context, w Wallet, t config.Secret, quote, incoming string, debit *Amount, metadata map[string]any) (Outgoing, error) {
 	p := map[string]any{"walletAddress": w.ID, "metadata": metadata}

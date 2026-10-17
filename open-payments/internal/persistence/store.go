@@ -217,10 +217,3 @@ func InsertResource(ctx context.Context, tx pgx.Tx, r Resource) error {
 	_, e := tx.Exec(ctx, "INSERT INTO resources(id,kind,external_ref,status,payload) VALUES($1,$2,$3,$4,$5)", r.ID, r.Kind, r.ExternalRef, r.Status, []byte(r.Payload))
 	return e
 }
-
-// GetResource loads a typed resource by ID without exposing database errors to HTTP.
-func (s *Store) GetResource(ctx context.Context, kind, id string) (json.RawMessage, error) {
-	var b []byte
-	e := s.Pool.QueryRow(ctx, "SELECT payload FROM resources WHERE kind=$1 AND id=$2", kind, id).Scan(&b)
-	return b, e
-}

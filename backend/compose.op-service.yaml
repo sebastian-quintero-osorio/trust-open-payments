@@ -1,0 +1,15 @@
+# Usar después de levantar open-payments/compose.yaml, que crea trust-payments.
+services:
+  api:
+    environment:
+      OP_CLIENT: http
+      OP_SERVICE_BASE_URL: http://op-service:8080
+      OP_SERVICE_API_KEY: ${OP_SERVICE_API_KEY:?Set OP_SERVICE_API_KEY to op-service INTERNAL_API_KEY}
+    networks:
+      - default
+      - payments
+
+networks:
+  payments:
+    external: true
+    name: trust-payments

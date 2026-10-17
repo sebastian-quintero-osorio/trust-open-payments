@@ -76,8 +76,11 @@ ejecutan localmente. No se ha configurado protección remota ni ejecutado Action
 
 Las pruebas reales de Open Payments requieren una wallet Trust, clave Ed25519
 registrada y wallets de usuarios separados para recaudo, ingresos y pagador demo.
-El backend FastAPI aún no existe en este repositorio; la integración final requiere
-su API y receptor de webhooks. Las pruebas locales no certifican el comportamiento de la wallet real.
+El backend FastAPI está en `../backend/` e incluye cliente HTTP, receptor de webhooks
+y workers para desembolsos, repartición y conciliación. Por defecto usa `OP_CLIENT=fake`;
+la conexión con este servicio requiere `OP_CLIENT=http`. Ver la configuración de
+dominio y red interna en [la guía operativa](docs/operations.md).
+Las pruebas locales no certifican el comportamiento de la wallet real.
 
 Referencias: [Open Payments](https://openpayments.dev/),
 [pgx](https://github.com/jackc/pgx),

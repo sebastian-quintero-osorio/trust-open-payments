@@ -133,9 +133,6 @@ func TestProtocolFlowPreservesTenantsAndExactAmounts(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if _, e = c.GetQuote(ctx, q.ID, grant.AccessToken.Value); e != nil {
-		t.Fatal(e)
-	}
 	out, e := c.CreateOutgoing(ctx, wallet, grant.AccessToken.Value, q.ID, "", nil, nil)
 	if e != nil {
 		t.Fatal(e)
@@ -150,7 +147,7 @@ func TestProtocolFlowPreservesTenantsAndExactAmounts(t *testing.T) {
 	if e != nil || !completed.Completed {
 		t.Fatal("not completed", e)
 	}
-	if signed.Load() != 8 {
+	if signed.Load() != 7 {
 		t.Fatal("unexpected request count", signed.Load())
 	}
 }
