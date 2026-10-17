@@ -21,3 +21,7 @@ tasks/
 # Cachés y archivos compilados de Python
 __pycache__/
 *.py[cod]
+
+# Prompts de Mateo Amaya que forman parte del repositorio
+!/prompts/mateo amaya/AGENTS.md
+!/prompts/mateo amaya/task[0-9]*.md
