@@ -24,7 +24,7 @@ from app.modules.marketplace.models import LoanOffer, LoanRequest
 from app.modules.platform import seed as seed_module
 from app.modules.platform.lazy import optional_attr
 from app.modules.recaudo.models import CollectionAccount
-from app.modules.sales.models import Payout, Sale
+from app.modules.sales.models import Payout, Sale, WebhookEvent
 from app.modules.users.models import User
 from tests.helpers import assert_contract, cop
 from tests.test_data_model import _loan
@@ -229,7 +229,6 @@ def test_ac7_seed_offers_no_marta_loan(client, db, dev):
     assert db.scalar(select(func.count()).select_from(Loan).where(Loan.merchant_id == marta.id)) == 0
 
 
-@pytest.mark.skip(reason="depende de spec 07")
 def test_ac8_simulate_sale_fake(client, db, dev, fake_op):
     result = _seed(client)
     marta_id = result["users"][0]["id"]
@@ -244,6 +243,8 @@ def test_ac8_simulate_sale_fake(client, db, dev, fake_op):
     assert (sale.source, sale.amount, sale.bre_b_reference) == ("live", cop(48_000).value, body["bre_b_reference"])
     calls = fake_op.calls_to("create_sim_qr_payment")
     assert len(calls) == 1 and calls[0].idempotency_key.startswith("sim:")
+    webhook = db.scalar(select(WebhookEvent).where(WebhookEvent.sale_id == sale.id))
+    assert (webhook.source, webhook.status) == ("reconciliation", "processed")  # 03 R11: procesada por 07 R3
 
 
 def test_ac9_simulate_asset_mismatch(client, db, dev, fake_op, make_merchant):

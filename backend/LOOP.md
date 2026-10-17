@@ -33,12 +33,13 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 | 00-core | ☑ | ver log |
 | 01-data-model | ☑ | ver log |
 | 02-op-client | ☑ | ver log |
-| 03-platform-dev | ◐ (faltan AC-6, AC-8, AC-11) | ver log |
+| 03-platform-dev | ◐ (falta AC-11) | ver log |
 | 04-users | ☑ | ver log |
 | 05-policies | ☑ | ver log |
 | 06-recaudo | ☑ | ver log |
-| 07-sales | ◐ | — |
-| 08 → 16 | ☐ | — |
+| 07-sales | ☑ | ver log |
+| 08-worker | ◐ | — |
+| 09 → 16 | ☐ | — |
 
 ## Decisiones
 
@@ -68,14 +69,19 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 
 - (05) Terms.to_dict() devuelve montos enteros (centavos); convertir a Money es de 11. features/unlocks_at en la zona de cfg.timezone; razones en singular cuando aplica.
 
+- (07) Pata Trust con TRUST_REVENUE_WALLET_ADDRESS vacío: queda held con receptor null y log de error; 16 la llena al reintentar (o 409 invalid_state si sigue vacío).
+- (07) next_since nunca retrocede (máximo entre el último created_at leído y el since recibido), con microsegundos y Z; since sin zona → 422. GET /sales: fecha malformada o from > to → 422; orden paid_at desc, id asc.
+- (07) sale_split solo para ventas processed (no held), como dice 14.
+- (07) Webhook: JSON con NaN/Infinity, \u0000 o montos fuera de bigint → 400 (antes daban 500 y Go reintentaría para siempre). bre_b_reference vacío u occurred_at sin zona → unmatched (invalid_payload).
+
 ## Cambios de contrato
 
 (ninguno)
 
 ## Pendientes por dependencia (cerrar antes de la fase final)
 
-- **03 AC-6** (historial del seed vía `ensure_collection_account`) → al terminar 06.
-- **03 AC-8** (simular venta procesada con el fake) → al terminar 06 y 07.
+- ~~03 AC-6~~ cerrado con la spec 06.
+- ~~03 AC-8~~ cerrado con la spec 07.
 - **03 AC-11** y seed de créditos R9/R10 → al terminar 05, 09 y 11. El seed (`app/modules/platform/seed.py`, `_seed_loan`, `_loan_tools`) asume estas interfaces; 05/09/11 deben cumplirlas o ajustar el seed:
   - `build_terms(principal, pct, fee_bps, term_months, request_pct_bps, cfg)` con `cfg` = `get_settings()` (campos en minúscula: `trust_share_bps`, `reprice_max_delta_bps`), `Terms` con sus campos y `.to_dict()`;
   - `get_credit_profile(db, merchant_id).assessment.id`;
@@ -96,3 +102,4 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - 2026-10-17 03:32 · Spec 04-users ☑ y spec 03-platform-dev parcial (health completo con verificación del asset de mercado, config, guardas dev, wallet falsa, seed de usuarios/ofertas/historial, simulador cableado). 94 tests pasan, 4 skips por dependencia. El revisor encontró 4 fallas; corregidas (incl. seed sin floats).
 - 2026-10-17 03:57 · Spec 05-policies ☑: división (prorrateada y literal), términos, match, recálculo y scoring v1 como funciones puras.
 - 2026-10-17 03:57 · Spec 06-recaudo ☑: GET/POST /me/collection-account y ensure_collection_account (commit antes de Go, reintento tras revocación o pool agotado). Se activó 03 AC-6. 127 tests pasan, 3 skips (03 AC-8 → 07, 03 AC-11 → 09/11, rutas completas → final).
+- 2026-10-17 04:30 · Spec 07-sales ☑: webhook de Puntored (HMAC sobre el cuerpo crudo, dedup, división en 3 patas, parte Trust con mínimo y barrido al pagar), ventas de hoy con cursor, historial y detalle. Catálogo de notificaciones y notify() creados (14 completa endpoints). Se activó 03 AC-8. 150 tests, 2 skips (03 AC-11, rutas completas). Revisor: 7 fallas corregidas (cursor que perdía ventas, created_at tras el lock, payloads con NaN/\u0000/montos fuera de bigint).

@@ -116,7 +116,7 @@ Al pasar a `cancelled`, `rejected` o `expired`, la solicitud vuelve a `open` y l
 | sale_id | fk sales | único (`sale_id`, `leg`) |
 | loan_id | fk null | null en la pata `merchant` sin crédito |
 | leg | `payout_leg` | |
-| receiver_wallet_url | text null | congelado al crear; `null` solo en la pata `merchant` `held` porque el negocio no tiene payout wallet (07 R4), que 16 llena al reintentar |
+| receiver_wallet_url | text null | congelado al crear; `null` solo en una pata `held` sin receptor: `merchant` porque el negocio no tiene payout wallet, o `trust` porque falta `TRUST_REVENUE_WALLET_ADDRESS` (07 R4); 16 lo llena al reintentar |
 | amount | bigint + asset | monto total de la pata |
 | description | text | congelada al crear (el reintento manda el mismo cuerpo) |
 | status | `payout_status` | |
