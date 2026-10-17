@@ -3,6 +3,7 @@ import http.client
 import importlib.util
 import threading
 import unittest
+from functools import partial
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -12,6 +13,24 @@ spec.loader.exec_module(server_module)
 
 
 class ProxyTests(unittest.TestCase):
+    def test_static_assets_reload_instead_of_using_cached_versions(self):
+        root = Path(__file__).resolve().parents[1] / 'src'
+        server = ThreadingHTTPServer(('127.0.0.1', 0), partial(server_module.Handler, directory=str(root)))
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        connection = http.client.HTTPConnection('127.0.0.1', server.server_port)
+        try:
+            for path in ['/portal-prestamos/prestamista.html', '/lib/app.css', '/app.js']:
+                with self.subTest(path=path):
+                    connection.request('GET', path, headers={'If-Modified-Since': 'Wed, 01 Jan 2031 00:00:00 GMT'})
+                    response = connection.getresponse()
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(response.getheader('Cache-Control'), 'no-store')
+                    self.assertEqual(response.read(), (root / path.lstrip('/')).read_bytes())
+        finally:
+            connection.close()
+            server.shutdown()
+            server.server_close()
+
     def test_wallet_authorization_keeps_return_location(self):
         target = 'https://app.example.test/op/return?loan_id=00000000-0000-4000-8000-000000000030&op_status=completed'
 

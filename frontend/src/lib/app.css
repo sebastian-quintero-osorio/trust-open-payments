@@ -1,8 +1,64 @@
 /* Source mockup styles are preserved. Only production states are added here. */
+@media screen {
+  .app-shell { min-height: 100vh; min-height: 100dvh; }
+  .sidebar { align-self: start; height: 100vh; height: 100dvh; overflow: hidden; }
+  .sidebar-content { flex: 1; min-height: 0; overflow-y: auto; }
+  .sidebar-bottom { flex: none; margin-top: 0; padding-top: 24px; }
+  .account .avatar { flex-shrink: 0; }
+  .account > div:last-child { min-width: 0; overflow-wrap: anywhere; }
+}
+@media screen and (min-width: 701px) {
+  body:has(> .app-shell) { overflow: hidden; }
+  .app-shell { height: 100vh; height: 100dvh; overflow: hidden; }
+  .sidebar { height: 100%; min-height: 0; }
+  .workspace { min-width: 0; min-height: 0; overflow-y: auto; }
+}
+@media screen and (max-height: 600px) {
+  .sidebar { padding-top: 12px; padding-bottom: 12px; }
+  .sidebar .workspace-label { margin-top: 12px; margin-bottom: 8px; }
+  .sidebar .admin-context { padding-top: 4px; padding-bottom: 4px; }
+  .sidebar-bottom { padding-top: 16px; }
+  .sidebar-rule { margin-bottom: 16px; }
+  .sidebar .sidebar-bottom .account-note { margin-top: 8px; }
+}
 .app-error { padding: 16px; margin: 16px 0; border: 1px solid #b7768b; border-radius: 12px; background: #35242c; color: #ffcfda; overflow-wrap: anywhere; }
 .app-loading { padding: 20px 0; color: var(--color-muted); }
 button:disabled { opacity: .55; cursor: wait; }
-.session-logout { border: 0; padding: 8px 0; background: none; color: var(--color-muted); text-align: left; }
+.sidebar-bottom .account strong { display: block; font-size: 14px; font-weight: 600; line-height: 1.4; }
+.sidebar-bottom .account span { font-size: 12px; }
+.sidebar-bottom .account-note {
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: #30263e;
+  color: var(--color-lavender);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.session-logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid #63576f;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.session-logout .icon { width: 18px; height: 18px; color: var(--color-muted); }
+.session-logout:hover, .session-logout:focus-visible { background: #35242c; border-color: #b7768b; color: #ffcfda; }
+.session-logout:hover .icon, .session-logout:focus-visible .icon { color: inherit; }
+.session-logout:active { background: #482c37; }
 .app-notifications { max-height: 65vh; overflow: auto; }
 .app-notifications article { padding: 16px 0; border-bottom: 1px solid var(--color-border); }
 .app-notifications p { margin: 8px 0; }

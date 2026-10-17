@@ -1,0 +1,121 @@
+ARQUITECTURA DE TRUST — EVIDENCIA DEL CÓDIGO
+Revisión: 2026-10-17. HEAD: 48bd7b4, incluyendo el árbol de trabajo local.
+
+Alcance
+La versión visual simplificada conserva componentes, persistencia y comunicaciones
+principales. Los detalles de autenticación, workers y retorno de consentimiento
+documentados abajo siguen verificados, pero se omiten del gráfico por legibilidad.
+La imagen representa la arquitectura lógica implementada con OP_CLIENT=http.
+No representa un despliegue comprobado ni una certificación de pagos reales.
+Se revisó frontend/, backend/ y open-payments/; landing y app móvil no forman
+parte de esta vista. Las flechas son comunicaciones, no movimientos de dinero.
+Cada PostgreSQL indica la persistencia del servicio; no exige dos servidores físicos.
+
+Correspondencia entre imagen y código (rutas relativas a la raíz del repositorio)
+
+1. Frontend HTML/CSS/JavaScript, solicitudes y ofertas, wallet y administración.
+   frontend/package.json
+   frontend/src/app.js
+   frontend/src/pages/{auth,portal,form,detail,wallet,admin}.js
+
+2. REST/JSON, prefijo /api/v1 y JWT Bearer en operaciones protegidas.
+   frontend/src/lib/api.js: api(), session.
+   frontend/src/lib/operations.js: rutas de las operaciones.
+   frontend/src/config.js: apiBaseUrl configurable; por defecto mismo origen.
+   backend/app/main.py: API_PREFIX, create_app().
+   backend/app/core/security.py y backend/app/core/deps.py: autenticación.
+   El proxy de mismo origen es una opción; la imagen no impone un proxy específico.
+
+3. Consulta periódica, no canal WebSocket.
+   frontend/src/pages/wallet.js: polling(refreshSales, 2500, ...).
+   frontend/src/pages/return.js: api('getLoan', ...), polling(check, 2000, ...).
+
+4. Python/FastAPI, usuarios, cupo y matching.
+   backend/app/main.py: registro de routers e inicio del worker.
+   backend/app/modules/users/service.py
+   backend/app/modules/scoring/service.py: get_credit_profile().
+   backend/app/modules/marketplace/service.py: list_matches(), score_market_offers().
+
+5. El reparto de ventas se calcula en el backend.
+   backend/app/policies/split.py: split_sale().
+   backend/app/modules/sales/service.py: process_puntored_event(), _create_legs().
+   Los destinos posibles son comercio, prestamista y Trust. No todas las ventas
+   generan tres transferencias: depende del crédito, montos y acumulación de comisión.
+   Sin crédito activo, split_sale() asigna toda la venta al comercio.
+
+6. Worker del backend: envío de pagos, consulta de estados y conciliación.
+   backend/app/worker.py: job_submit_payouts(), job_poll_payouts(),
+   job_poll_disbursements(), job_reconcile(), start_worker().
+   Corre como hilo del proceso; no se representa un servicio externo de colas.
+   La conciliación implementada consume list_sim_qr_payments().
+
+7. Backend -> Go mediante API privada /v1, API key e idempotencia.
+   backend/app/integrations/op/client.py: _build_op_client().
+   backend/app/integrations/op/http.py: HttpOpClient, API_KEY_HEADER,
+   IDEMPOTENCY_HEADER, create_payment(), create_transfer(), create_collection_account().
+   open-payments/internal/httpapi/server.go: Handler(), serve().
+   X-Internal-Api-Key autentica rutas privadas; Idempotency-Key se exige en POST
+   privados, no en todas las peticiones. OP_CLIENT=fake selecciona FakeOpClient
+   dentro del backend y no requiere Go.
+
+8. Go, SDK Open Payments, cuentas, pagos, transferencias y workers.
+   open-payments/go.mod: github.com/interledger/open-payments-go.
+   open-payments/cmd/op-service/main.go: run(), app.Start().
+   open-payments/internal/application/service.go: New(), Bind().
+   open-payments/internal/application/{accounts,flows,worker}.go
+
+9. Wallets externas: autorización y recursos Open Payments mediante HTTPS.
+   open-payments/internal/openpayments/client.go: Wallet, RequestGrant(),
+   CreateIncoming(), CreateQuote(), CreateOutgoing(), request() con DoSigned().
+   open-payments/internal/openpayments/authorization.go: InteractiveGrant().
+   open-payments/internal/openpayments/network.go: transporte HTTPS.
+   open-payments/internal/config/config.go: wallets y claves configurables.
+   Los servidores externos se agrupan conceptualmente; no se afirma que sean
+   un único proveedor ni que exista una infraestructura de red particular.
+
+10. Flujo de consentimiento y retorno al frontend.
+    frontend/src/pages/detail.js: navegación a response.authorization_url.
+    open-payments/internal/application/flows.go: createPayment().
+    open-payments/internal/application/callback.go: callback(), http.Redirect().
+    backend/app/modules/loans/service.py: construcción del return_url.
+    frontend/src/pages/return.js: confirmación por getLoan; op_status no prueba el pago.
+    Las flechas de consentimiento describen navegación del browser, no un webhook
+    de pago enviado por la wallet al frontend.
+
+11. Webhook QR de Go hacia el backend, autenticado con HMAC.
+    open-payments/internal/application/simulator.go: startSim(), referencia BREB-SIM-.
+    open-payments/internal/application/webhook.go: evento qr_payment.received,
+    outbox y firma HMAC-SHA256 con X-Puntored-Signature.
+    backend/app/modules/sales/router.py: POST /webhooks/puntored/payments.
+    backend/app/modules/sales/service.py: receive_puntored_webhook(), verify_signature().
+    Ruta completa en FastAPI: /api/v1/webhooks/puntored/payments.
+    El simulador se habilita con SIM_ENABLED. Puede invocar Open Payments con
+    wallets configuradas; el componente simulado es la entrada QR Puntored/Bre-B.
+    No se encontró un adaptador a la API bancaria real de Puntored/Bre-B en los
+    componentes revisados. El nombre del endpoint o un logo no acredita integración.
+
+12. Persistencia por servicio.
+    backend/app/core/db.py: SQLAlchemy, engine y SessionLocal.
+    backend/app/modules/{users,loans,sales,recaudo}/models.py
+    open-payments/internal/persistence/store.go: pgxpool y migraciones.
+    open-payments/migrations/001_base.sql: recursos e idempotencia.
+    open-payments/migrations/002_workflows.sql: grants y jobs.
+    open-payments/migrations/003_trust.sql: cuentas, simulador y webhook_outbox.
+    open-payments/internal/workflow/vault.go: cifrado de grants.
+
+Método de comprobación y límites
+Se contrastaron módulos de aplicación, routers, clientes, políticas, workers y
+migraciones. No se tomaron los README como única evidencia: el README de
+open-payments todavía dice que el backend FastAPI no existe, lo que contradice
+backend/app/main.py y sus módulos actuales.
+
+Esta tarea no ejecutó transferencias, pruebas de integración contra wallets reales
+ni un despliegue. La comprobación avala las relaciones presentes en el código.
+No se muestran AWS, blockchain, smart contracts, Redis o una pasarela bancaria real,
+porque no son dependencias demostradas del recorrido representado.
+
+Artefactos
+arquitectura-trust.png — 3840 x 2160, listo para compartir (16:9).
+arquitectura-trust.svg — vector editable, texto seleccionable.
+generar.py — fuente reproducible; requiere Python y cairosvg.
+Regenerar: python generar.py desde este directorio (con cairosvg instalado).

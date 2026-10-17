@@ -39,6 +39,7 @@ h1 { font-size: clamp(28px, 2.5vw, 36px); letter-spacing: -.045em; }
 .credit-amount { margin-top: 18px; font-size: clamp(36px, 3.5vw, 50px); letter-spacing: -.05em; font-variant-numeric: tabular-nums; line-height: 1.2; white-space: nowrap; }
 .credit-amount > span { font-size: 11px; margin-left: 10px; color: var(--color-muted); letter-spacing: 0; }
 .credit-caption { margin-top: 9px; font-size: 12px; color: var(--color-muted); }
+.credit-summary > .credit-caption + .button { margin-top: 20px; }
 .lending-headline { max-width: 380px; margin-top: 20px; font-size: clamp(26px, 3vw, 38px); line-height: 1.2; letter-spacing: -.045em; }
 .credit-source { display: flex; align-items: center; gap: 7px; margin-top: 26px; font-size: 10px; color: #c7b4df; }
 .credit-source > span { width: 5px; height: 5px; border-radius: 50%; background: var(--color-lavender); }
@@ -58,6 +59,7 @@ h1 { font-size: clamp(28px, 2.5vw, 36px); letter-spacing: -.045em; }
 .filter-group button[aria-pressed="true"] { background: #35283f; color: var(--color-text); border-color: #624973; }
 .filter-group button:hover { color: var(--color-text); }
 .offer-list { border: 1px solid #49404f; border-radius: 16px; overflow: hidden; background: #1d1b20; }
+.offer-list > .history-help { margin: 0; padding: 24px; }
 .list-labels, .offer-row { display: grid; grid-template-columns: minmax(165px, 1.3fr) minmax(125px, 1fr) minmax(130px, 1fr) minmax(115px, 1fr) 108px; gap: 20px; padding: 0 24px; align-items: center; }
 .list-labels { min-height: 43px; font-size: 10px; color: #afa2bb; background: #241f2b; border-bottom: 1px solid #49404f; }
 .offer-row { min-height: 115px; }

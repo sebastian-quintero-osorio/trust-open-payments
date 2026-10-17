@@ -11,9 +11,18 @@ from urllib.parse import urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 
 class Handler(SimpleHTTPRequestHandler):
+    def end_headers(self):
+        if not self.path.startswith('/api/'):
+            self.send_header('Cache-Control', 'no-store')
+        super().end_headers()
+
     def do_GET(self):
         if self.path.startswith('/api/'):
             return self.proxy()
+        # Development files must be reloaded, even if a browser cached an older
+        # response before this server started sending Cache-Control: no-store.
+        if 'If-Modified-Since' in self.headers:
+            del self.headers['If-Modified-Since']
         if self.path.startswith('/op/return?') or self.path == '/op/return':
             self.path = '/op/return.html'
         return super().do_GET()

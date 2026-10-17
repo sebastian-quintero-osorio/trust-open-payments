@@ -9,6 +9,13 @@ function prepareChrome() {
   // Review annotations belong to the reference artifact, not to the product.
   $$('.review-bar, .review-footer, #scope-dialog, .demo-note, .simulation-label').forEach(node => node.remove());
   document.title = document.title.replace(/ · Mockup.*/, '');
+  const sidebar = $('#sidebar'), account = $('.sidebar-bottom');
+  if (sidebar && account) {
+    const content = el('div', 'sidebar-content');
+    // Only navigation scrolls; the account always has its own reserved space.
+    [...sidebar.children].filter(node => node !== account).forEach(node => content.append(node));
+    sidebar.prepend(content);
+  }
 }
 function shell(me) {
   text('.account strong', me.business_name || me.public_name);
@@ -22,6 +29,7 @@ function shell(me) {
     if (a.getAttribute('href')?.includes('portal-prestamos')) a.href = home(me.role);
   });
   const logout = el('button', 'session-logout', 'Cerrar sesión'); logout.type = 'button';
+  logout.insertAdjacentHTML('afterbegin', '<svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M9 12h12m-4-4 4 4-4 4"/></svg>');
   logout.onclick = () => { session.clear(); location.replace('/autenticacion/index.html'); };
   $('.sidebar-bottom')?.append(logout);
   const sidebar = $('#sidebar'), overlay = $('#menu-overlay'), toggle = $('#open-menu'), workspace = $('.workspace');

@@ -300,6 +300,37 @@ class BrowserTests(unittest.TestCase):
         self.page.locator('#back-loans').click()
         expect(self.page.locator('#loan-search')).to_have_value(uid(37))
 
+    def test_sidebar_account_stays_visible_with_long_content_and_short_windows(self):
+        self.authenticated()
+        for role, path in [('merchant', '/portal-prestamos/index.html'),
+                           ('lender', '/portal-prestamos/prestamista.html'),
+                           ('admin', '/administrador/index.html')]:
+            self.backend.role = role
+            self.backend.user = Backend(role).user
+            for width, height in [(1366, 593), (820, 320), (390, 280)]:
+                with self.subTest(role=role, width=width, height=height):
+                    self.page.set_viewport_size({'width': width, 'height': height})
+                    self.visit(path)
+                    self.page.locator('main').evaluate("node => node.style.minHeight = '2400px'")
+                    if width <= 700:
+                        self.page.locator('#open-menu').click()
+                    account = self.page.locator('.sidebar-bottom')
+                    initial = account.bounding_box()
+                    if width > 700:
+                        self.page.locator('.workspace').evaluate('node => node.scrollTop = node.scrollHeight')
+                        self.assertGreater(self.page.locator('.workspace').evaluate('node => node.scrollTop'), 0)
+                    self.page.locator('.main-nav').evaluate('''node => {
+                        const item = node.firstElementChild;
+                        for (let i = 0; i < 20; i++) node.append(item.cloneNode(true));
+                    }''')
+                    self.page.locator('.sidebar-content').evaluate('node => node.scrollTop = node.scrollHeight')
+                    self.assertGreater(self.page.locator('.sidebar-content').evaluate('node => node.scrollTop'), 0)
+                    expect(self.page.locator('.account')).to_be_in_viewport(ratio=1)
+                    expect(self.page.locator('.session-logout')).to_be_in_viewport(ratio=1)
+                    self.assertAlmostEqual(account.bounding_box()['y'], initial['y'], delta=1)
+                    self.page.locator('.session-logout').focus()
+                    expect(self.page.locator('.session-logout')).to_be_focused()
+
     def test_mobile_layouts_navigation_and_errors(self):
         self.authenticated(); self.page.set_viewport_size({'width':390,'height':844})
         for path in ['/portal-prestamos/index.html','/crear-prestamo/solicitar.html','/detalle-prestamo/oferta.html?id='+uid(10),'/wallet/index.html']:

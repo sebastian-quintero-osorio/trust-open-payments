@@ -79,11 +79,14 @@ ejecutan localmente. No se ha configurado protección remota ni ejecutado Action
 
 Las pruebas reales de Open Payments requieren una wallet Trust, clave Ed25519
 registrada y wallets de usuarios separados para recaudo, ingresos y pagador demo.
-El backend FastAPI está en `../backend/` e incluye cliente HTTP, receptor de webhooks
-y workers para desembolsos, repartición y conciliación. Por defecto usa `OP_CLIENT=fake`;
-la conexión con este servicio requiere `OP_CLIENT=http`. Ver la configuración de
-dominio y red interna en [la guía operativa](docs/operations.md).
-Las pruebas locales no certifican el comportamiento de la wallet real.
+El backend FastAPI está implementado en [`../backend/`](../backend/README.md), incluido
+el cliente HTTP, el receptor de webhooks y los workers para desembolsos, repartición
+y conciliación. Por defecto usa `OP_CLIENT=fake`; la conexión con este servicio
+requiere `OP_CLIENT=http`. Ver la configuración de dominio y red interna en
+[la guía operativa](docs/operations.md) y la arquitectura conjunta en la
+[documentación técnica](../docs/README.md). Las pruebas locales no certifican el
+comportamiento de la wallet real; la aceptación externa requiere sus credenciales
+y consentimientos.
 
 Referencias: [Open Payments](https://openpayments.dev/),
 [pgx](https://github.com/jackc/pgx),
@@ -166,9 +169,10 @@ en loopback. `scripts/live-smoke.py` utiliza únicamente la biblioteca estándar
 
 La suite incluye un receptor FastAPI real para verificar el contrato de webhook;
 la aplicación de negocio Trust y su contabilidad siguen perteneciendo a su backend.
-Las cinco fases tienen implementación y validación local. La aceptación contra
-Test Wallet y el despliegue público siguen pendientes de credenciales y operación
-real. La publicación del código no implica que esa aceptación haya sido aprobada.
+Las cinco fases tienen implementación y validación local documentadas. El despliegue
+integrado tiene un [registro de verificación fechado](../deploy/aws/STATUS.txt), con
+sus condiciones y pendientes. La aceptación de movimientos contra Test Wallet debe
+comprobarse por separado; publicar el código o arrancar los servicios no la acredita.
 
 ## Demo sin dominio
 
