@@ -1,0 +1,3 @@
+1. Claude crea una nueva rama llamada greenfield/landing en la cual vamos a idear y trabajar en la primera versión de la landing page comercial de Trust. Lee los documentos en la carpeta branding y avisame cuando estés listo para discutir sobre la landing sin tirar una línea de código. La página la haremos en Astro.
+
+2. Coge el logo de Downloads/Asset 2.png y Asset 3.png y usalos, descarga también la fuente Qontra de internet y usala, y soluciona el problema del contraste jugando con los colores. Tiene que ser muy animada y también muy bien optimizada. Convierte el trust.md a UTF-8 para solucionar las tildes, y sí, la landing usará capturas de la app, así que deja los placeholders imaginandote las pantallas.

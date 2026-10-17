@@ -1,0 +1,53 @@
+---
+/**
+ * "Una venta, dos destinos": accessible wrapper around the two flow geometries.
+ * Horizontal canvas when the component is at least 780px wide, vertical canvas below (fits 288px+).
+ * Animation is driven by the inherited custom properties --flow-play (paused|running) and --flow-T.
+ */
+import FlowCanvas from './FlowCanvas.astro';
+import ExampleBadge from './ExampleBadge.astro';
+
+interface Props {
+  /** accessible description of the whole diagram (COPY.md como.diagram.aria) */
+  label: string;
+  class?: string;
+}
+
+const { label, class: className } = Astro.props;
+---
+
+<div class:list={['sf', className]} role="img" aria-label={label}>
+  <ExampleBadge class="sf__badge" />
+  <div class="sf__geo sf__geo--h" data-flow-geo="h"><FlowCanvas variant="h" /></div>
+  <div class="sf__geo sf__geo--v" data-flow-geo="v"><FlowCanvas variant="v" /></div>
+</div>
+
+<style>
+  .sf {
+    position: relative;
+    container-type: inline-size;
+    container-name: split-flow;
+  }
+  .sf :global(.sf__badge) {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+    z-index: 3;
+  }
+  .sf__geo--h {
+    display: none;
+  }
+  .sf__geo--v {
+    max-inline-size: 400px;
+    margin-inline: auto;
+    padding-block-start: 44px;
+  }
+  @container split-flow (min-width: 780px) {
+    .sf__geo--h {
+      display: block;
+    }
+    .sf__geo--v {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,63 @@
+---
+// Prestamistas (COPY.md §7). The page's only light section (lilac): a deliberate contrast moment. Mirrored
+// split (phone on the right), benefits as text. Straight edges: the orbital arc belongs to the hero only.
+import Section from '../ui/Section.astro';
+import DeviceFrame from '../ui/DeviceFrame.astro';
+import PortafolioScreen from '../screens/PortafolioScreen.astro';
+import AudienceSplit from '../audience/AudienceSplit.astro';
+import AudienceVisual from '../audience/AudienceVisual.astro';
+import type { Benefit } from '../audience/AudienceSplit.astro';
+
+const benefits: Benefit[] = [
+  {
+    title: 'Decides con información',
+    text: 'Cada solicitud está dentro del cupo que Trust calcula para el comercio. Sabes su límite.',
+  },
+  {
+    title: 'Abonos con cada venta',
+    text: 'Recibes el porcentaje acordado cada vez que el comercio cobra con Bre-B. Sin cobros manuales.',
+  },
+  {
+    title: 'Tú pones el rango',
+    text: 'Decide entre qué montos quieres prestar. Publica tu oferta o acepta solicitudes que encajen.',
+  },
+  {
+    title: 'Lícito y trazable',
+    text: 'Una forma lícita de poner tu dinero a trabajar. Cada abono queda registrado.',
+  },
+];
+---
+
+<Section id="prestamistas" theme="light" aria-labelledby="prestamistas-title" class="prestamistas">
+  <div class="container">
+    <AudienceSplit
+      id="prestamistas"
+      lead="Define tu rango, publica ofertas o acepta solicitudes. Recibe tu parte de cada venta del comercio, automáticamente y sin tener que cobrar."
+      benefits={benefits}
+      cta={{ label: 'Únete como prestamista', variant: 'violet', preselect: 'prestamista' }}
+      note="Trust no promete rentabilidades. Las condiciones de cada crédito se acuerdan antes de empezar."
+      visualSide="end"
+      tone="light"
+    >
+      <Fragment slot="title">Presta de forma lícita y mira llegar cada abono.</Fragment>
+      <AudienceVisual slot="visual" tone="light">
+        <DeviceFrame
+          screenId="portafolio-prestamista"
+          alt="App de Trust: portafolio de un prestamista con tres créditos activos y los abonos que llegan con cada venta."
+          width="clamp(248px, 24vw, 330px)"
+        >
+          <PortafolioScreen />
+        </DeviceFrame>
+      </AudienceVisual>
+    </AudienceSplit>
+  </div>
+</Section>
+
+<style>
+  /* the dark phone sits on lilac with a neutral shadow, no violet halo */
+  .prestamistas :global(.device__frame) {
+    box-shadow:
+      0 0 0 1px rgb(0 0 0 / 0.6),
+      0 40px 80px -32px rgb(25 25 25 / 0.45);
+  }
+</style>

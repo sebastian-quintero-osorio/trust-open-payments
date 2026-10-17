@@ -1,0 +1,967 @@
+---
+/**
+ * One geometry of the "Una venta, dos destinos" flow (horizontal for wide containers, vertical for phones).
+ * SVG draws the rails and light; nodes, labels and the travelling pulse are HTML overlays (crisp text).
+ *
+ * Timeline (one cycle = --flow-T, default 6s; the steps list in ComoFunciona shares the same percentages):
+ *   0–4 %   pulse appears at Cliente
+ *   4–40 %  three hops: Cliente → Bre-B (16 %) → Wallet (28 %) → Trust (40 %), trunk lights behind it
+ *   40–50 % Trust flashes and absorbs the pulse
+ *   45–65 % two streams (85 % thick and bright · 15 % thin) run to Comercio and Prestamista
+ *   60–74 % the amounts roll over as each stream lands
+ *   74–100 % calm pause, light fades, loop
+ * Plays only while the ancestor sets --flow-play: running (toggled on visibility). Without JS or with
+ * reduced motion no animation is applied and the base styles below are the finished composition.
+ *
+ * Compositor-only light: the SVG holds just the static rails. Each lit path is an HTML "beam" whose shape
+ * comes from a STATIC mask (the path stroked into an SVG data URL). Inside it a window slides along the
+ * travel axis (transform) while its gradient paint slides the opposite way by the same amount, so the
+ * paint stays put and only the window's edge moves: the path appears to draw itself. The comet rides the
+ * window's leading edge. Nothing animates stroke-dashoffset or offset-distance (both main-thread).
+ */
+import Logo from '../ui/Logo.astro';
+import { formatCOP, pct } from '../../scripts/format';
+
+interface Props {
+  variant: 'h' | 'v';
+}
+
+const { variant } = Astro.props;
+
+type Pt = readonly [number, number];
+interface Geometry {
+  w: number;
+  h: number;
+  cliente: Pt;
+  breb: Pt;
+  wallet: Pt;
+  trust: Pt;
+  trunk: string;
+  com: { d: string; from: Pt; to: Pt };
+  pre: { d: string; from: Pt; to: Pt };
+}
+
+const geometry: Record<Props['variant'], Geometry> = {
+  h: {
+    w: 1000,
+    h: 410,
+    cliente: [80, 205],
+    breb: [263, 205],
+    wallet: [447, 205],
+    trust: [630, 205],
+    trunk: 'M80 205H630',
+    com: { d: 'M672 205C738 205 726 90 792 90', from: [672, 205], to: [792, 90] },
+    pre: { d: 'M672 205C738 205 726 320 792 320', from: [672, 205], to: [792, 320] },
+  },
+  v: {
+    w: 360,
+    h: 620,
+    cliente: [180, 44],
+    breb: [180, 157],
+    wallet: [180, 270],
+    trust: [180, 384],
+    trunk: 'M180 44V384',
+    com: { d: 'M180 418C180 472 92 466 92 520', from: [180, 418], to: [92, 520] },
+    pre: { d: 'M180 418C180 472 268 466 268 520', from: [180, 418], to: [268, 520] },
+  },
+};
+
+const g = geometry[variant];
+const fx = (x: number) => `${((x / g.w) * 100).toFixed(3)}%`;
+const fy = (y: number) => `${((y / g.h) * 100).toFixed(3)}%`;
+// translations in container-query units so the pulse scales with the canvas width
+const cq = (d: number) => `${((d / g.w) * 100).toFixed(3)}cqi`;
+const at = (p: Pt) => `--x: ${fx(p[0])}; --y: ${fy(p[1])};`;
+const hop = (n: string, p: Pt) => `--${n}x: ${cq(p[0] - g.cliente[0])}; --${n}y: ${cq(p[1] - g.cliente[1])};`;
+const mid: Pt = [(g.cliente[0] + g.breb[0]) / 2, (g.cliente[1] + g.breb[1]) / 2];
+
+const horizontal = variant === 'h';
+const canvasStyle = [
+  `aspect-ratio: ${g.w} / ${g.h};`,
+  hop('h1', g.breb),
+  hop('h2', g.wallet),
+  hop('h3', g.trust),
+  hop('hs', mid),
+].join(' ');
+
+// The one example sale (COPY.md conv.datos): $48.000 → 85 % comercio · 15 % prestamista
+const SALE = 48_000;
+const SHARE_COM = 85;
+const SHARE_PRE = 100 - SHARE_COM;
+
+/* ---------- beams: the lit paths (user units; widths and opacities match the old SVG strokes) ---------- */
+type Stroke = readonly [width: number, opacity: number];
+interface BeamSpec {
+  key: 'trunk' | 'com' | 'pre';
+  d: string;
+  from: Pt;
+  to: Pt;
+  /** soft halo (round caps) and bright core (butt caps) of the lit path */
+  halo: Stroke;
+  core: Stroke;
+  /** the comet riding the head: a slightly thicker bright stroke plus its own faint glow (streams only) */
+  glint?: { core: Stroke; halo: Stroke };
+}
+const specs: BeamSpec[] = [
+  { key: 'trunk', d: g.trunk, from: g.cliente, to: g.trust, halo: [12, 0.22], core: [2.5, 1] },
+  {
+    key: 'com',
+    d: g.com.d,
+    from: g.com.from,
+    to: g.com.to,
+    halo: [22, 0.2],
+    core: [7, 1],
+    glint: { core: [9, 1], halo: [18, 0.22] },
+  },
+  {
+    key: 'pre',
+    d: g.pre.d,
+    from: g.pre.from,
+    to: g.pre.to,
+    halo: [8, 0.16],
+    core: [2.25, 0.9],
+    glint: { core: [3.5, 1], halo: [9, 0.2] },
+  },
+];
+const pc = (n: number, of: number) => `${((n / of) * 100).toFixed(3)}%`;
+const along = (p: Pt) => (horizontal ? p[0] : p[1]);
+/** soft fade at the window's leading edge, in user units */
+const FEATHER = 14;
+/** comet length along the travel axis and its gap behind the edge, in user units */
+const COMET = 18;
+const COMET_GAP = 2;
+
+const beams = specs.map((s) => {
+  const pad = s.halo[0] / 2 + 1;
+  // every path is monotonic along the travel axis and its control points sit inside the endpoint box
+  const x = Math.min(s.from[0], s.to[0]) - pad;
+  const y = Math.min(s.from[1], s.to[1]) - pad;
+  const w = Math.abs(s.to[0] - s.from[0]) + pad * 2;
+  const h = Math.abs(s.to[1] - s.from[1]) + pad * 2;
+  const mask = (halo: Stroke, core: Stroke, coreCap: 'butt' | 'round') => {
+    const svg =
+      `<svg xmlns='http://www.w3.org/2000/svg' viewBox='${x} ${y} ${w} ${h}' preserveAspectRatio='none'>` +
+      `<g fill='none' stroke='#fff' stroke-linecap='round'>` +
+      `<path d='${s.d}' stroke-width='${halo[0]}' stroke-opacity='${halo[1]}'/>` +
+      `<path d='${s.d}' stroke-width='${core[0]}' stroke-opacity='${core[1]}' stroke-linecap='${coreCap}'/>` +
+      `</g></svg>`;
+    return `--mask: url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  };
+  const start = horizontal ? x : y;
+  const len = horizontal ? w : h;
+  // window translation (as % of its own length) that puts its leading edge on point p
+  const edgeAt = (p: Pt) => pc(along(p) - start - len, len);
+  const vert = s.to[1] < s.from[1] ? 'top' : s.to[1] > s.from[1] ? 'bottom' : '';
+  const horiz = s.to[0] > s.from[0] ? 'right' : s.to[0] < s.from[0] ? 'left' : '';
+  const box = [`left: ${pc(x, g.w)}`, `top: ${pc(y, g.h)}`, `width: ${pc(w, g.w)}`, `height: ${pc(h, g.h)}`];
+  const style = [
+    ...box,
+    mask(s.halo, s.core, 'butt'),
+    `--dir: to ${[vert, horiz].filter(Boolean).join(' ')}`,
+    `--fw: ${pc(FEATHER, len)}`,
+    ...(s.key === 'trunk' ? [`--k1: ${edgeAt(g.breb)}`, `--k2: ${edgeAt(g.wallet)}`] : []),
+  ].join('; ');
+  // glint stops (from the far end of its box) and the extra run after landing so it slides off the end
+  const glintStyle = s.glint
+    ? [
+        ...box,
+        mask(s.glint.halo, s.glint.core, 'round'),
+        `--g0: ${pc(len - COMET_GAP - COMET, len)}`,
+        `--g1: ${pc(len - COMET_GAP - COMET * 0.3, len)}`,
+        `--g2: ${pc(len - COMET_GAP, len)}`,
+        `--gx: ${pc(COMET_GAP + COMET * 0.7, len)}`,
+      ].join('; ')
+    : null;
+  return { key: s.key, style, glintStyle };
+});
+---
+
+<div class:list={['sf-canvas', `sf-canvas--${variant}`]} style={canvasStyle} aria-hidden="true">
+  <!-- rails: the static structure -->
+  <svg class="sf-svg" viewBox={`0 0 ${g.w} ${g.h}`} fill="none" focusable="false">
+    <path class="rail" d={g.trunk}></path>
+    <path class="rail rail--com" d={g.com.d}></path>
+    <path class="rail rail--pre" d={g.pre.d}></path>
+  </svg>
+
+  <!-- light: the trunk behind the pulse, then the two streams (85 % thick · 15 % thin) -->
+  {
+    beams.map((b) => (
+      <Fragment>
+        <div class:list={['beam', `beam--${b.key}`]} style={b.style}>
+          <div class="beam__win">
+            <div class="beam__paint" />
+          </div>
+        </div>
+        {b.glintStyle && (
+          <div class:list={['beam', 'beam--glint', `beam--glint-${b.key}`]} style={b.glintStyle}>
+            <div class="beam__comet" />
+          </div>
+        )}
+      </Fragment>
+    ))
+  }
+
+  <!-- system nodes carry their name (no generic icons); the Trust node is the app icon with the real wordmark -->
+  <div class="node node--cliente" style={at(g.cliente)}>
+    <span class="node__core">Cliente</span>
+  </div>
+  <div class="node node--breb" style={at(g.breb)}>
+    <span class="node__core">Bre-B</span>
+  </div>
+  <div class="node node--wallet" style={at(g.wallet)}>
+    <span class="node__core">Wallet Puntored</span>
+  </div>
+  <div class="node node--trust" style={at(g.trust)}>
+    <span class="node__glow"></span>
+    <span class="node__core"><Logo tone="light" width={50} class="node__mark" /></span>
+    <span class="node__label">División Trust</span>
+  </div>
+
+  <div class="dest dest--com" style={at(g.com.to)}>
+    <span class="dest__text">
+      <span class="dest__name">Comercio</span>
+      <span class="dest__amt"
+        ><span class="dest__pct">{pct(SHARE_COM)}</span> · <span class="dest__slot"
+          ><span class="dest__val">{formatCOP((SALE * SHARE_COM) / 100)}</span></span
+        ></span
+      >
+    </span>
+  </div>
+  <div class="dest dest--pre" style={at(g.pre.to)}>
+    <span class="dest__text">
+      <span class="dest__name">Prestamista</span>
+      <span class="dest__amt"
+        ><span class="dest__pct">{pct(SHARE_PRE)}</span> · <span class="dest__slot"
+          ><span class="dest__val">{formatCOP((SALE * SHARE_PRE) / 100)}</span></span
+        ></span
+      >
+    </span>
+  </div>
+
+  <div class="pulse" style={at(g.cliente)}>
+    <span class="pulse__tag">{`Venta ${formatCOP(SALE)}`}</span>
+  </div>
+</div>
+
+<style>
+  /* ---------- canvas ---------- */
+  .sf-canvas {
+    --node: 56px;
+    --trust: 84px;
+    --play: var(--flow-play, paused);
+    --T: var(--flow-T, 6s);
+    /* travel axis of the light: x for the horizontal geometry, y for the vertical one */
+    --ax: 1;
+    --ay: 0;
+    --axis-to: to right;
+    position: relative;
+    inline-size: 100%;
+    container-type: inline-size;
+  }
+  .sf-canvas--v {
+    --node: 48px;
+    --trust: 68px;
+    --ax: 0;
+    --ay: 1;
+    --axis-to: to bottom;
+  }
+  .sf-svg {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: visible;
+  }
+
+  /* ---------- svg strokes ---------- */
+  .rail {
+    stroke: rgb(180 153 254 / 0.22);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+  .rail--com {
+    stroke: rgb(180 153 254 / 0.26);
+    stroke-width: 3;
+  }
+  .rail--pre {
+    stroke: rgb(180 153 254 / 0.2);
+    stroke-width: 1.25;
+  }
+  /* ---------- beams (lit paths): static path mask, moving window ---------- */
+  .beam {
+    position: absolute;
+    pointer-events: none;
+    -webkit-mask-image: var(--mask);
+    mask-image: var(--mask);
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+  .beam__win,
+  .beam__paint,
+  .beam__comet {
+    position: absolute;
+    inset: 0;
+  }
+  /* the window clips the paint and fades it out over its leading edge (the fade travels with it) */
+  .beam__win {
+    --fade: linear-gradient(var(--axis-to), #000 calc(100% - var(--fw)), rgb(0 0 0 / 0));
+    -webkit-mask-image: var(--fade);
+    mask-image: var(--fade);
+  }
+  .beam--trunk .beam__paint {
+    background: linear-gradient(var(--dir), var(--trust-violet), var(--trust-violet-400) 55%, var(--trust-lavender));
+  }
+  .beam--com .beam__paint {
+    background: linear-gradient(var(--dir), var(--trust-lavender), var(--trust-lilac));
+  }
+  .beam--pre .beam__paint {
+    background: linear-gradient(var(--dir), var(--trust-violet), var(--trust-violet-400));
+  }
+  /* comet: a short bright band at the far end of a full-size layer that moves exactly like the window */
+  .beam__comet {
+    --comet: #fff;
+    background: linear-gradient(
+      var(--axis-to),
+      rgb(255 255 255 / 0) var(--g0),
+      var(--comet) var(--g1),
+      rgb(255 255 255 / 0) var(--g2)
+    );
+    opacity: 0;
+  }
+  .beam--glint-pre .beam__comet {
+    --comet: var(--trust-lilac);
+  }
+
+  /* ---------- nodes ---------- */
+  .node {
+    position: absolute;
+    z-index: 3; /* above the pulse dot: the light travels on the rails and passes behind each node */
+    inset-block-start: var(--y);
+    inset-inline-start: var(--x);
+    inline-size: var(--node);
+    block-size: var(--node);
+    translate: -50% -50%;
+  }
+  .node__core {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 100%;
+    block-size: 100%;
+    border-radius: 50%;
+    background:
+      radial-gradient(120% 120% at 50% 0%, rgb(241 233 253 / 0.1), transparent 60%),
+      var(--ink-900);
+    box-shadow:
+      inset 0 0 0 1px var(--border-strong),
+      inset 0 1px 0 rgb(255 255 255 / 0.08),
+      0 12px 30px -12px rgb(0 0 0 / 0.8);
+    color: var(--text-accent);
+  }
+  /* light that rises when the pulse passes (opacity only) */
+  .node__core::before {
+    content: '';
+    position: absolute;
+    inset: -60%;
+    z-index: -1;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(105 48 249 / 0.6), rgb(105 48 249 / 0));
+    opacity: 0;
+  }
+  /* ping ring */
+  .node__core::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    box-shadow: 0 0 0 1.5px var(--trust-lavender);
+    opacity: 0;
+  }
+  .node:not(.node--trust) {
+    inline-size: max-content;
+    block-size: 40px;
+  }
+  .node:not(.node--trust) .node__core {
+    padding-inline: 14px;
+    border-radius: 12px;
+    font: 600 0.875rem/1 var(--font-body);
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .node__label {
+    position: absolute;
+    inset-block-start: calc(100% + 12px);
+    inset-inline-start: 50%;
+    translate: -50% 0;
+    font: 500 0.875rem/1.2 var(--font-body);
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .node--trust {
+    inline-size: var(--trust);
+    block-size: var(--trust);
+  }
+  .node--trust .node__core {
+    border-radius: 30%;
+    background:
+      radial-gradient(90% 70% at 50% 108%, var(--trust-lilac) 0%, var(--trust-lavender) 18%, var(--trust-violet) 46%, rgb(105 48 249 / 0) 78%),
+      radial-gradient(80% 60% at 50% 0%, var(--ink-violet) 0%, var(--violet-900) 70%);
+    box-shadow:
+      inset 0 0 0 1px rgb(241 233 253 / 0.28),
+      inset 0 1px 0 rgb(255 255 255 / 0.18),
+      0 20px 50px -18px rgb(105 48 249 / 0.9);
+    color: #fff;
+  }
+  .node--trust .node__core::after {
+    box-shadow: 0 0 0 2px var(--trust-lilac);
+  }
+  .node--trust :global(.node__mark) {
+    inline-size: 60%;
+    block-size: auto;
+    translate: 0 -6%;
+  }
+  .node--trust .node__label {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .node__glow {
+    position: absolute;
+    inset: -110%;
+    z-index: -1;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(105 48 249 / 0.55), rgb(105 48 249 / 0.18) 55%, rgb(105 48 249 / 0));
+    opacity: 0.55;
+  }
+
+  /* ---------- destinations ---------- */
+  .dest {
+    position: absolute;
+    inset-block-start: var(--y);
+    inset-inline-start: var(--x);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgb(31 29 37 / 0.92), rgb(20 19 23 / 0.92));
+    box-shadow:
+      inset 0 0 0 1px var(--border),
+      var(--inner-highlight),
+      0 18px 40px -20px rgb(0 0 0 / 0.9);
+    translate: 0 -50%;
+    white-space: nowrap;
+  }
+  /* lit edge when a stream lands */
+  .dest::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow:
+      inset 0 0 0 1px var(--trust-lavender),
+      0 0 40px -8px rgb(105 48 249 / 0.85);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .dest--pre::before {
+    box-shadow:
+      inset 0 0 0 1px rgb(157 103 251 / 0.75),
+      0 0 26px -10px rgb(105 48 249 / 0.7);
+  }
+  .dest__text {
+    display: grid;
+    gap: 2px;
+  }
+  .dest__name {
+    font: 500 0.8125rem/1.2 var(--font-body);
+    color: var(--text-muted);
+  }
+  .dest__amt {
+    font: 600 0.9375rem/1.25 var(--font-body);
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+  .dest__pct {
+    color: var(--text-accent);
+  }
+  .dest__slot {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: bottom;
+  }
+  .dest__val {
+    display: inline-block;
+  }
+
+  /* ---------- pulse ---------- */
+  .pulse {
+    position: absolute;
+    inset-block-start: var(--y);
+    inset-inline-start: var(--x);
+    inline-size: 0;
+    block-size: 0;
+    transform: translate(var(--hsx), var(--hsy));
+    z-index: 2;
+  }
+  .pulse__dot {
+    position: absolute;
+    inset-block-start: -7px;
+    inset-inline-start: -7px;
+    inline-size: 14px;
+    block-size: 14px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff 0 35%, var(--trust-lilac) 55%, var(--trust-lavender) 100%);
+    box-shadow:
+      0 0 0 4px rgb(180 153 254 / 0.22),
+      0 0 22px 6px rgb(105 48 249 / 0.75);
+  }
+  .pulse__dot::after {
+    content: '';
+    position: absolute;
+    inset: -26px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(180 153 254 / 0.4), rgb(105 48 249 / 0));
+  }
+  .pulse__tag {
+    position: absolute;
+    inset-block-end: 30px; /* clears the 40px text nodes, which sit above the pulse */
+    inset-inline-start: 0;
+    translate: -50% 0;
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: rgb(20 19 23 / 0.9);
+    box-shadow:
+      inset 0 0 0 1px var(--border-strong),
+      0 10px 30px -12px rgb(105 48 249 / 0.8);
+    font: 600 0.8125rem/1.2 var(--font-body);
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  /* ---------- vertical geometry: labels to the side ---------- */
+  .sf-canvas--v .node__label {
+    inset-block-start: 50%;
+    inset-inline-start: calc(100% + 14px);
+    translate: 0 -50%;
+  }
+  .sf-canvas--v .pulse__tag {
+    inset-block-end: auto;
+    inset-block-start: 0;
+    inset-inline-start: auto;
+    inset-inline-end: 20px;
+    translate: 0 -50%;
+  }
+  .sf-canvas--v .dest {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    inline-size: calc(168 / 360 * 100%);
+    padding: 12px 12px 14px;
+    translate: -50% 0;
+  }
+  .sf-canvas--v .dest__amt {
+    font-size: 0.875rem;
+  }
+  @container (max-width: 330px) {
+    .pulse__tag,
+    .dest__name,
+    .node__label {
+      font-size: 0.75rem;
+    }
+    .sf-canvas--v .dest__amt {
+      font-size: 0.8125rem;
+    }
+    .sf-canvas--v .pulse__tag {
+      padding: 5px 9px;
+      inset-inline-end: 16px;
+    }
+  }
+  @container (max-width: 900px) {
+    .sf-canvas--h .dest {
+      gap: 10px;
+      padding: 10px 14px 10px 10px;
+    }
+    .sf-canvas--h .dest__amt {
+      font-size: 0.875rem;
+    }
+  }
+
+  /* ---------- motion (JS present, motion allowed) ---------- */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(.js) .pulse,
+    :global(.js) .pulse__dot,
+    :global(.js) .pulse__tag,
+    :global(.js) .beam__win,
+    :global(.js) .beam__paint,
+    :global(.js) .beam__comet,
+    :global(.js) .node__core,
+    :global(.js) .node__core::before,
+    :global(.js) .node__core::after,
+    :global(.js) .node__glow,
+    :global(.js) .dest::before,
+    :global(.js) .dest__val {
+      animation-duration: var(--T);
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+      animation-fill-mode: both;
+      animation-play-state: var(--play);
+    }
+
+    :global(.js) .pulse {
+      animation-name: sf-pulse;
+    }
+    :global(.js) .pulse__dot {
+      animation-name: sf-dot;
+    }
+    :global(.js) .pulse__tag {
+      animation-name: sf-tag;
+    }
+    :global(.js) .beam--trunk .beam__win {
+      animation-name: sf-trunk-win;
+    }
+    :global(.js) .beam--trunk .beam__paint {
+      animation-name: sf-trunk-paint;
+    }
+    :global(.js) .beam--com .beam__win,
+    :global(.js) .beam--pre .beam__win {
+      animation-name: sf-stream-win;
+    }
+    :global(.js) .beam--com .beam__paint,
+    :global(.js) .beam--pre .beam__paint {
+      animation-name: sf-stream-paint;
+    }
+    :global(.js) .beam__comet {
+      animation-name: sf-comet;
+    }
+    :global(.js) .node__core {
+      animation-name: none;
+    }
+    :global(.js) .node--trust .node__core {
+      animation-name: sf-trust-core;
+    }
+    :global(.js) .node__core::before {
+      animation-name: sf-node-glow;
+    }
+    :global(.js) .node__core::after {
+      animation-name: sf-ping;
+    }
+    :global(.js) .node--cliente .node__core::before,
+    :global(.js) .node--cliente .node__core::after {
+      animation-delay: calc(var(--T) * 0.02);
+    }
+    :global(.js) .node--breb .node__core::before,
+    :global(.js) .node--breb .node__core::after {
+      animation-delay: calc(var(--T) * 0.155);
+    }
+    :global(.js) .node--wallet .node__core::before,
+    :global(.js) .node--wallet .node__core::after {
+      animation-delay: calc(var(--T) * 0.275);
+    }
+    :global(.js) .node--trust .node__core::before,
+    :global(.js) .node--trust .node__core::after {
+      animation-delay: calc(var(--T) * 0.395);
+    }
+    :global(.js) .node__glow {
+      animation-name: sf-trust-glow;
+    }
+    :global(.js) .dest::before {
+      animation-name: sf-arrive;
+    }
+    :global(.js) .dest__val {
+      animation-name: sf-tick;
+    }
+    :global(.js) .dest--pre::before,
+    :global(.js) .dest--pre .dest__val {
+      animation-delay: calc(var(--T) * 0.01);
+    }
+  }
+
+  @keyframes sf-pulse {
+    0% {
+      transform: translate(0, 0);
+      opacity: 0;
+    }
+    4% {
+      transform: translate(0, 0);
+      opacity: 1;
+      animation-timing-function: cubic-bezier(0.55, 0, 0.35, 1);
+    }
+    16% {
+      transform: translate(var(--h1x), var(--h1y));
+      opacity: 1;
+      animation-timing-function: cubic-bezier(0.55, 0, 0.35, 1);
+    }
+    28% {
+      transform: translate(var(--h2x), var(--h2y));
+      opacity: 1;
+      animation-timing-function: cubic-bezier(0.55, 0, 0.35, 1);
+    }
+    40% {
+      transform: translate(var(--h3x), var(--h3y));
+      opacity: 1;
+    }
+    45%,
+    100% {
+      transform: translate(var(--h3x), var(--h3y));
+      opacity: 0;
+    }
+  }
+
+  @keyframes sf-dot {
+    0% {
+      transform: scale(0.4);
+    }
+    4%,
+    39% {
+      transform: scale(1);
+    }
+    45%,
+    100% {
+      transform: scale(2.4);
+    }
+  }
+
+  @keyframes sf-tag {
+    0%,
+    33% {
+      opacity: 1;
+    }
+    38%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /*
+   * Beam draw-on. The window and its paint run mirrored keyframes with identical offsets and easing, so
+   * their translations cancel on every frame: the gradient stays fixed and only the window's edge travels.
+   * --ax/--ay pick the axis; --k1/--k2 put the trunk's edge on Bre-B and on the wallet (see frontmatter).
+   */
+  @keyframes sf-trunk-win {
+    0%,
+    3.9% {
+      transform: translate(calc(var(--ax) * -100%), calc(var(--ay) * -100%));
+      opacity: 0;
+    }
+    4% {
+      transform: translate(calc(var(--ax) * -100%), calc(var(--ay) * -100%));
+      opacity: 1;
+      animation-timing-function: cubic-bezier(0.55, 0, 0.35, 1);
+    }
+    16% {
+      transform: translate(calc(var(--ax) * var(--k1)), calc(var(--ay) * var(--k1)));
+      opacity: 1;
+      animation-timing-function: cubic-bezier(0.55, 0, 0.35, 1);
+    }
+    28% {
+      transform: translate(calc(var(--ax) * var(--k2)), calc(var(--ay) * var(--k2)));
+      opacity: 1;
+      animation-timing-function: cubic-bezier(0.55, 0, 0.35, 1);
+    }
+    40%,
+    48% {
+      transform: translate(0, 0);
+      opacity: 1;
+    }
+    64%,
+    100% {
+      transform: translate(0, 0);
+      opacity: 0;
+    }
+  }
+
+  @keyframes sf-trunk-paint {
+    0%,
+    4% {
+      transform: translate(calc(var(--ax) * 100%), calc(var(--ay) * 100%));
+      animation-timing-function: cubic-bezier(0.55, 0, 0.35, 1);
+    }
+    16% {
+      transform: translate(calc(var(--ax) * -1 * var(--k1)), calc(var(--ay) * -1 * var(--k1)));
+      animation-timing-function: cubic-bezier(0.55, 0, 0.35, 1);
+    }
+    28% {
+      transform: translate(calc(var(--ax) * -1 * var(--k2)), calc(var(--ay) * -1 * var(--k2)));
+      animation-timing-function: cubic-bezier(0.55, 0, 0.35, 1);
+    }
+    40%,
+    100% {
+      transform: translate(0, 0);
+    }
+  }
+
+  @keyframes sf-stream-win {
+    0%,
+    44.9% {
+      transform: translate(calc(var(--ax) * -100%), calc(var(--ay) * -100%));
+      opacity: 0;
+    }
+    45% {
+      transform: translate(calc(var(--ax) * -100%), calc(var(--ay) * -100%));
+      opacity: 1;
+      animation-timing-function: cubic-bezier(0.22, 0.7, 0.3, 1);
+    }
+    65%,
+    84% {
+      transform: translate(0, 0);
+      opacity: 1;
+    }
+    97%,
+    100% {
+      transform: translate(0, 0);
+      opacity: 0;
+    }
+  }
+
+  @keyframes sf-stream-paint {
+    0%,
+    45% {
+      transform: translate(calc(var(--ax) * 100%), calc(var(--ay) * 100%));
+      animation-timing-function: cubic-bezier(0.22, 0.7, 0.3, 1);
+    }
+    65%,
+    100% {
+      transform: translate(0, 0);
+    }
+  }
+
+  /* the comet layer repeats the window's travel, then runs a little further so it slides off the end */
+  @keyframes sf-comet {
+    0%,
+    44.9% {
+      transform: translate(calc(var(--ax) * -100%), calc(var(--ay) * -100%));
+      opacity: 0;
+    }
+    45% {
+      transform: translate(calc(var(--ax) * -100%), calc(var(--ay) * -100%));
+      opacity: 1;
+      animation-timing-function: cubic-bezier(0.22, 0.7, 0.3, 1);
+    }
+    65% {
+      transform: translate(0, 0);
+      opacity: 1;
+    }
+    70%,
+    100% {
+      transform: translate(calc(var(--ax) * var(--gx)), calc(var(--ay) * var(--gx)));
+      opacity: 0;
+    }
+  }
+
+  @keyframes sf-node-glow {
+    0% {
+      opacity: 0;
+    }
+    2% {
+      opacity: 1;
+    }
+    14%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes sf-ping {
+    0% {
+      transform: scale(1);
+      opacity: 0;
+    }
+    1% {
+      transform: scale(1);
+      opacity: 0.9;
+    }
+    11%,
+    100% {
+      transform: scale(1.75);
+      opacity: 0;
+    }
+  }
+
+  @keyframes sf-trust-core {
+    0%,
+    39% {
+      transform: scale(1);
+    }
+    42% {
+      transform: scale(1.08);
+    }
+    52%,
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes sf-trust-glow {
+    0%,
+    38% {
+      opacity: 0.35;
+    }
+    43% {
+      opacity: 1;
+    }
+    62%,
+    100% {
+      opacity: 0.35;
+    }
+  }
+
+  @keyframes sf-arrive {
+    0%,
+    62% {
+      opacity: 0;
+    }
+    66% {
+      opacity: 1;
+    }
+    84% {
+      opacity: 0.5;
+    }
+    98%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes sf-tick {
+    0%,
+    59% {
+      transform: translateY(0);
+      opacity: 1;
+      animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
+    }
+    64% {
+      transform: translateY(-110%);
+      opacity: 0;
+    }
+    64.01% {
+      transform: translateY(110%);
+      opacity: 0;
+      animation-timing-function: cubic-bezier(0.22, 0.7, 0.3, 1);
+    }
+    73%,
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* reduced motion: never animate, the base styles are the composed final state */
+  @media (prefers-reduced-motion: reduce) {
+    .sf-canvas *,
+    .sf-canvas *::before,
+    .sf-canvas *::after {
+      animation: none !important;
+    }
+  }
+
+  /* no testigos (docs/DESIGN.md): no travelling dot, no ping rings, no glow pop on the nodes */
+  .node__core::before,
+  .node__core::after {
+    display: none;
+  }
+</style>

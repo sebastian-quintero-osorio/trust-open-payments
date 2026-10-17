@@ -1,0 +1,125 @@
+---
+import ArrowRight from '@lucide/astro/icons/arrow-right';
+import type { HTMLAttributes } from 'astro/types';
+
+type Variant = 'primary' | 'violet' | 'ghost' | 'link';
+
+interface Props extends Omit<HTMLAttributes<'a'>, 'type'> {
+  /** renders an <a> when set, otherwise a <button> */
+  href?: string;
+  variant?: Variant;
+  size?: 'md' | 'lg';
+  type?: 'button' | 'submit';
+  arrow?: boolean;
+  disabled?: boolean;
+}
+
+const { href, variant = 'primary', size = 'md', type = 'button', arrow = false, disabled, class: className, ...rest } = Astro.props;
+const classes = ['btn', `btn--${variant}`, `btn--${size}`, className];
+---
+
+{
+  href ? (
+    <a href={href} class:list={classes} {...rest}>
+      <span class="btn__label"><slot /></span>
+      {arrow && <ArrowRight class="btn__arrow" size={18} stroke-width={1.75} aria-hidden="true" />}
+    </a>
+  ) : (
+    <button type={type} class:list={classes} disabled={disabled} {...(rest as HTMLAttributes<'button'>)}>
+      <span class="btn__label"><slot /></span>
+      {arrow && <ArrowRight class="btn__arrow" size={18} stroke-width={1.75} aria-hidden="true" />}
+    </button>
+  )
+}
+
+<style>
+  .btn {
+    --btn-h: 48px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-block-size: var(--btn-h);
+    padding-inline: 22px;
+    border: 0;
+    border-radius: 12px; /* near-square, like the corners of the wordmark (docs/DESIGN.md) */
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    isolation: isolate;
+    transition:
+      transform var(--dur-2) var(--ease-out),
+      background-color var(--dur-2) var(--ease-out),
+      color var(--dur-2) var(--ease-out);
+  }
+  .btn--lg {
+    --btn-h: 56px;
+    padding-inline: 28px;
+    font-size: 1rem;
+  }
+  /* hover is a color change only: no lift, no glow (docs/DESIGN.md) */
+  .btn:active {
+    transform: scale(0.98);
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+  }
+
+  .btn--primary {
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-text);
+  }
+  .btn--primary:hover {
+    background: var(--btn-primary-bg-hover);
+  }
+
+  .btn--violet {
+    background: var(--btn-violet-bg);
+    color: var(--btn-violet-text);
+  }
+  .btn--violet:hover {
+    background: var(--btn-violet-bg-hover);
+  }
+
+  .btn--ghost {
+    background: rgb(241 233 253 / 0.04);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+  .btn--ghost:hover {
+    background: rgb(241 233 253 / 0.08);
+  }
+
+  /* secondary action as a text link: lavender, underlined on hover */
+  .btn--link {
+    min-block-size: 44px;
+    padding-inline: 2px;
+    background: none;
+    color: var(--text-accent);
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.3em;
+    transition: text-decoration-color var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
+  }
+  .btn--link:hover {
+    color: var(--text);
+    text-decoration-color: currentColor;
+  }
+
+  .btn__arrow {
+    flex: none;
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+  .btn:hover .btn__arrow {
+    transform: translateX(3px);
+  }
+</style>

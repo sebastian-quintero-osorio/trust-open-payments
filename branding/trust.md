@@ -4,121 +4,121 @@ Brand Visual Identity & Motion Guidelines
 
 1. Esencia de marca 
 
-TRUST es una marca de estética ultramoderna, digital y sofisticada. Su identidad visual está inspirada en el futuro de la tecnología, las finanzas digitales y las experiencias premium. 
+TRUST es una marca de est√©tica ultramoderna, digital y sofisticada. Su identidad visual est√° inspirada en el futuro de la tecnolog√≠a, las finanzas digitales y las experiencias premium. 
 
-La marca transmite innovación, confianza, precisión y evolución constante. Su lenguaje gráfico es minimalista, pero visualmente impactante, combinando composiciones limpias con iluminación digital, profundidad, transparencias y movimientos cuidadosamente diseñados. 
+La marca transmite innovaci√≥n, confianza, precisi√≥n y evoluci√≥n constante. Su lenguaje gr√°fico es minimalista, pero visualmente impactante, combinando composiciones limpias con iluminaci√≥n digital, profundidad, transparencias y movimientos cuidadosamente dise√±ados. 
 
-TRUST no busca verse como una marca tecnológica convencional. Su universo visual debe sentirse avanzado, elegante, dinámico y ligeramente futurista, sin caer en una estética excesivamente artificial, saturada o de ciencia ficción. 
+TRUST no busca verse como una marca tecnol√≥gica convencional. Su universo visual debe sentirse avanzado, elegante, din√°mico y ligeramente futurista, sin caer en una est√©tica excesivamente artificial, saturada o de ciencia ficci√≥n. 
 
 Conceptos clave: Modern / Futuristic / Premium / Minimal / Glowing / Fluid / Glassy / Digital. 
 
-2. Paleta cromática y jerarquía de color 
+2. Paleta crom√°tica y jerarqu√≠a de color 
 
-El negro es el protagonista absoluto de la identidad visual. Debe ocupar la mayor proporción de las composiciones y funcionar como base para generar profundidad, elegancia y contraste. 
+El negro es el protagonista absoluto de la identidad visual. Debe ocupar la mayor proporci√≥n de las composiciones y funcionar como base para generar profundidad, elegancia y contraste. 
 
-El morado eléctrico es el segundo color más importante. Representa la energía tecnológica de TRUST y se utiliza para destacar elementos, crear iluminación, construir gradientes y dirigir la atención del espectador. 
+El morado el√©ctrico es el segundo color m√°s importante. Representa la energ√≠a tecnol√≥gica de TRUST y se utiliza para destacar elementos, crear iluminaci√≥n, construir gradientes y dirigir la atenci√≥n del espectador. 
 
-Los tonos lavanda y lila claro son complementarios. Su función es aportar luminosidad, suavidad y profundidad, sin competir con el negro y el morado principal. 
+Los tonos lavanda y lila claro son complementarios. Su funci√≥n es aportar luminosidad, suavidad y profundidad, sin competir con el negro y el morado principal. 
 
-Distribución cromática orientativa: 
+Distribuci√≥n crom√°tica orientativa: 
 
 65 % negro: fondos, superficies y espacios negativos. 
-25 % morado eléctrico: elementos principales, iluminación y acentos. 
+25 % morado el√©ctrico: elementos principales, iluminaci√≥n y acentos. 
 10 % tonos secundarios: lavandas, lilas y colores claros. 
-Esta distribución es una guía de dirección de arte, no una regla matemática rígida. El negro siempre debe mantener el mayor peso visual. 
+Esta distribuci√≥n es una gu√≠a de direcci√≥n de arte, no una regla matem√°tica r√≠gida. El negro siempre debe mantener el mayor peso visual. 
 
-3. Gradientes e iluminación 
+3. Gradientes e iluminaci√≥n 
 
-Los gradientes son uno de los recursos gráficos más importantes de TRUST. 
+Los gradientes son uno de los recursos gr√°ficos m√°s importantes de TRUST. 
 
-Se utilizan transiciones fluidas entre el morado eléctrico, el violeta, el lavanda y los tonos claros de la marca. Estas mezclas deben sentirse naturales, suaves y sofisticadas, evitando divisiones bruscas entre colores. 
+Se utilizan transiciones fluidas entre el morado el√©ctrico, el violeta, el lavanda y los tonos claros de la marca. Estas mezclas deben sentirse naturales, suaves y sofisticadas, evitando divisiones bruscas entre colores. 
 
-Los gradientes pueden ser lineales, radiales o multidireccionales, dependiendo de la composición. Se priorizan aquellos que generan una sensación de luz ambiental, profundidad y movimiento. 
+Los gradientes pueden ser lineales, radiales o multidireccionales, dependiendo de la composici√≥n. Se priorizan aquellos que generan una sensaci√≥n de luz ambiental, profundidad y movimiento. 
 
-El efecto glow es un componente característico de la identidad. Los elementos destacados pueden emitir halos luminosos morados, reflejos difusos o iluminación suave sobre superficies oscuras. 
+El efecto glow es un componente caracter√≠stico de la identidad. Los elementos destacados pueden emitir halos luminosos morados, reflejos difusos o iluminaci√≥n suave sobre superficies oscuras. 
 
-El brillo debe ser controlado y elegante. No debe confundirse con efectos neón exagerados ni con una estética gamer. 
+El brillo debe ser controlado y elegante. No debe confundirse con efectos ne√≥n exagerados ni con una est√©tica gamer. 
 
-Dirección visual: iluminación volumétrica sutil, soft glow, ambient light, color diffusion, smooth gradients y profundidad atmosférica. 
+Direcci√≥n visual: iluminaci√≥n volum√©trica sutil, soft glow, ambient light, color diffusion, smooth gradients y profundidad atmosf√©rica. 
 
 4. Glass Effects y materiales digitales 
 
-TRUST puede incorporar recursos de glassmorphism y liquid glass en determinadas piezas gráficas, interfaces y animaciones. 
+TRUST puede incorporar recursos de glassmorphism y liquid glass en determinadas piezas gr√°ficas, interfaces y animaciones. 
 
-Estos efectos deben simular superficies de vidrio digital mediante transparencia, desenfoque, refracción de luz, reflejos delicados y bordes sutilmente iluminados. 
+Estos efectos deben simular superficies de vidrio digital mediante transparencia, desenfoque, refracci√≥n de luz, reflejos delicados y bordes sutilmente iluminados. 
 
 Los elementos pueden presentar una apariencia flotante y tridimensional, pero siempre conservando una estructura limpia y minimalista. 
 
 Se recomienda utilizar: 
 
-Superficies translúcidas con desenfoque de fondo. 
+Superficies transl√∫cidas con desenfoque de fondo. 
 Reflejos suaves y bordes iluminados. 
 Materiales con apariencia de vidrio pulido. 
 Capas flotantes con profundidad. 
-Distorsiones ópticas sutiles. 
+Distorsiones √≥pticas sutiles. 
 Reflejos en tonos morados y lavanda. 
-Regla principal: los efectos de vidrio son recursos secundarios, no la base de toda la identidad. Deben utilizarse únicamente cuando aporten sofisticación, profundidad o funcionalidad. 
+Regla principal: los efectos de vidrio son recursos secundarios, no la base de toda la identidad. Deben utilizarse √∫nicamente cuando aporten sofisticaci√≥n, profundidad o funcionalidad. 
 
-5. Composición y estilo gráfico 
+5. Composici√≥n y estilo gr√°fico 
 
 La identidad visual de TRUST se construye a partir de la simplicidad, el equilibrio y el uso intencional del espacio negativo. 
 
-Se priorizan fondos oscuros, composiciones ordenadas, tipografías contemporáneas, geometrías precisas y elementos digitales con acabados de alta calidad. 
+Se priorizan fondos oscuros, composiciones ordenadas, tipograf√≠as contempor√°neas, geometr√≠as precisas y elementos digitales con acabados de alta calidad. 
 
-Cada composición debe tener un protagonista visual claramente definido. Los efectos luminosos, gradientes y transparencias deben reforzar ese elemento, nunca competir con él. 
+Cada composici√≥n debe tener un protagonista visual claramente definido. Los efectos luminosos, gradientes y transparencias deben reforzar ese elemento, nunca competir con √©l. 
 
-Se deben evitar composiciones sobrecargadas, texturas innecesarias, sombras demasiado fuertes, demasiados colores simultáneos y elementos decorativos sin propósito. 
+Se deben evitar composiciones sobrecargadas, texturas innecesarias, sombras demasiado fuertes, demasiados colores simult√°neos y elementos decorativos sin prop√≥sito. 
 
-La marca debe transmitir tecnología avanzada a través de la precisión y el detalle, no mediante la acumulación de efectos. 
+La marca debe transmitir tecnolog√≠a avanzada a trav√©s de la precisi√≥n y el detalle, no mediante la acumulaci√≥n de efectos. 
 
-6. Motion Graphics y animación 
+6. Motion Graphics y animaci√≥n 
 
-El movimiento es una extensión natural de la identidad de TRUST. 
+El movimiento es una extensi√≥n natural de la identidad de TRUST. 
 
-Las animaciones deben sentirse fluidas, inteligentes y tecnológicamente avanzadas. Se favorecen las transformaciones orgánicas entre formas, las transiciones limpias, los movimientos suaves de cámara y las aceleraciones progresivas. 
+Las animaciones deben sentirse fluidas, inteligentes y tecnol√≥gicamente avanzadas. Se favorecen las transformaciones org√°nicas entre formas, las transiciones limpias, los movimientos suaves de c√°mara y las aceleraciones progresivas. 
 
-Los efectos de morphing, máscaras animadas, reflejos en movimiento y gradientes dinámicos son especialmente adecuados. 
+Los efectos de morphing, m√°scaras animadas, reflejos en movimiento y gradientes din√°micos son especialmente adecuados. 
 
-La animación puede comenzar de forma lenta y controlada, aumentar progresivamente su velocidad y finalizar con una desaceleración elegante. 
+La animaci√≥n puede comenzar de forma lenta y controlada, aumentar progresivamente su velocidad y finalizar con una desaceleraci√≥n elegante. 
 
-Principios de animación: 
+Principios de animaci√≥n: 
 
 Transiciones fluidas y precisas. 
 Uso de easing natural. 
 Aceleraciones y desaceleraciones progresivas. 
-Movimientos con intención. 
-Transformaciones mediante máscaras y morphing. 
-Iluminación y reflejos animados sutilmente. 
+Movimientos con intenci√≥n. 
+Transformaciones mediante m√°scaras y morphing. 
+Iluminaci√≥n y reflejos animados sutilmente. 
 Finales limpios que permitan reconocer claramente la marca. 
-Las animaciones deben mantener siempre la geometría, identidad y legibilidad del logotipo original. 
+Las animaciones deben mantener siempre la geometr√≠a, identidad y legibilidad del logotipo original. 
 
 7. Identidad sonora 
 
-TRUST mantiene una comunicación audiovisual predominantemente silenciosa. 
+TRUST mantiene una comunicaci√≥n audiovisual predominantemente silenciosa. 
 
-Las animaciones gráficas, transiciones y elementos visuales no deben incorporar efectos sonoros de manera habitual. El movimiento y la iluminación deben tener suficiente fuerza para comunicar sin necesidad de sonido. 
+Las animaciones gr√°ficas, transiciones y elementos visuales no deben incorporar efectos sonoros de manera habitual. El movimiento y la iluminaci√≥n deben tener suficiente fuerza para comunicar sin necesidad de sonido. 
 
-La excepción son las animaciones de presentación del logotipo, en las que puede utilizarse una firma sonora breve, elegante y tecnológica. 
+La excepci√≥n son las animaciones de presentaci√≥n del logotipo, en las que puede utilizarse una firma sonora breve, elegante y tecnol√≥gica. 
 
-Esta firma debe ser minimalista, moderna y reconocible. Puede incorporar una textura electrónica suave, una resonancia digital o un sonido sintético limpio y corto. 
+Esta firma debe ser minimalista, moderna y reconocible. Puede incorporar una textura electr√≥nica suave, una resonancia digital o un sonido sint√©tico limpio y corto. 
 
-Se deben evitar efectos exagerados, impactos cinematográficos fuertes, sonidos de videojuegos y transiciones sonoras repetitivas. 
+Se deben evitar efectos exagerados, impactos cinematogr√°ficos fuertes, sonidos de videojuegos y transiciones sonoras repetitivas. 
 
-El sonido acompaña la identidad, pero nunca domina la experiencia. 
+El sonido acompa√±a la identidad, pero nunca domina la experiencia. 
 
-8. Sensación final de marca 
+8. Sensaci√≥n final de marca 
 
-Cada pieza visual de TRUST debe transmitir la sensación de estar frente a una marca de nueva generación. 
+Cada pieza visual de TRUST debe transmitir la sensaci√≥n de estar frente a una marca de nueva generaci√≥n. 
 
-Su estética debe ser oscura pero luminosa, minimalista pero expresiva, tecnológica pero sofisticada, futurista pero funcional. 
+Su est√©tica debe ser oscura pero luminosa, minimalista pero expresiva, tecnol√≥gica pero sofisticada, futurista pero funcional. 
 
-El negro aporta autoridad y elegancia. El morado aporta identidad y energía. Los gradientes generan fluidez. El glow crea atmósfera. Los glass effects añaden profundidad y modernidad. 
+El negro aporta autoridad y elegancia. El morado aporta identidad y energ√≠a. Los gradientes generan fluidez. El glow crea atm√≥sfera. Los glass effects a√±aden profundidad y modernidad. 
 
-TRUST es tecnología que se siente premium: limpia, precisa, luminosa y en constante evolución. 
+TRUST es tecnolog√≠a que se siente premium: limpia, precisa, luminosa y en constante evoluci√≥n. 
 
   
 
-Tipografía: 
+Tipograf√≠a: 
 
   
 

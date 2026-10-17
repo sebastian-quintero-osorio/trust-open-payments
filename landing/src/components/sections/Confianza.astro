@@ -1,0 +1,311 @@
+---
+// Confianza (COPY.md §9). Protagonist: the record of one sale (the page's example data), from the Bre-B
+// payment to the lender's abono. It is a real <table>; when it first scrolls into view the rows are written
+// one after another (opacity/transform only, once). No JS / reduced motion: the finished table.
+// The four pillars are plain text with hairline dividers (docs/DESIGN.md: no icon tiles, no glass, no orbit).
+import Section from '../ui/Section.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import { NBSP, formatCOP } from '../../scripts/format';
+
+const pillars = [
+  {
+    title: 'Cupo calculado en Trust',
+    text: 'El comercio pide dentro de su cupo. El prestamista sabe que cada solicitud tiene un límite claro.',
+  },
+  {
+    title: 'División en el origen',
+    text: 'Cada pago se divide automáticamente en la wallet de Puntored, con el porcentaje acordado. Sin pasos manuales.',
+  },
+  {
+    title: 'Pagos trazables',
+    text: 'Cada venta, cada división y cada abono quedan registrados. Nada depende de la memoria ni de la palabra.',
+  },
+  {
+    title: 'Cada quien pone su rango',
+    text: 'Comercio y prestamista definen su rango. El crédito empieza solo cuando ambos aceptan las condiciones.',
+  },
+];
+
+type Row = { event: string; detail: string; amount?: number; kind?: 'split' | 'merchant' | 'lender' };
+const rows: Row[] = [
+  { event: 'Venta con Bre-B', detail: 'Tienda La Esquina', amount: 48000 },
+  { event: 'Llega a la wallet Puntored', detail: 'Tienda La Esquina', amount: 48000 },
+  { event: 'División acordada', detail: `85${NBSP}% comercio / 15${NBSP}% prestamista`, kind: 'split' },
+  { event: 'Para el comercio', detail: 'Tienda La Esquina', amount: 40800, kind: 'merchant' },
+  { event: 'Abono al prestamista', detail: 'Camilo P.', amount: 7200, kind: 'lender' },
+];
+const time = '10:42 a. m.';
+---
+
+<Section id="confianza" theme="dark" aria-labelledby="confianza-title" class="conf">
+  <div class="container conf__grid">
+    <div class="conf__copy">
+      <SectionHeading id="confianza-title" title="Cada pago queda registrado, de la venta al abono." />
+      <dl class="pillars">
+        {
+          pillars.map((p) => (
+            <div class="pillar">
+              <dt class="pillar__title">{p.title}</dt>
+              <dd class="pillar__text">{p.text}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+
+    <figure class="ledger" data-ledger data-reveal="fade">
+      <div class="ledger__head" aria-hidden="true">
+        <span class="ledger__title">Registro de una venta</span>
+        <span class="ledger__badge">Ejemplo</span>
+      </div>
+      <table class="ledger__table">
+        <caption class="sr-only">Registro de una venta (ejemplo)</caption>
+        <thead class="sr-only">
+          <tr>
+            <th scope="col">Hora</th>
+            <th scope="col">Movimiento</th>
+            <th scope="col">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            rows.map((r, i) => (
+              <tr class:list={['row', r.kind && `row--${r.kind}`]} style={`--n: ${i}`}>
+                <td class="row__time tnum">{time}</td>
+                <th scope="row" class="row__event">
+                  <span class="row__name">{r.event}</span>
+                  <span class="row__detail">{r.detail}</span>
+                  {r.kind === 'split' && (
+                    <span class="row__bar" aria-hidden="true">
+                      <span class="row__bar-a" />
+                      <span class="row__bar-b" />
+                    </span>
+                  )}
+                </th>
+                <td class="row__amount tnum">{r.amount !== undefined ? formatCOP(r.amount) : ''}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+      <figcaption class="ledger__foot">Cada fila queda guardada y se puede rastrear hasta la venta que la originó.</figcaption>
+    </figure>
+  </div>
+</Section>
+
+<script>
+  import { onceVisible, prefersReducedMotion } from '../../scripts/motion';
+
+  // rows are written once, the first time the record is on screen
+  document.querySelectorAll<HTMLElement>('[data-ledger]').forEach((ledger) => {
+    if (prefersReducedMotion()) return;
+    ledger.classList.add('is-pending');
+    onceVisible(ledger, () => {
+      ledger.classList.remove('is-pending');
+      ledger.classList.add('is-writing');
+    }, 0.35);
+  });
+</script>
+
+<style>
+  .conf__grid {
+    display: grid;
+    gap: clamp(56px, 7vw, 88px);
+    align-items: start;
+  }
+  @media (min-width: 1040px) {
+    .conf__grid {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+      gap: clamp(56px, 6vw, 104px);
+    }
+    .ledger {
+      position: sticky;
+      inset-block-start: 120px;
+    }
+  }
+
+  /* ---------- pillars: text only ---------- */
+  .pillars {
+    display: grid;
+    margin: clamp(40px, 5vw, 56px) 0 0;
+  }
+  .pillar {
+    display: grid;
+    gap: 6px;
+    padding-block: 22px;
+    border-block-start: 1px solid var(--border);
+  }
+  .pillar:last-child {
+    border-block-end: 1px solid var(--border);
+  }
+  .pillar__title {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .pillar__text {
+    margin: 0;
+    max-inline-size: 46ch;
+    color: var(--text-muted);
+    text-wrap: pretty;
+  }
+
+  /* ---------- the record ---------- */
+  .ledger {
+    margin: 0;
+    padding: clamp(20px, 3vw, 32px);
+    border-radius: 20px;
+    background: var(--surface-solid);
+    box-shadow:
+      inset 0 1px 0 rgb(241 233 253 / 0.06),
+      0 0 0 1px var(--border),
+      0 40px 80px -48px rgb(0 0 0 / 0.9);
+  }
+  .ledger__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+  }
+  .ledger__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding-block-end: 18px;
+  }
+  .ledger__title {
+    font-family: var(--font-display);
+    font-size: clamp(1.375rem, 1.1rem + 0.8vw, 1.75rem);
+    line-height: 1.1;
+    color: var(--text);
+  }
+  .ledger__badge {
+    font-size: var(--fs-small);
+    color: var(--text-subtle);
+  }
+
+  /* one row = time | movement | amount, hairline dividers */
+  .row {
+    position: relative;
+  }
+  .row > * {
+    padding-block: 16px;
+    border-block-start: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .row__time {
+    inline-size: 1%;
+    padding-inline-end: clamp(16px, 2.4vw, 28px);
+    white-space: nowrap;
+    font-size: var(--fs-small);
+    color: var(--text-subtle);
+  }
+  .row__event {
+    font-weight: 400;
+    text-align: start;
+  }
+  .row__name {
+    display: block;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .row__detail {
+    display: block;
+    margin-block-start: 2px;
+    font-size: var(--fs-small);
+    color: var(--text-muted);
+  }
+  .row__amount {
+    padding-inline-start: 16px;
+    text-align: end;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .row--lender .row__amount,
+  .row--lender .row__name {
+    color: var(--text-accent);
+  }
+
+  /* the agreed split, drawn to scale */
+  .row__bar {
+    display: flex;
+    gap: 3px;
+    max-inline-size: 260px;
+    block-size: 6px;
+    margin-block-start: 12px;
+  }
+  .row__bar-a {
+    flex: 85;
+    border-radius: 2px;
+    background: var(--trust-lilac);
+    transform-origin: left center;
+  }
+  .row__bar-b {
+    flex: 15;
+    border-radius: 2px;
+    background: var(--trust-violet);
+    transform-origin: left center;
+  }
+
+  .ledger__foot {
+    padding-block-start: 18px;
+    border-block-start: 1px solid var(--border);
+    font-size: var(--fs-small);
+    color: var(--text-subtle);
+    text-wrap: pretty;
+  }
+
+  /* ---------- writing the record (once) ---------- */
+  @media (prefers-reduced-motion: no-preference) {
+    .ledger.is-pending .row,
+    .ledger.is-pending .row__bar > span {
+      opacity: 0;
+    }
+    .ledger.is-writing .row {
+      animation: row-write 520ms var(--ease-out) both;
+      animation-delay: calc(var(--n) * 260ms + 120ms);
+    }
+    .ledger.is-writing .row__bar > span {
+      animation: bar-grow 700ms var(--ease-brand) both;
+      animation-delay: calc(2 * 260ms + 420ms);
+    }
+    .ledger.is-writing .row__bar-b {
+      animation-delay: calc(2 * 260ms + 620ms);
+    }
+  }
+  @keyframes row-write {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 8px, 0);
+    }
+  }
+  @keyframes bar-grow {
+    from {
+      opacity: 0;
+      transform: scaleX(0);
+    }
+  }
+
+  @media (max-width: 520px) {
+    /* time moves above the movement on narrow screens */
+    .row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      border-block-start: 1px solid var(--border);
+    }
+    .row > * {
+      border-block-start: 0;
+    }
+    .row__time {
+      grid-column: 1 / -1;
+      inline-size: auto;
+      padding-block: 14px 0;
+    }
+    .row__event {
+      padding-block-start: 4px;
+    }
+    .row__amount {
+      padding-block-start: 4px;
+    }
+  }
+</style>

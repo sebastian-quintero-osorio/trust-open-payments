@@ -1,0 +1,254 @@
+---
+import { Font } from 'astro:assets';
+import '../styles/tokens.css';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description: string;
+  /** social card title/description (default to title/description) */
+  ogTitle?: string;
+  ogDescription?: string;
+  /** absolute or root-relative path to the social preview image */
+  ogImage?: string;
+  ogImageAlt?: string;
+  noindex?: boolean;
+}
+
+const {
+  title,
+  description,
+  ogTitle = title,
+  ogDescription = description,
+  ogImage = '/og.jpg',
+  ogImageAlt = 'Trust',
+  noindex = false,
+} = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImageUrl = new URL(ogImage, Astro.site);
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Trust',
+  url: Astro.site?.href,
+  logo: new URL('/icon-512.png', Astro.site).href,
+  description,
+};
+---
+
+<!doctype html>
+<html lang="es-CO">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex" />}
+
+    <meta name="theme-color" content="#191919" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_CO" />
+    <meta property="og:site_name" content="Trust" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:title" content={ogTitle} />
+    <meta property="og:description" content={ogDescription} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:alt" content={ogImageAlt} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={ogTitle} />
+    <meta name="twitter:description" content={ogDescription} />
+    <meta name="twitter:image" content={ogImageUrl} />
+
+    <Font cssVariable="--font-qontra" preload />
+    <Font cssVariable="--font-barlow" preload={[{ weight: 400 }]} />
+
+    <!-- Lets CSS hide reveal targets only when JS can bring them back. -->
+    <script is:inline>document.documentElement.classList.add('js');</script>
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+    <slot />
+
+    <script>
+      import { prefersReducedMotion } from '../scripts/motion';
+
+      const root = document.documentElement;
+      const idle = (cb: () => void) =>
+        'requestIdleCallback' in window ? requestIdleCallback(cb, { timeout: 2000 }) : setTimeout(cb, 200);
+      const afterLoad = (cb: () => void) =>
+        document.readyState === 'complete' ? cb() : addEventListener('load', cb, { once: true });
+
+      // Fallback for browsers without scroll-driven animations: reveal on intersection.
+      if (!CSS.supports('animation-timeline: view()') && !prefersReducedMotion()) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              entry.target.classList.add('is-in');
+              io.unobserve(entry.target);
+            }
+          },
+          { rootMargin: '0px 0px -8% 0px', threshold: 0.12 },
+        );
+        document.querySelectorAll('[data-reveal]').forEach((el) => io.observe(el));
+      }
+
+      /* ---------- in-page links ----------
+       * Sections below the fold use content-visibility:auto, whose 960px placeholders make any browser-computed
+       * scroll destination wrong. So: render every section (.cv-all), scroll once real sizes are laid out,
+       * check where we landed, then hand rendering back to the browser and move focus to the target.
+       */
+      const offsetTop = (el: Element) =>
+        (parseFloat(getComputedStyle(root).scrollPaddingTop) || 0) + (parseFloat(getComputedStyle(el).scrollMarginTop) || 0);
+      const destination = (el: Element) =>
+        Math.max(0, Math.min(root.scrollHeight - innerHeight, el.getBoundingClientRect().top + scrollY - offsetTop(el)));
+      const frames = (n: number, cb: () => void) => requestAnimationFrame(() => (n > 1 ? frames(n - 1, cb) : cb()));
+
+      let navigation = 0;
+      let holdCvAll = false; // initial #hash load: keep every section rendered until `load`
+
+      function goTo(target: HTMLElement, { smooth, focus }: { smooth: boolean; focus: boolean }) {
+        const id = ++navigation;
+        root.classList.add('cv-all');
+        // next frame: the newly rendered sections are laid out before we measure anything
+        requestAnimationFrame(() => {
+          if (id !== navigation) return;
+          const behavior: ScrollBehavior = smooth && !prefersReducedMotion() ? 'smooth' : 'auto';
+          let finished = false;
+          let interrupted = false;
+          let quiet = 0;
+          const cap = setTimeout(() => finish(), 4000);
+          const onScroll = () => {
+            clearTimeout(quiet);
+            // safety net for browsers without `scrollend` (and for a missed one)
+            quiet = window.setTimeout(() => finish(), 'onscrollend' in window ? 700 : 180);
+          };
+          const onUser = () => {
+            interrupted = true; // the visitor took over the scroll: don't pull them back
+            finish();
+          };
+          const userInput = ['wheel', 'touchstart', 'keydown'] as const;
+          const listen = (on: boolean) => {
+            if (on) {
+              addEventListener('scroll', onScroll, { passive: true });
+              addEventListener('scrollend', finish);
+              for (const type of userInput) addEventListener(type, onUser, { passive: true });
+            } else {
+              removeEventListener('scroll', onScroll);
+              removeEventListener('scrollend', finish);
+              for (const type of userInput) removeEventListener(type, onUser);
+            }
+          };
+          function finish() {
+            if (finished) return;
+            finished = true;
+            clearTimeout(cap);
+            clearTimeout(quiet);
+            listen(false);
+            if (id !== navigation) return; // a newer navigation owns .cv-all now
+            if (!interrupted) {
+              const y = destination(target);
+              if (Math.abs(y - scrollY) > 2) scrollTo({ top: y, behavior: 'instant' });
+              // a fragment navigation to the same URL updates :target (pushState does not); we are already in
+              // place, so its instant scroll is a no-op
+              if (location.hash && !target.matches(':target')) location.replace(location.hash);
+            }
+            // one more frame with real sizes so contain-intrinsic-size remembers them, then release
+            frames(2, () => {
+              if (id !== navigation || holdCvAll) return;
+              root.classList.remove('cv-all');
+            });
+            if (focus && !interrupted) {
+              if (!target.matches('a[href], button, input, select, textarea, [tabindex]')) target.setAttribute('tabindex', '-1');
+              target.focus({ preventScroll: true });
+            }
+          }
+
+          const y = destination(target);
+          if (Math.abs(y - scrollY) < 1) return finish(); // already there: no scroll, no scrollend
+          listen(true);
+          if (behavior === 'smooth') {
+            target.scrollIntoView({ behavior, block: 'start' });
+            onScroll(); // arms the quiet timer in case the scroll never starts
+          } else {
+            scrollTo({ top: y, behavior: 'instant' });
+            frames(2, finish); // let a rendered frame record the real section sizes first
+          }
+        });
+      }
+
+      const targetOf = (hash: string) => {
+        if (hash.length < 2) return null;
+        try {
+          return document.getElementById(decodeURIComponent(hash.slice(1)));
+        } catch {
+          return null;
+        }
+      };
+
+      // one delegated listener for every same-page link (no stopPropagation: other delegated listeners, like the
+      // waitlist's data-preselect handler, still run)
+      document.addEventListener('click', (e) => {
+        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        const a = (e.target as Element | null)?.closest?.('a[href^="#"]');
+        if (!(a instanceof HTMLAnchorElement) || a.target || a.hasAttribute('download')) return;
+        const target = targetOf(a.hash);
+        if (!target) return;
+        e.preventDefault();
+        if (location.hash !== a.hash) history.pushState(null, '', a.hash);
+        goTo(target, { smooth: true, focus: true });
+      });
+
+      // typed hash, or back/forward between hash entries
+      addEventListener('hashchange', () => {
+        const target = targetOf(location.hash);
+        if (target) goTo(target, { smooth: false, focus: false });
+      });
+
+      // arriving with #hash: the browser's own fragment scroll (during parsing and again at load) must see real
+      // sizes too, so every section stays rendered until load, then the position is checked once more
+      const initial = targetOf(location.hash);
+      const navType = (performance.getEntriesByType?.('navigation')[0] as PerformanceNavigationTiming | undefined)?.type;
+      if (initial && (!navType || navType === 'navigate')) {
+        holdCvAll = true;
+        root.classList.add('cv-all');
+        afterLoad(() =>
+          requestAnimationFrame(() => {
+            holdCvAll = false;
+            goTo(initial, { smooth: false, focus: false });
+          }),
+        );
+      }
+
+      // After load, render each deferred section once (one per idle period, never one long task) so
+      // contain-intrinsic-size:auto remembers real heights: scroll positions and the scrollbar stay truthful.
+      afterLoad(() =>
+        idle(() => {
+          const queue = [...document.querySelectorAll<HTMLElement>('.cv-auto')];
+          const next = () => {
+            const el = queue.shift();
+            if (!el) return;
+            el.style.contentVisibility = 'visible';
+            void el.offsetHeight; // lay it out inside this idle task
+            // keep it for one rendered frame (sizes are recorded at ResizeObserver timing), then restore
+            frames(2, () => {
+              el.style.removeProperty('content-visibility');
+              if (!el.getAttribute('style')) el.removeAttribute('style');
+              idle(next);
+            });
+          };
+          next();
+        }),
+      );
+    </script>
+  </body>
+</html>

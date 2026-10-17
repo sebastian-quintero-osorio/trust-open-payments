@@ -1,0 +1,22 @@
+---
+// Dev-only: render a single section at /preview/<id> (no pages are generated in production builds).
+import Layout from '../../layouts/Layout.astro';
+import { allSections } from '../../sections';
+// dev-only gallery of the app mocks: imported here (not in sections.ts) so it stays out of the landing's bundle
+import ScreensGallery from '../../components/dev/ScreensGallery.astro';
+
+export function getStaticPaths() {
+  if (!import.meta.env.DEV) return [];
+  return [...Object.keys(allSections), 'screens'].map((section) => ({ params: { section } }));
+}
+
+const previews = { ...allSections, screens: ScreensGallery };
+const id = Astro.params.section as keyof typeof previews;
+const Component = previews[id];
+---
+
+<Layout title={`Preview · ${id}`} description="Vista previa de sección" noindex>
+  <main id="contenido">
+    <Component />
+  </main>
+</Layout>

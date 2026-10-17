@@ -1,0 +1,19 @@
+# Solo pyproject.toml, uv.lock, .python-version y app/ entran a la imagen.
+.env
+.env.*
+!.env.example
+.venv/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.ruff_cache/
+.gitkeep
+tests/
+scripts/
+tools/
+specs/
+docs/
+LOOP.md
+README.md
+Dockerfile
+docker-compose.yml

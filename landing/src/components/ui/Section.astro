@@ -1,0 +1,17 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+interface Props extends HTMLAttributes<'section'> {
+  id: string;
+  /** dark = brand black (default) · deep = darker well · light = lilac section (swaps text tokens) */
+  theme?: 'dark' | 'deep' | 'light';
+  /** skip rendering work until near the viewport; disable for above-the-fold sections */
+  deferRender?: boolean;
+}
+
+const { id, theme = 'dark', deferRender = true, class: className, ...rest } = Astro.props;
+---
+
+<section id={id} class:list={['section', deferRender && 'cv-auto', className]} data-theme={theme} {...rest}>
+  <slot />
+</section>

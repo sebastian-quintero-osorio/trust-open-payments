@@ -1,0 +1,289 @@
+---
+// Mock of the app screen "Tu cupo" (screenId cupo-dashboard), COPY.md §13a. Hero phone.
+// Rendered inside <DeviceFrame> (390×844pt canvas, sizes in var(--pt)). Decorative: no focusable elements.
+import './screen-kit.css';
+import StatusBar from './StatusBar.astro';
+import Num from './Num.astro';
+import Bell from '@lucide/astro/icons/bell';
+import Plus from '@lucide/astro/icons/plus';
+import ReceiptText from '@lucide/astro/icons/receipt-text';
+import Tag from '@lucide/astro/icons/tag';
+import Clock from '@lucide/astro/icons/clock';
+import House from '@lucide/astro/icons/house';
+import ChartColumn from '@lucide/astro/icons/chart-column';
+import HandCoins from '@lucide/astro/icons/hand-coins';
+import UserRound from '@lucide/astro/icons/user-round';
+import ChevronRight from '@lucide/astro/icons/chevron-right';
+
+const sw = 1.75;
+---
+
+<div class="sk-screen cupo" data-screen="cupo-dashboard">
+  <StatusBar />
+
+  <div class="sk-body cupo__body">
+    <div class="sk-row cupo__head">
+      <div class="sk-avatar">TL</div>
+      <div class="sk-stack sk-grow">
+        <span class="cupo__hello">Hola, Marta</span>
+        <span class="sk-cap sk-nowrap">Tienda La Esquina · Bucaramanga</span>
+      </div>
+      <div class="sk-iconbtn cupo__bell">
+        <span class="sk-ico" style="--s: 20"><Bell stroke-width={sw} /></span>
+      </div>
+    </div>
+
+    <div class="sk-row cupo__section">
+      <span class="sk-title">Tu cupo</span>
+    </div>
+
+    <div class="sk-card sk-card--hero cupo__hero">
+      <span class="sk-sheen sk-loop"></span>
+      <span class="sk-label">Cupo disponible</span>
+      <Num value={4000000} class="sk-amt sk-amt--xl cupo__amount" />
+      <span class="sk-cap">Cupo total <span class="sk-money">$6.000.000</span></span>
+      <div class="sk-btn sk-btn--sm cupo__cta">
+        <span class="sk-ico" style="--s: 18"><Plus stroke-width={2.25} /></span>
+        Pedir crédito
+      </div>
+    </div>
+
+    <div class="sk-card cupo__credit">
+      <div class="sk-row">
+        <span class="sk-label">Crédito activo</span>
+        <span class="sk-micro">Desde 2 oct 2026</span>
+      </div>
+      <div class="sk-row cupo__credit-main">
+        <span class="sk-amt sk-amt--md">$2.000.000</span>
+        <span class="sk-chip sk-chip--accent">15&nbsp;% de cada venta</span>
+      </div>
+      <span class="sk-cap">Prestamista: <span class="sk-strong">Camilo P.</span></span>
+      <div class="sk-bar cupo__bar">
+        <span class="sk-bar__fill" style="--p: 32%; --d: 350ms; --t: 1300ms" data-anim="fill-x"></span>
+      </div>
+      <span class="sk-cap">Pagado <span class="sk-money">$640.000</span> · <span class="sk-accent sk-strong cupo__pct">32&nbsp;%</span></span>
+    </div>
+
+    <div class="sk-card cupo__sales">
+      <div class="sk-row">
+        <span class="sk-label">Ventas de hoy con Bre-B</span>
+        <span class="sk-micro">14 ventas</span>
+      </div>
+      <Num value={612000} delay={250} class="sk-amt sk-amt--md cupo__sales-amt" />
+      <div class="sk-split cupo__split">
+        <span class="sk-split__a" data-anim="fill-x" style="--d: 500ms"></span>
+        <span class="sk-split__b" data-anim="fill-x-end" style="--d: 900ms; --t: 900ms"></span>
+      </div>
+      <div class="sk-row cupo__legend">
+        <span class="cupo__leg"><span class="sk-cap">Para ti</span> <span class="sk-money">$520.200</span></span>
+        <span class="cupo__leg"><span class="sk-cap">Abonado</span> <span class="sk-money sk-accent">$91.800</span></span>
+      </div>
+    </div>
+
+    <div class="cupo__shortcuts">
+      <div class="cupo__tile">
+        <span class="cupo__tile-ico"><span class="sk-ico" style="--s: 18"><ReceiptText stroke-width={sw} /></span></span>
+        <span class="cupo__tile-label">Ver ventas</span>
+      </div>
+      <div class="cupo__tile cupo__tile--offers">
+        <span class="cupo__tile-ico"><span class="sk-ico" style="--s: 18"><Tag stroke-width={sw} /></span></span>
+        <span class="cupo__tile-label">Ofertas para ti <span class="sk-accent">(3)</span></span>
+        <span class="cupo__tile-go sk-ico" style="--s: 16"><ChevronRight stroke-width={2} /></span>
+      </div>
+      <div class="cupo__tile">
+        <span class="cupo__tile-ico"><span class="sk-ico" style="--s: 18"><Clock stroke-width={sw} /></span></span>
+        <span class="cupo__tile-label">Historial</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cupo__tabbar">
+    <div class="cupo__tab is-active">
+      <span class="cupo__tab-ico"><span class="sk-ico" style="--s: 22"><House stroke-width={sw} /></span></span>
+      <span>Inicio</span>
+    </div>
+    <div class="cupo__tab">
+      <span class="cupo__tab-ico"><span class="sk-ico" style="--s: 22"><ChartColumn stroke-width={sw} /></span></span>
+      <span>Ventas</span>
+    </div>
+    <div class="cupo__tab">
+      <span class="cupo__tab-ico"><span class="sk-ico" style="--s: 22"><HandCoins stroke-width={sw} /></span></span>
+      <span>Créditos</span>
+    </div>
+    <div class="cupo__tab">
+      <span class="cupo__tab-ico"><span class="sk-ico" style="--s: 22"><UserRound stroke-width={sw} /></span></span>
+      <span>Perfil</span>
+    </div>
+  </div>
+  <span class="sk-home"></span>
+</div>
+
+<style>
+  .cupo__body {
+    padding-block-start: calc(var(--pt) * 6);
+  }
+
+  .cupo__head {
+    gap: calc(var(--pt) * 12);
+  }
+
+  .cupo__hello {
+    font-size: calc(var(--pt) * 19);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+
+  .cupo__bell {
+    position: relative;
+  }
+
+  .cupo__section {
+    margin-block: calc(var(--pt) * 18) calc(var(--pt) * 10);
+  }
+
+  .cupo__hero {
+    display: flex;
+    flex-direction: column;
+    padding: calc(var(--pt) * 20);
+  }
+
+  .cupo__hero :global(.cupo__amount) {
+    margin-block: calc(var(--pt) * 6) calc(var(--pt) * 4);
+    line-height: 1.05;
+  }
+
+  .cupo__cta {
+    margin-block-start: calc(var(--pt) * 18);
+  }
+
+  .cupo__credit,
+  .cupo__sales {
+    display: flex;
+    flex-direction: column;
+    margin-block-start: calc(var(--pt) * 10);
+  }
+
+  .cupo__credit-main {
+    margin-block: calc(var(--pt) * 8) calc(var(--pt) * 6);
+  }
+
+  .cupo__bar {
+    margin-block: calc(var(--pt) * 12) calc(var(--pt) * 8);
+  }
+
+  .cupo__sales :global(.cupo__sales-amt) {
+    margin-block: calc(var(--pt) * 6) calc(var(--pt) * 12);
+  }
+
+  .cupo__legend {
+    margin-block-start: calc(var(--pt) * 10);
+    justify-content: flex-start;
+    gap: calc(var(--pt) * 18);
+  }
+
+  .cupo__leg {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--pt) * 6);
+    font-size: calc(var(--pt) * 12.5);
+  }
+
+  .cupo__leg .sk-cap {
+    font-size: inherit;
+  }
+
+  .cupo__shortcuts {
+    display: grid;
+    grid-template-columns: 1fr 1.42fr 1fr;
+    gap: calc(var(--pt) * 8);
+    margin-block-start: calc(var(--pt) * 10);
+  }
+
+  .cupo__tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--pt) * 8);
+    padding: calc(var(--pt) * 10) calc(var(--pt) * 12);
+    border-radius: calc(var(--pt) * 18);
+    background: rgb(241 233 253 / 0.04);
+    border: 1px solid var(--sk-line);
+  }
+
+  .cupo__tile--offers {
+    background: linear-gradient(160deg, rgb(105 48 249 / 0.22), rgb(105 48 249 / 0.06));
+    border-color: rgb(180 153 254 / 0.26);
+  }
+
+  .cupo__tile-ico {
+    display: grid;
+    place-items: center;
+    inline-size: calc(var(--pt) * 30);
+    block-size: calc(var(--pt) * 30);
+    border-radius: 50%;
+    background: rgb(241 233 253 / 0.07);
+    color: var(--sk-text);
+  }
+
+  .cupo__tile--offers .cupo__tile-ico {
+    background: rgb(105 48 249 / 0.45);
+    color: #fff;
+    box-shadow: 0 0 calc(var(--pt) * 14) rgb(105 48 249 / 0.7);
+  }
+
+  .cupo__tile-label {
+    font-size: calc(var(--pt) * 12.5);
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .cupo__tile-go {
+    position: absolute;
+    inset-block-start: calc(var(--pt) * 12);
+    inset-inline-end: calc(var(--pt) * 10);
+    color: var(--sk-accent);
+  }
+
+  .cupo__tabbar {
+    position: absolute;
+    z-index: 2;
+    inset-inline: 0;
+    inset-block-end: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    block-size: calc(var(--pt) * 86);
+    padding: calc(var(--pt) * 9) calc(var(--pt) * 12) 0;
+    background: linear-gradient(180deg, rgb(25 25 25 / 0.82), var(--trust-black) 40%);
+    border-block-start: 1px solid var(--sk-line);
+  }
+
+  .cupo__tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(var(--pt) * 3);
+    font-size: calc(var(--pt) * 10.5);
+    font-weight: 500;
+    color: var(--sk-subtle);
+  }
+
+  .cupo__tab-ico {
+    display: grid;
+    place-items: center;
+    inline-size: calc(var(--pt) * 54);
+    block-size: calc(var(--pt) * 30);
+    border-radius: 999px;
+  }
+
+  .cupo__tab.is-active {
+    color: var(--sk-accent);
+  }
+
+  .cupo__tab.is-active .cupo__tab-ico {
+    background: rgb(105 48 249 / 0.24);
+    color: var(--trust-lilac);
+    box-shadow: inset 0 0 0 1px rgb(180 153 254 / 0.25);
+  }
+</style>

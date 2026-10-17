@@ -1,0 +1,440 @@
+---
+import Section from '../ui/Section.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import SplitFlow from '../flow/SplitFlow.astro';
+import { pct } from '../../scripts/format';
+
+const steps = [
+  {
+    title: 'Tu cliente paga',
+    text: 'Tu cliente te paga con Bre-B, el sistema de pagos inmediatos de Colombia. Como cualquier venta del día.',
+  },
+  {
+    title: 'Llega a Puntored',
+    text: 'El pago entra a tu wallet de Puntored, donde se recolectan tus ventas.',
+  },
+  {
+    title: 'Trust lo divide',
+    text: 'Trust aplica el porcentaje acordado: una parte para ti, otra para tu prestamista. Sin que hagas nada.',
+  },
+  {
+    title: 'Cada quien recibe',
+    text: 'Tú recibes tu parte para seguir vendiendo. Tu prestamista recibe su abono, venta a venta.',
+  },
+];
+
+const diagramLabel = `Diagrama: el pago de un cliente viaja por Bre-B hasta la wallet de Puntored, donde Trust lo divide entre el comercio (${pct(85)}) y el prestamista (${pct(15)}). Porcentajes de ejemplo.`;
+---
+
+<Section id="como-funciona" theme="deep" aria-labelledby="como-funciona-title" class="cf">
+  <div class="container-wide">
+    <SectionHeading
+      id="como-funciona-title"
+      title="Así se reparte cada venta."
+      lead="El pago de tu cliente se divide automáticamente, según el porcentaje que acordaste al tomar el crédito."
+      align="center"
+    />
+
+    <div class="cf__stage" data-flow-stage>
+      <div class="cf__main" data-flow-main>
+        <div class="cf__diagram" data-reveal="fade">
+          <SplitFlow label={diagramLabel} />
+        </div>
+        <p class="cf__note">Ejemplo ilustrativo. El porcentaje real se define al acordar cada crédito.</p>
+
+        <ol class="cf__steps" role="list">
+          {
+            steps.map((step, i) => (
+              <li class="cf-step">
+                <span class="cf-step__track" aria-hidden="true">
+                  <span class="cf-step__fill" />
+                </span>
+                <h3 class="cf-step__title">{step.title}</h3>
+                <p class="cf-step__text">
+                  {step.text.split('Bre-B').map((part, j, all) => (
+                    <Fragment>
+                      {part}
+                      {j < all.length - 1 && <span class="nowrap">Bre-B</span>}
+                    </Fragment>
+                  ))}
+                </p>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+
+    </div>
+  </div>
+</Section>
+
+<script>
+  import { prefersReducedMotion, whenVisible } from '../../scripts/motion';
+
+  // One class on the shared ancestor starts the diagram and the steps in the same frame (they stay in sync).
+  const stage = document.querySelector<HTMLElement>('[data-flow-stage]');
+  const main = stage?.querySelector<HTMLElement>('[data-flow-main]');
+  if (stage && main && !prefersReducedMotion()) {
+    // A few cycles per visit, then the diagram rests on its finished picture (the base styles); coming back to
+    // the section starts it again. Motion that explains, without looping forever (docs/DESIGN.md §6).
+    const CYCLES = 3;
+    const cycleMs = (parseFloat(getComputedStyle(stage).getPropertyValue('--flow-T')) || 6) * 1000;
+    let restTimer = 0;
+    whenVisible(
+      main,
+      (visible) => {
+        window.clearTimeout(restTimer);
+        if (visible) {
+          stage.classList.remove('is-rested');
+          stage.classList.add('is-playing');
+          restTimer = window.setTimeout(() => {
+            stage.classList.remove('is-playing');
+            stage.classList.add('is-rested');
+          }, CYCLES * cycleMs);
+        } else {
+          stage.classList.remove('is-playing');
+        }
+      },
+      { threshold: 0.12 },
+    );
+
+    // Crossing the diagram's container breakpoint swaps geometries (display: none ↔ block), which restarts the
+    // newly shown canvas's CSS animations at 0 while the steps keep their place. Re-align every time-based loop
+    // in the diagram + steps to the steps' clock whenever the visible geometry changes.
+    const wideGeo = main.querySelector<HTMLElement>('[data-flow-geo="h"]');
+    const clock = main.querySelector<HTMLElement>('.cf-step__fill');
+    if (wideGeo && clock) {
+      let wide: boolean | null = null;
+      const realign = () => {
+        const t = clock.getAnimations()[0]?.currentTime;
+        if (typeof t !== 'number') return;
+        for (const a of main.getAnimations({ subtree: true })) {
+          if (a.timeline === document.timeline && a.effect?.getTiming().iterations === Infinity) a.currentTime = t;
+        }
+      };
+      new ResizeObserver(() => {
+        const now = getComputedStyle(wideGeo).display !== 'none';
+        if (wide !== null && now !== wide) realign();
+        wide = now;
+      }).observe(wideGeo.parentElement ?? main);
+    }
+  }
+</script>
+
+<style>
+  .cf {
+    overflow: clip;
+  }
+  .cf__stage.is-rested :global(*),
+  .cf__stage.is-rested :global(*::before),
+  .cf__stage.is-rested :global(*::after) {
+    animation: none !important;
+  }
+  /* horizon light: a pre-blurred radial arc, static */
+  .cf__ambient {
+    position: absolute;
+    inset-block-start: -1px;
+    inset-inline: 0;
+    block-size: min(70vw, 720px);
+    z-index: -1;
+    /* glow over a soft fade from the page black, so the deeper well has no hard seam */
+    background:
+      radial-gradient(60% 50% at 50% 0%, rgb(105 48 249 / 0.2), rgb(105 48 249 / 0) 70%),
+      radial-gradient(40% 30% at 50% 0%, rgb(180 153 254 / 0.1), rgb(180 153 254 / 0) 70%),
+      linear-gradient(180deg, var(--bg), rgb(14 13 18 / 0) 240px);
+    pointer-events: none;
+  }
+
+  .cf__stage {
+    --flow-T: 6s;
+    --flow-play: paused;
+    display: grid;
+    gap: clamp(56px, 7vw, 72px);
+    margin-block-start: clamp(56px, 7vw, 96px);
+  }
+  .cf__stage.is-playing {
+    --flow-play: running;
+  }
+  @media (min-width: 1200px) {
+    .cf__stage {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: clamp(48px, 5vw, 88px);
+    }
+  }
+
+  .cf__main {
+    min-inline-size: 0;
+    container: cf-main / inline-size;
+  }
+  .cf__note {
+    margin-block-start: 20px;
+    font-size: var(--fs-small);
+    color: var(--text-subtle);
+    text-align: center;
+  }
+
+  /* ---------- steps ---------- */
+  .cf__steps {
+    display: grid;
+    gap: 8px;
+    margin-block-start: clamp(36px, 5vw, 56px);
+    padding: 0;
+    list-style: none;
+  }
+  @container cf-main (min-width: 780px) {
+    .cf__steps {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .cf__note {
+      text-align: start;
+    }
+  }
+  .cf-step {
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding: 24px 20px 22px;
+    border-radius: var(--r-lg);
+    isolation: isolate;
+  }
+  /* active-step light (opacity only) */
+  .cf-step::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background:
+      radial-gradient(90% 70% at 50% 0%, rgb(105 48 249 / 0.22), rgb(105 48 249 / 0) 75%),
+      var(--surface);
+    box-shadow:
+      inset 0 0 0 1px var(--border),
+      var(--inner-highlight);
+    opacity: 0;
+  }
+  .cf-step__track {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 20px;
+    block-size: 2px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: rgb(180 153 254 / 0.14);
+  }
+  .cf-step__fill {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--trust-violet), var(--trust-lavender));
+    transform-origin: 0 50%;
+  }
+  .cf-step__title {
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+  }
+  .nowrap {
+    white-space: nowrap;
+  }
+  .cf-step__text {
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+    text-wrap: pretty;
+  }
+
+  /* ---------- phone ---------- */
+  .cf__phone {
+    display: grid;
+    justify-items: center;
+    gap: 28px;
+    justify-self: center;
+  }
+  .cf__caption {
+    font-size: 0.8125rem;
+    color: var(--text-subtle);
+    text-align: center;
+  }
+
+  /* ---------- steps synced with the diagram (same --flow-T timeline) ---------- */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(.js) .cf-step::before,
+    :global(.js) .cf-step__fill {
+      animation-duration: var(--flow-T);
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+      animation-fill-mode: both;
+      animation-play-state: var(--flow-play);
+    }
+    :global(.js) .cf-step:nth-child(1)::before {
+      animation-name: cf-on-1;
+    }
+    :global(.js) .cf-step:nth-child(2)::before {
+      animation-name: cf-on-2;
+    }
+    :global(.js) .cf-step:nth-child(3)::before {
+      animation-name: cf-on-3;
+    }
+    :global(.js) .cf-step:nth-child(4)::before {
+      animation-name: cf-on-4;
+    }
+    :global(.js) .cf-step:nth-child(1) .cf-step__fill {
+      animation-name: cf-fill-1;
+    }
+    :global(.js) .cf-step:nth-child(2) .cf-step__fill {
+      animation-name: cf-fill-2;
+    }
+    :global(.js) .cf-step:nth-child(3) .cf-step__fill {
+      animation-name: cf-fill-3;
+    }
+    :global(.js) .cf-step:nth-child(4) .cf-step__fill {
+      animation-name: cf-fill-4;
+    }
+  }
+
+  /* windows: 1 = 0–16 % · 2 = 16–30 % · 3 = 30–50 % · 4 = 50–96 % of the cycle */
+  @keyframes cf-on-1 {
+    0% {
+      opacity: 0;
+    }
+    2%,
+    15% {
+      opacity: 1;
+    }
+    18%,
+    100% {
+      opacity: 0;
+    }
+  }
+  @keyframes cf-on-2 {
+    0%,
+    15% {
+      opacity: 0;
+    }
+    17%,
+    29% {
+      opacity: 1;
+    }
+    32%,
+    100% {
+      opacity: 0;
+    }
+  }
+  @keyframes cf-on-3 {
+    0%,
+    29% {
+      opacity: 0;
+    }
+    31%,
+    49% {
+      opacity: 1;
+    }
+    52%,
+    100% {
+      opacity: 0;
+    }
+  }
+  @keyframes cf-on-4 {
+    0%,
+    49% {
+      opacity: 0;
+    }
+    51%,
+    93% {
+      opacity: 1;
+    }
+    98%,
+    100% {
+      opacity: 0;
+    }
+  }
+  @keyframes cf-fill-1 {
+    0% {
+      transform: scaleX(0);
+      opacity: 1;
+    }
+    16%,
+    92% {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+    98%,
+    100% {
+      transform: scaleX(1);
+      opacity: 0;
+    }
+  }
+  @keyframes cf-fill-2 {
+    0%,
+    16% {
+      transform: scaleX(0);
+      opacity: 1;
+    }
+    30%,
+    92% {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+    98%,
+    100% {
+      transform: scaleX(1);
+      opacity: 0;
+    }
+  }
+  @keyframes cf-fill-3 {
+    0%,
+    30% {
+      transform: scaleX(0);
+      opacity: 1;
+    }
+    50%,
+    92% {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+    98%,
+    100% {
+      transform: scaleX(1);
+      opacity: 0;
+    }
+  }
+  @keyframes cf-fill-4 {
+    0%,
+    50% {
+      transform: scaleX(0);
+      opacity: 1;
+    }
+    74%,
+    92% {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+    98%,
+    100% {
+      transform: scaleX(1);
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cf-step::before,
+    .cf-step__fill {
+      animation: none !important;
+    }
+  }
+
+  /* one protagonist: the diagram spans the container; steps are static text (no stepper, no moving card) */
+  @media (min-width: 1100px) {
+    .cf__stage {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .cf-step__track,
+  .cf-step::before {
+    display: none !important;
+  }
+</style>

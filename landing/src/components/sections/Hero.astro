@@ -1,0 +1,403 @@
+---
+/**
+ * Hero (COPY.md §3). Protagonist: the headline and the product over the orbital horizon, the one place the
+ * arc appears (docs/DESIGN.md). Beside the phone, a single glass card splits one sale of the example data.
+ * Motion map (transform/opacity only):
+ *  - H1: masked word-by-word rise on load (CSS only, starts immediately, never opacity 0).
+ *  - Copy, phone and the sale card: one staggered entrance (CSS). No loops.
+ *  - Pointer parallax (desktop, fine pointer): rAF-lerped CSS vars --px/--py; the card sits deeper than the phone.
+ *  - Scroll-out (view timeline --hero, exit range): phone and card drift up, the horizon rises and brightens.
+ * Reduced motion: the composed final state; parallax, scroll-out and the aurora shader are skipped.
+ * Layout: one column below 60em (later with a larger default font). Columns are minmax(0, 1fr) and the CTAs
+ * wrap, so large text or WCAG text-spacing overrides never push content past the gutter.
+ */
+import Section from '../ui/Section.astro';
+import Button from '../ui/Button.astro';
+import DeviceFrame from '../ui/DeviceFrame.astro';
+import CupoScreen from '../screens/CupoScreen.astro';
+import Horizon from '../hero/Horizon.astro';
+import HeroReceipt from '../hero/HeroReceipt.astro';
+
+const copy = {
+  // hero.h1: "Cada venta paga un poco de tu crédito." — "tu crédito." never breaks apart
+  h1Lead: ['Cada', 'venta', 'paga', 'un', 'poco', 'de'],
+  h1Tail: ['tu', 'crédito.'],
+  sub: 'Tus clientes te pagan con Bre-B a través de Puntored. Trust divide cada pago automáticamente: una parte para ti, otra abona a tu crédito.',
+  ctaPrimary: 'Quiero crédito para mi comercio',
+  ctaSecondary: 'Quiero prestar con Trust',
+  reassurance: 'Lista de espera abierta en Colombia, sin compromiso.',
+  mockupCaption: 'Pantalla ilustrativa con datos de ejemplo.',
+  mockupAlt:
+    'Pantalla de la app de Trust con el cupo disponible de Tienda La Esquina y la división de sus ventas del día.',
+};
+const leadCount = copy.h1Lead.length;
+---
+
+<Section id="inicio" theme="dark" deferRender={false} aria-labelledby="inicio-title" class="hero" data-hero>
+  <Horizon />
+
+  <div class="container-wide hero__grid">
+    <div class="hero__copy">
+      <h1 id="inicio-title" class="h-display hero__title">
+        {
+          copy.h1Lead.map((word, i) => (
+            <>
+              <span class="w"><span class="w__i" style={`--i: ${i}`}>{word}</span></span>{' '}
+            </>
+          ))
+        }
+        <span class="hero__tail">
+          {
+            copy.h1Tail.map((word, i) => (
+              <>
+                <span class="w"><span class="w__i" style={`--i: ${leadCount + i}`}>{word}</span></span>
+                {i < copy.h1Tail.length - 1 && ' '}
+              </>
+            ))
+          }
+        </span>
+      </h1>
+
+      <p class="lead hero__sub">{copy.sub}</p>
+
+      <div class="hero__ctas">
+        <Button href="#lista-de-espera" variant="violet" size="lg" data-preselect="comercio">
+          {copy.ctaPrimary}
+        </Button>
+        <Button href="#lista-de-espera" variant="link" size="lg" data-preselect="prestamista">
+          {copy.ctaSecondary}
+        </Button>
+      </div>
+
+      <p class="hero__reassure">{copy.reassurance}</p>
+    </div>
+
+    <div class="hero__visual">
+      <div class="hero__stage" data-hero-stage>
+        <div class="hero__aura" aria-hidden="true"></div>
+        <div class="hero__exit">
+          <div class="hero__phone">
+            <DeviceFrame
+              screenId="cupo-dashboard"
+              alt={copy.mockupAlt}
+              width="var(--hero-pw)"
+              glow
+              priority
+            >
+              <CupoScreen />
+            </DeviceFrame>
+          </div>
+        </div>
+        <div class="hero__receipt">
+          <div class="hero__receipt-in">
+            <HeroReceipt />
+          </div>
+        </div>
+      </div>
+      <p class="hero__caption">{copy.mockupCaption}</p>
+    </div>
+  </div>
+</Section>
+
+<script>
+  import { prefersReducedMotion } from '../../scripts/motion';
+
+  const hero = document.querySelector<HTMLElement>('[data-hero]');
+  const stage = document.querySelector<HTMLElement>('[data-hero-stage]');
+
+  // desktop pointer parallax: rAF-lerped CSS vars, transform only; idle when the pointer rests
+  if (hero && stage && matchMedia('(hover: hover) and (pointer: fine) and (min-width: 60em)').matches && !prefersReducedMotion()) {
+    let tx = 0,
+      ty = 0,
+      x = 0,
+      y = 0,
+      raf = 0;
+    const step = () => {
+      x += (tx - x) * 0.07;
+      y += (ty - y) * 0.07;
+      stage.style.setProperty('--px', x.toFixed(4));
+      stage.style.setProperty('--py', y.toFixed(4));
+      raf = Math.abs(tx - x) + Math.abs(ty - y) > 0.002 ? requestAnimationFrame(step) : 0;
+    };
+    const kick = () => {
+      if (!raf) raf = requestAnimationFrame(step);
+    };
+    hero.addEventListener(
+      'pointermove',
+      (e) => {
+        const r = hero.getBoundingClientRect();
+        tx = ((e.clientX - r.left) / r.width) * 2 - 1;
+        ty = ((e.clientY - r.top) / r.height) * 2 - 1;
+        kick();
+      },
+      { passive: true },
+    );
+    hero.addEventListener('pointerleave', () => {
+      tx = ty = 0;
+      kick();
+    });
+  }
+</script>
+
+<style>
+  .hero {
+    --nav-h: 72px;
+    --hero-pw: clamp(220px, min(23vw, calc((100svh - 250px) * 0.45)), 330px);
+    display: flex;
+    align-items: center;
+    min-block-size: min(100svh, 1120px);
+    padding-block: calc(var(--nav-h) + clamp(28px, 5vh, 64px)) clamp(56px, 8vh, 104px);
+    view-timeline: --hero block;
+    /* clip (not hidden): no scroll container, so view() timelines still resolve against the page */
+    overflow-x: clip;
+  }
+
+  .hero__grid {
+    display: grid;
+    /* minmax(0, …): the track never grows to a child's min-content (long CTA labels, large text) */
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(56px, 10vw, 72px);
+    align-items: center;
+  }
+  .hero__grid > * {
+    min-inline-size: 0;
+  }
+  @media (min-width: 60em) {
+    .hero__grid {
+      grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+      gap: clamp(32px, 4vw, 72px);
+    }
+  }
+
+  /* ---------- copy ---------- */
+  .hero__copy {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    gap: clamp(20px, 2.4vw, 28px);
+  }
+  .hero__copy > * {
+    max-inline-size: 100%;
+  }
+
+  .hero__title {
+    font-size: clamp(2.875rem, 1.05rem + 5.1vw, 6.5rem);
+    line-height: 1;
+    letter-spacing: -0.025em;
+    max-inline-size: 11.5em;
+  }
+  /* masked word rise: each word is clipped by its own box and slides up from below its baseline */
+  .w {
+    display: inline-block;
+    overflow: clip;
+    vertical-align: top;
+    padding-block: 0.04em 0.14em;
+    margin-block: -0.04em -0.14em;
+  }
+  .w__i {
+    display: inline-block;
+    animation: word-rise 0.78s var(--ease-out) both;
+    animation-delay: calc(60ms + var(--i) * 45ms);
+  }
+  .hero__tail {
+    white-space: nowrap;
+  }
+  /* very large text / text-spacing overrides: let the tail break rather than overflow */
+  @media (max-width: 37.49em) {
+    .hero__tail {
+      white-space: normal;
+    }
+  }
+
+  .hero__sub {
+    max-inline-size: 34em;
+    animation: hero-fade-up 0.9s var(--ease-out) 0.28s both;
+  }
+
+  .hero__ctas {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 24px;
+    padding-block-start: 4px;
+    animation: hero-fade-up 0.9s var(--ease-out) 0.38s both;
+  }
+
+  .hero__reassure {
+    font-size: var(--fs-small);
+    color: var(--text-subtle);
+    animation: hero-fade-up 0.9s var(--ease-out) 0.48s both;
+  }
+
+  /* ---------- visual ---------- */
+  .hero__visual {
+    display: grid;
+    justify-items: center;
+    gap: clamp(28px, 3vw, 40px);
+  }
+  .hero__stage {
+    --px: 0;
+    --py: 0;
+    position: relative;
+  }
+  .hero__aura {
+    position: absolute;
+    inset: 4% -45% 0;
+    z-index: -1;
+    border-radius: 50%;
+    background: radial-gradient(50% 42% at 50% 62%, rgb(105 48 249 / 0.32), rgb(105 48 249 / 0) 70%);
+    animation: hero-fade 1.6s var(--ease-out) 0.2s both;
+  }
+  .hero__exit {
+    position: relative;
+  }
+  .hero__phone {
+    position: relative;
+    z-index: 1;
+    transform: perspective(1400px) translate3d(calc(var(--px) * 7px), calc(var(--py) * 5px), 0)
+      rotateY(calc(var(--px) * -4deg)) rotateX(calc(var(--py) * 3deg));
+    animation: phone-in 1.1s var(--ease-out) 0.15s both;
+  }
+
+  /* the sale card: in front of the phone, deeper in the parallax */
+  .hero__receipt {
+    position: absolute;
+    z-index: 2;
+    inset-block-end: 12%;
+    inset-inline-end: calc(100% - 40px);
+  }
+  .hero__receipt-in {
+    transform: translate3d(calc(var(--px) * 14px), calc(var(--py) * 10px), 0);
+    animation: receipt-in 0.9s var(--ease-out) 0.85s backwards;
+  }
+
+  .hero__caption {
+    font-size: 0.8125rem;
+    /* sits over the horizon glow: muted (not subtle) keeps it above 4.5:1 on the violet band */
+    color: var(--text-muted);
+    text-align: center;
+    animation: hero-fade 1s var(--ease-out) 1s both;
+  }
+
+  /* desktop: the phone hugs the right of its column so the card has room on the left */
+  @media (min-width: 60em) {
+    .hero__visual {
+      justify-items: end;
+    }
+    .hero__caption {
+      inline-size: var(--hero-pw);
+    }
+  }
+
+  @media (max-width: 59.99em) {
+    .hero {
+      align-items: flex-start;
+    }
+    .hero__ctas {
+      inline-size: 100%;
+    }
+    .hero__visual {
+      inline-size: 100%;
+    }
+    .hero {
+      --hero-pw: clamp(210px, 58vw, 268px);
+    }
+    /* one column: the card sits under the phone, never on top of its UI */
+    .hero__stage {
+      display: grid;
+      justify-items: center;
+      gap: 20px;
+    }
+    .hero__receipt {
+      position: static;
+    }
+    .hero__receipt :global(.rc) {
+      background: var(--surface-solid);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* phones: full-width primary CTA whose label may wrap (large default text, text-spacing overrides) */
+  @media (max-width: 37.49em) {
+    .hero__ctas :global(.btn--violet) {
+      inline-size: 100%;
+      padding-block: 10px;
+      line-height: 1.25;
+      white-space: normal;
+      text-align: center;
+      text-wrap: balance;
+    }
+  }
+  @media (max-width: 23.74em) {
+    .hero__ctas :global(.btn--violet) {
+      padding-inline: 16px;
+      font-size: 0.875rem;
+    }
+  }
+
+  /* scroll-out: phone and card drift up as the hero leaves (CSS only) */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .hero__exit {
+        animation: hero-exit linear both;
+        animation-timeline: --hero;
+        animation-range: exit 0% exit 100%;
+      }
+      .hero__receipt {
+        animation: hero-exit linear both;
+        animation-timeline: --hero;
+        animation-range: exit 0% exit 100%;
+      }
+    }
+  }
+
+  /* reduced motion: the composed final state at once */
+  @media (prefers-reduced-motion: reduce) {
+    .w__i,
+    .hero__sub,
+    .hero__ctas,
+    .hero__reassure,
+    .hero__aura,
+    .hero__phone,
+    .hero__receipt-in,
+    .hero__caption {
+      animation: none;
+    }
+  }
+
+  /* ---------- keyframes ---------- */
+  @keyframes word-rise {
+    from {
+      transform: translate3d(0, 118%, 0);
+    }
+  }
+  @keyframes hero-fade-up {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 16px, 0);
+    }
+  }
+  @keyframes hero-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes phone-in {
+    from {
+      opacity: 0;
+      translate: 0 48px;
+    }
+  }
+  @keyframes receipt-in {
+    from {
+      opacity: 0;
+      translate: 0 24px;
+    }
+  }
+  @keyframes hero-exit {
+    to {
+      transform: translate3d(0, -72px, 0) scale(1.04);
+    }
+  }
+</style>

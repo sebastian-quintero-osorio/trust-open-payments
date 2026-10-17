@@ -1,0 +1,132 @@
+---
+/**
+ * Device stage for the audience sections: halo, scroll-driven parallax on the phone (slow) and on an
+ * optional floating widget (faster, slot "float"), plus the shared example-data caption.
+ * Parallax only runs with scroll-driven animations and no reduced-motion preference; otherwise static.
+ */
+interface Props {
+  tone?: 'dark' | 'light';
+  /** side where the floating widget sticks out of the phone */
+  floatSide?: 'start' | 'end';
+}
+
+const { tone = 'dark', floatSide = 'end' } = Astro.props;
+const hasFloat = Astro.slots.has('float');
+---
+
+<div class:list={['av', `av--${tone}`, `av--float-${floatSide}`]}>
+  <div class="av__stage" data-reveal="scale">
+    {tone === 'light' && <span class="av__floor" aria-hidden="true" />}
+    <div class="av__device">
+      <slot />
+    </div>
+    {
+      hasFloat && (
+        <div class="av__float">
+          <slot name="float" />
+        </div>
+      )
+    }
+  </div>
+  <p class="av__caption">Pantalla ilustrativa con datos de ejemplo.</p>
+</div>
+
+<style>
+  .av {
+    display: grid;
+    justify-items: center;
+    inline-size: 100%;
+  }
+  .av__stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    view-timeline: --av-stage block;
+  }
+  .av__device {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* pre-blurred ambient light (no filter) */
+  .av__halo {
+    position: absolute;
+    inset: -14% -46%;
+    z-index: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(closest-side, rgb(105 48 249 / 0.32), rgb(105 48 249 / 0.12) 55%, rgb(105 48 249 / 0) 100%);
+    pointer-events: none;
+  }
+
+  .av__float {
+    position: absolute;
+    z-index: 2;
+    inset-block-end: 16%;
+  }
+  /* sticks out of the phone (on wide screens mostly outside, so it doesn't cover the mock's text),
+     but never past the viewport at 320px */
+  .av--float-end .av__float {
+    inset-inline-end: clamp(-196px, calc(48px - 24vw), -24px);
+  }
+  .av--float-start .av__float {
+    inset-inline-start: clamp(-196px, calc(48px - 24vw), -24px);
+  }
+
+  .av__caption {
+    margin-block-start: 40px;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--text-subtle);
+    text-align: center;
+  }
+
+  /* light tone: the dark phone pops off the lilac with a grounded shadow and a violet bloom */
+  .av--light .av__halo {
+    inset: -10% -40%;
+    background:
+      radial-gradient(closest-side, rgb(105 48 249 / 0.38), rgb(157 103 251 / 0.16) 50%, rgb(157 103 251 / 0) 100%);
+  }
+  .av__floor {
+    position: absolute;
+    z-index: 0;
+    inset-inline: 2%;
+    inset-block-end: -4%;
+    block-size: 12%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(25 25 25 / 0.42), rgb(28 10 82 / 0.16) 60%, rgb(25 25 25 / 0) 100%);
+    pointer-events: none;
+  }
+
+  @keyframes av-parallax-slow {
+    from {
+      transform: translate3d(0, 44px, 0);
+    }
+    to {
+      transform: translate3d(0, -44px, 0);
+    }
+  }
+  @keyframes av-parallax-fast {
+    from {
+      transform: translate3d(0, 120px, 0);
+    }
+    to {
+      transform: translate3d(0, -100px, 0);
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .av__device {
+        animation: av-parallax-slow linear both;
+        animation-timeline: --av-stage;
+        animation-range: cover;
+      }
+      .av__float {
+        animation: av-parallax-fast linear both;
+        animation-timeline: --av-stage;
+        animation-range: cover;
+      }
+    }
+  }
+</style>

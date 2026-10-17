@@ -1,0 +1,183 @@
+---
+/**
+ * Shared split layout for the audience sections (Comercios / Prestamistas).
+ * Desktop: device on one side spanning two rows, heading + benefits + CTA on the other.
+ * Mobile: heading → device → benefits → CTA.
+ * Slots: `title` (rich h2 content), `visual` (an <AudienceVisual>).
+ */
+import SectionHeading from '../ui/SectionHeading.astro';
+import Button from '../ui/Button.astro';
+import { nowrapParts } from '../../scripts/nowrap';
+
+// text only: docs/DESIGN.md bans icon tiles on benefits
+export interface Benefit {
+  title: string;
+  text: string;
+}
+
+interface Props {
+  /** section id; the heading gets `${id}-title` */
+  id: string;
+  eyebrow?: string;
+  lead: string;
+  benefits: Benefit[];
+  cta: { label: string; variant: 'primary' | 'violet'; preselect: 'comercio' | 'prestamista' };
+  note?: string;
+  /** side of the device on desktop */
+  visualSide?: 'start' | 'end';
+  tone?: 'dark' | 'light';
+}
+
+const { id, eyebrow, lead, benefits, cta, note, visualSide = 'start', tone = 'dark' } = Astro.props;
+---
+
+<div class:list={['aud', `aud--visual-${visualSide}`, `aud--${tone}`]}>
+  <div class="aud__head">
+    <SectionHeading id={`${id}-title`} eyebrow={eyebrow} lead={lead}>
+      <Fragment slot="title"><slot name="title" /></Fragment>
+    </SectionHeading>
+  </div>
+
+  <div class="aud__visual">
+    <slot name="visual" />
+  </div>
+
+  <div class="aud__body">
+    <ul class="aud__benefits" role="list">
+      {
+        benefits.map((b, i) => (
+          <li class="benefit">
+            <h3 class="benefit__title">{b.title}</h3>
+            <p class="benefit__text">{nowrapParts(b.text).map((p) => (p.nowrap ? <span class="nw">{p.text}</span> : p.text))}</p>
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="aud__actions">
+      <Button href="#lista-de-espera" variant={cta.variant} size="lg" class="aud__cta" data-preselect={cta.preselect}>
+        {cta.label}
+      </Button>
+      {note && <p class="aud__note">{note}</p>}
+    </div>
+  </div>
+</div>
+
+<style>
+  .aud {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'head'
+      'visual'
+      'body';
+    row-gap: clamp(48px, 9vw, 72px);
+  }
+  .aud__head {
+    grid-area: head;
+  }
+  .aud__visual {
+    grid-area: visual;
+    display: grid;
+    place-items: center;
+  }
+  .aud__body {
+    grid-area: body;
+    display: grid;
+    gap: clamp(36px, 5vw, 52px);
+  }
+
+  /* the half-width column needs a calmer h2 than the full-width default */
+  .aud :global(.h2) {
+    font-size: clamp(2.25rem, 1.35rem + 2.7vw, 4.125rem);
+  }
+
+  @media (min-width: 1024px) {
+    .aud {
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        'visual head'
+        'visual body';
+      column-gap: clamp(56px, 7vw, 120px);
+      row-gap: 56px;
+      align-items: start;
+    }
+    .aud--visual-end {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      grid-template-areas:
+        'head visual'
+        'body visual';
+    }
+    .aud__visual {
+      align-self: center;
+    }
+  }
+
+  /* ---------- benefits: text only, hairline above each ---------- */
+  .aud__benefits {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px clamp(24px, 3vw, 44px);
+    margin: 0;
+  }
+  @media (min-width: 640px) {
+    .aud__benefits {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .benefit {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding-block-start: 22px;
+    border-block-start: 1px solid var(--border);
+  }
+  .benefit__title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-synthesis: none;
+    font-size: clamp(1.25rem, 1.1rem + 0.45vw, 1.5rem);
+    line-height: 1.15;
+    letter-spacing: -0.005em;
+    color: var(--text);
+    text-wrap: balance;
+  }
+  .nw {
+    white-space: nowrap;
+  }
+  .benefit__text {
+    color: var(--text-muted);
+    font-size: 0.9875rem;
+    line-height: 1.6;
+    text-wrap: pretty;
+    max-inline-size: 42ch;
+  }
+
+  /* ---------- actions ---------- */
+  .aud__actions {
+    display: grid;
+    justify-items: start;
+    gap: 18px;
+  }
+  .aud__note {
+    font-size: var(--fs-small);
+    line-height: 1.5;
+    color: var(--text-subtle);
+    max-inline-size: 48ch;
+  }
+  @media (max-width: 479px) {
+    .aud__actions {
+      justify-items: stretch;
+    }
+    .aud__actions .aud__cta {
+      white-space: normal;
+      text-align: center;
+    }
+  }
+
+  /* ---------- light tone (lilac section) ---------- */
+  .aud--light .benefit {
+    border-color: rgb(105 48 249 / 0.22);
+  }
+</style>

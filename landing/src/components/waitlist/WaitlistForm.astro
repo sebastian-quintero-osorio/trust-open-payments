@@ -1,0 +1,777 @@
+---
+/**
+ * Waitlist form (COPY.md §11). Progressive enhancement, driven by two optional env vars:
+ *
+ * PUBLIC_WAITLIST_ENDPOINT set:
+ * - No JS (or before the deferred module script runs): a native form, `action={endpoint}` `method="post"`.
+ *   The browser's own validation runs (required, type=email) and the browser posts the fields URL-encoded
+ *   (application/x-www-form-urlencoded: tipo, nombre, correo, ciudad, website) and navigates to the response.
+ *   So the endpoint must ALSO accept urlencoded posts (not only JSON), silently drop submissions whose `website`
+ *   honeypot is filled, and answer that navigation (e.g. a 303 redirect back to `/#lista-de-espera` or a thank-you page).
+ * - JS: custom accessible validation (the script sets form.noValidate), JSON POST via fetch with a 15 s timeout,
+ *   sending/success/error states. A non-2xx answer is shown as an error and the data stays in the fields.
+ *
+ * PUBLIC_WAITLIST_ENDPOINT not set:
+ * - The submit button is rendered disabled (on a static host a post to "/" would 404) and a <noscript> line says
+ *   the form needs JavaScript. The script enables the button; a valid submit then says the form is not connected.
+ *   It never fakes success and nothing is sent or stored.
+ *
+ * PUBLIC_PRIVACY_URL: when set, the privacy note links to it ("Consulta la Política de privacidad."); otherwise only
+ * its first sentence is shown (no dead link).
+ *
+ * Also owns the page-wide contract: clicking any `a[data-preselect="comercio|prestamista"]` checks that radio.
+ */
+import CircleAlert from '@lucide/astro/icons/circle-alert';
+import Info from '@lucide/astro/icons/info';
+import Check from '@lucide/astro/icons/check';
+import Button from '../ui/Button.astro';
+
+const endpoint: string = String(import.meta.env.PUBLIC_WAITLIST_ENDPOINT ?? '').trim();
+const privacyUrl: string = String(import.meta.env.PUBLIC_PRIVACY_URL ?? '').trim();
+
+const copy = {
+  requiredHint: 'Todos los campos son obligatorios.',
+  tipoLabel: 'Soy',
+  tipoError: 'Elige si eres comercio o prestamista.',
+  nombreLabel: 'Nombre',
+  nombrePlaceholder: 'Nombre y apellido',
+  nombreError: 'Escribe tu nombre.',
+  correoLabel: 'Correo electrónico',
+  correoPlaceholder: 'tucorreo@ejemplo.com',
+  correoErrorVacio: 'Escribe tu correo.',
+  correoErrorFormato: 'Revisa tu correo. Parece que falta algo.',
+  ciudadLabel: 'Ciudad',
+  ciudadPlaceholder: 'Ej.: Bucaramanga',
+  ciudadError: 'Escribe tu ciudad.',
+  submit: 'Unirme a la lista',
+  noscript: 'Este formulario necesita JavaScript. Actívalo en tu navegador para unirte a la lista.',
+  privacy: 'Solo usaremos tus datos para avisarte sobre Trust.',
+  sending: 'Enviando…',
+  successTitle: 'Listo, {nombre}. Ya estás en la lista.',
+  successTitleFallback: 'Listo, ya estás en la lista.',
+  successText: 'Te avisaremos cuando abramos el acceso.',
+  error: 'No pudimos enviar tus datos. Revisa tu conexión e inténtalo de nuevo.',
+  notConnected: import.meta.env.DEV
+    ? 'Formulario aún no conectado (modo desarrollo). Tus datos no se enviaron ni se guardaron.'
+    : 'Formulario aún no conectado. Tus datos no se enviaron ni se guardaron.',
+};
+---
+
+<div class="wl" data-waitlist>
+  <form
+    class="wl__form"
+    method="post"
+    action={endpoint || undefined}
+    data-waitlist-form
+    data-endpoint={endpoint}
+    data-msg-tipo={copy.tipoError}
+    data-msg-nombre={copy.nombreError}
+    data-msg-correo-vacio={copy.correoErrorVacio}
+    data-msg-correo-formato={copy.correoErrorFormato}
+    data-msg-ciudad={copy.ciudadError}
+    data-msg-sending={copy.sending}
+    data-msg-error={copy.error}
+    data-msg-not-connected={copy.notConnected}
+    data-msg-success={copy.successTitle}
+    data-msg-success-fallback={copy.successTitleFallback}
+  >
+    <p class="wl__hint" id="wl-hint">{copy.requiredHint}</p>
+
+    <fieldset class="wl__group" role="radiogroup" aria-required="true" aria-describedby="wl-tipo-error" data-field="tipo">
+      <legend class="wl__label">{copy.tipoLabel}</legend>
+      <div class="seg">
+        <span class="seg__indicator" aria-hidden="true"></span>
+        <label class="seg__opt">
+          <input type="radio" name="tipo" value="comercio" required />
+          <span class="seg__text">
+            <span class="seg__title">Comercio</span><span class="seg__sep"> · </span><span class="seg__sub">quiero crédito</span>
+          </span>
+        </label>
+        <label class="seg__opt">
+          <input type="radio" name="tipo" value="prestamista" required />
+          <span class="seg__text">
+            <span class="seg__title">Prestamista</span><span class="seg__sep"> · </span><span class="seg__sub">quiero prestar</span>
+          </span>
+        </label>
+      </div>
+      <p class="wl__error" id="wl-tipo-error" hidden>
+        <CircleAlert size={16} stroke-width={1.75} aria-hidden="true" /><span data-msg></span>
+      </p>
+    </fieldset>
+
+    <div class="wl__fields">
+      <div class="wl__field wl__field--full" data-field="nombre">
+        <label class="wl__label" for="wl-nombre">{copy.nombreLabel}</label>
+        <input
+          class="wl__input"
+          id="wl-nombre"
+          name="nombre"
+          type="text"
+          autocomplete="name"
+          autocapitalize="words"
+          enterkeyhint="next"
+          placeholder={copy.nombrePlaceholder}
+          required
+          aria-describedby="wl-nombre-error"
+        />
+        <p class="wl__error" id="wl-nombre-error" hidden>
+          <CircleAlert size={16} stroke-width={1.75} aria-hidden="true" /><span data-msg></span>
+        </p>
+      </div>
+
+      <div class="wl__field" data-field="correo">
+        <label class="wl__label" for="wl-correo">{copy.correoLabel}</label>
+        <input
+          class="wl__input"
+          id="wl-correo"
+          name="correo"
+          type="email"
+          inputmode="email"
+          autocomplete="email"
+          autocapitalize="off"
+          spellcheck="false"
+          enterkeyhint="next"
+          placeholder={copy.correoPlaceholder}
+          required
+          aria-describedby="wl-correo-error"
+        />
+        <p class="wl__error" id="wl-correo-error" hidden>
+          <CircleAlert size={16} stroke-width={1.75} aria-hidden="true" /><span data-msg></span>
+        </p>
+      </div>
+
+      <div class="wl__field" data-field="ciudad">
+        <label class="wl__label" for="wl-ciudad">{copy.ciudadLabel}</label>
+        <input
+          class="wl__input"
+          id="wl-ciudad"
+          name="ciudad"
+          type="text"
+          autocomplete="address-level2"
+          autocapitalize="words"
+          enterkeyhint="send"
+          placeholder={copy.ciudadPlaceholder}
+          required
+          aria-describedby="wl-ciudad-error"
+        />
+        <p class="wl__error" id="wl-ciudad-error" hidden>
+          <CircleAlert size={16} stroke-width={1.75} aria-hidden="true" /><span data-msg></span>
+        </p>
+      </div>
+    </div>
+
+    <!-- honeypot: invisible to people and assistive tech; bots that fill it are dropped silently -->
+    <div class="wl__hp" aria-hidden="true">
+      <label for="wl-website">Sitio web</label>
+      <input id="wl-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+    </div>
+
+    <div class="wl__submit-row">
+      <Button type="submit" variant="violet" size="lg" class="wl__submit" disabled={!endpoint} data-submit>{copy.submit}</Button>
+    </div>
+    {
+      !endpoint && (
+        <noscript>
+          <p class="wl__noscript">
+            <Info size={16} stroke-width={1.75} aria-hidden="true" />
+            <span>{copy.noscript}</span>
+          </p>
+        </noscript>
+      )
+    }
+
+    <p class="wl__status" role="status" aria-live="polite" data-status>
+      <span class="wl__status-icon wl__status-icon--info" aria-hidden="true"><Info size={16} stroke-width={1.75} /></span>
+      <span class="wl__status-icon wl__status-icon--error" aria-hidden="true"><CircleAlert size={16} stroke-width={1.75} /></span>
+      <span data-status-text></span>
+    </p>
+
+    <p class="wl__privacy">
+      {copy.privacy}
+      {
+        privacyUrl && (
+          <>
+            Consulta la <a href={privacyUrl}>Política de privacidad</a>.
+          </>
+        )
+      }
+    </p>
+  </form>
+
+  <div class="wl__success" data-success hidden>
+    <div class="wl__check" aria-hidden="true">
+      <span class="wl__check-halo"></span>
+      <span class="wl__check-disc"><Check class="wl__check-icon" size={34} stroke-width={2.25} /></span>
+    </div>
+    <h3 class="wl__success-title" tabindex="-1" data-success-title>{copy.successTitleFallback}</h3>
+    <p class="wl__success-text">{copy.successText}</p>
+  </div>
+</div>
+
+<script>
+  type FieldName = 'tipo' | 'nombre' | 'correo' | 'ciudad';
+  const FIELDS: FieldName[] = ['tipo', 'nombre', 'correo', 'ciudad'];
+  const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  // Page-wide preselection contract: CTAs are <a href="#lista-de-espera" data-preselect="comercio|prestamista">.
+  document.addEventListener('click', (event) => {
+    const link = (event.target as Element | null)?.closest?.('a[data-preselect]');
+    if (!link) return;
+    const value = link.getAttribute('data-preselect');
+    const radio = Array.from(document.querySelectorAll<HTMLInputElement>('[data-waitlist-form] input[name="tipo"]')).find(
+      (r) => r.value === value,
+    );
+    if (!radio) return;
+    radio.checked = true;
+    radio.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  document.querySelectorAll<HTMLElement>('[data-waitlist]').forEach((root) => {
+    const form = root.querySelector<HTMLFormElement>('[data-waitlist-form]');
+    const success = root.querySelector<HTMLElement>('[data-success]');
+    const successTitle = root.querySelector<HTMLElement>('[data-success-title]');
+    const status = root.querySelector<HTMLElement>('[data-status]');
+    const statusText = root.querySelector<HTMLElement>('[data-status-text]');
+    const submit = root.querySelector<HTMLButtonElement>('[data-submit]');
+    if (!form || !success || !successTitle || !status || !statusText || !submit) return;
+    const submitLabel = submit.querySelector<HTMLElement>('.btn__label') ?? submit;
+    const idleLabel = submitLabel.textContent ?? '';
+    const msg = (key: string) => form.dataset[key] ?? '';
+    const control = (name: FieldName) => form.elements.namedItem(name);
+    const textInput = (name: Exclude<FieldName, 'tipo'>) => control(name) as HTMLInputElement;
+    const radios = () => Array.from(form.querySelectorAll<HTMLInputElement>('input[name="tipo"]'));
+    let attempted = false;
+    let sending = false;
+
+    // JS is here: take over validation (native bubbles stay off) and enable the button the markup may ship disabled
+    form.noValidate = true;
+    submit.disabled = false;
+
+    const valueOf = (name: FieldName): string =>
+      name === 'tipo' ? (radios().find((r) => r.checked)?.value ?? '') : textInput(name).value.trim();
+
+    const check = (name: FieldName): string => {
+      const v = valueOf(name);
+      if (name === 'tipo') return v ? '' : msg('msgTipo');
+      if (name === 'nombre') return v ? '' : msg('msgNombre');
+      if (name === 'ciudad') return v ? '' : msg('msgCiudad');
+      if (!v) return msg('msgCorreoVacio');
+      return EMAIL.test(v) ? '' : msg('msgCorreoFormato');
+    };
+
+    const show = (name: FieldName, error: string) => {
+      const box = form.querySelector<HTMLElement>(`[data-field="${name}"]`);
+      const errEl = box?.querySelector<HTMLElement>('.wl__error');
+      const target = name === 'tipo' ? box : textInput(name);
+      if (!box || !errEl || !target) return;
+      const text = errEl.querySelector<HTMLElement>('[data-msg]');
+      if (text) text.textContent = error;
+      errEl.hidden = !error;
+      if (error) target.setAttribute('aria-invalid', 'true');
+      else target.removeAttribute('aria-invalid');
+      // focus lands on a radio on an empty submit: let it carry the group's error as its own description
+      if (name === 'tipo') {
+        for (const radio of radios()) {
+          if (error) radio.setAttribute('aria-describedby', errEl.id);
+          else radio.removeAttribute('aria-describedby');
+        }
+      }
+    };
+
+    const setStatus = (text: string, tone: 'info' | 'error' | 'quiet' = 'info') => {
+      statusText.textContent = text;
+      status.dataset.tone = text ? tone : '';
+    };
+
+    const setSending = (on: boolean) => {
+      sending = on;
+      submit.disabled = on;
+      for (const el of [submit, form]) {
+        if (on) el.setAttribute('aria-busy', 'true');
+        else el.removeAttribute('aria-busy');
+      }
+      submitLabel.textContent = on ? msg('msgSending') : idleLabel;
+    };
+
+    const showSuccess = (nombre: string) => {
+      const first = nombre.split(/\s+/)[0] ?? '';
+      successTitle.textContent = first ? msg('msgSuccess').replace('{nombre}', first) : msg('msgSuccessFallback');
+      root.style.minBlockSize = `${root.offsetHeight}px`; // keep the card's height: no layout jump
+      form.hidden = true;
+      success.hidden = false;
+      successTitle.focus({ preventScroll: true });
+    };
+
+    // live re-validation once the person has tried to submit
+    const revalidate = (event: Event) => {
+      if (!attempted) return;
+      const name = (event.target as HTMLInputElement | null)?.name as FieldName | undefined;
+      if (name && FIELDS.includes(name)) show(name, check(name));
+    };
+    form.addEventListener('input', revalidate);
+    form.addEventListener('change', (event) => {
+      const name = (event.target as HTMLInputElement | null)?.name;
+      // a preselected/picked type clears its error right away
+      if (name === 'tipo') show('tipo', attempted ? check('tipo') : '');
+      else revalidate(event);
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (sending) return;
+      attempted = true;
+      setStatus('');
+
+      const errors = FIELDS.map((name) => [name, check(name)] as const);
+      errors.forEach(([name, error]) => show(name, error));
+      const firstInvalid = errors.find(([, error]) => error)?.[0];
+      if (firstInvalid) {
+        if (firstInvalid === 'tipo') (radios().find((r) => r.checked) ?? radios()[0])?.focus();
+        else textInput(firstInvalid).focus();
+        return;
+      }
+
+      const payload = {
+        tipo: valueOf('tipo'),
+        nombre: valueOf('nombre'),
+        correo: valueOf('correo'),
+        ciudad: valueOf('ciudad'),
+      };
+
+      const honeypot = form.elements.namedItem('website') as HTMLInputElement | null;
+      if (honeypot?.value) {
+        showSuccess(''); // likely a bot: drop the request without telling it
+        return;
+      }
+
+      const endpoint = form.dataset.endpoint?.trim();
+      if (!endpoint) {
+        setStatus(msg('msgNotConnected'), 'info'); // never fake success
+        return;
+      }
+
+      setSending(true);
+      setStatus(msg('msgSending'), 'quiet');
+      // AbortController + timer instead of AbortSignal.timeout() (missing in Safari < 16, Chrome < 103, Firefox < 100)
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        setSending(false);
+        setStatus('');
+        showSuccess(payload.nombre);
+      } catch {
+        setSending(false);
+        setStatus(msg('msgError'), 'error'); // data stays in the fields
+        submit.focus();
+      } finally {
+        clearTimeout(timer);
+      }
+    });
+  });
+</script>
+
+<style>
+  .wl {
+    position: relative;
+    display: grid;
+  }
+  .wl__form {
+    display: grid;
+    gap: 22px;
+  }
+  .wl__form[hidden] {
+    display: none;
+  }
+  .wl__hint {
+    font-size: var(--fs-small);
+    color: var(--text-subtle);
+  }
+
+  .wl__label {
+    display: block;
+    margin-block-end: 8px;
+    padding: 0;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--text);
+  }
+
+  /* ---------- segmented control (native radios) ---------- */
+  .wl__group {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-inline-size: 0;
+  }
+  .seg {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 4px;
+    border-radius: 18px;
+    background: rgb(14 13 18 / 0.72);
+    box-shadow: inset 0 0 0 1px var(--border-input);
+  }
+  /* error ≠ focus: focus is an outer ring; an error is a hairline plus a solid bar on the leading edge
+     (the icon + text below remain the accessible signal) */
+  .wl__group[aria-invalid='true'] .seg {
+    box-shadow:
+      inset 3px 0 0 var(--trust-lavender),
+      inset 0 0 0 1px var(--trust-lavender);
+  }
+  .seg__indicator {
+    position: absolute;
+    inset-block: 4px;
+    inset-inline-start: 4px;
+    inline-size: calc(50% - 4px);
+    border-radius: 14px;
+    background: linear-gradient(180deg, var(--trust-violet) 0%, var(--violet-600) 100%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.22),
+      0 10px 28px -10px rgb(105 48 249 / 0.9);
+    opacity: 0;
+    transform: translateX(0) scale(0.94);
+    transition:
+      transform var(--dur-3) var(--ease-out),
+      opacity var(--dur-2) var(--ease-out);
+  }
+  .seg:has(input:checked) .seg__indicator {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  .seg:has(input[value='prestamista']:checked) .seg__indicator {
+    transform: translateX(100%) scale(1);
+  }
+  .seg__opt {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-block-size: 64px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color var(--dur-2) var(--ease-out);
+  }
+  .seg__opt input {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    inline-size: 100%;
+    block-size: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .seg__opt:hover {
+    color: var(--text);
+  }
+  .seg__opt:has(input:checked) {
+    color: #fff;
+  }
+  .seg__opt:has(input:focus-visible) {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  .seg__text {
+    display: grid;
+    min-inline-size: 0;
+    line-height: 1.25;
+  }
+  .seg__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .seg__opt:has(input:checked) .seg__title {
+    color: #fff;
+  }
+  /* keeps the accessible name "Comercio · quiero crédito" while stacking it visually */
+  .seg__sep {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .seg__sub {
+    font-size: 0.8125rem;
+  }
+  .seg__opt:has(input:checked) .seg__sub {
+    color: var(--trust-lilac);
+  }
+
+  /* ---------- text fields ---------- */
+  .wl__fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px 16px;
+  }
+  @media (min-width: 640px) {
+    .wl__fields {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .wl__field--full {
+      grid-column: 1 / -1;
+    }
+  }
+  .wl__input {
+    display: block;
+    inline-size: 100%;
+    min-block-size: 52px;
+    padding: 0 16px;
+    border: 1px solid var(--border-input);
+    border-radius: 14px;
+    background: rgb(14 13 18 / 0.72);
+    color: var(--text);
+    font-size: 1rem; /* 16px: no zoom on iOS */
+    line-height: 1.2;
+    transition:
+      border-color var(--dur-2) var(--ease-out),
+      background-color var(--dur-2) var(--ease-out);
+  }
+  .wl__input::placeholder {
+    color: var(--text-subtle);
+    opacity: 1;
+  }
+  .wl__input:hover {
+    border-color: rgb(180 153 254 / 0.7);
+  }
+  .wl__input:focus {
+    outline: none;
+  }
+  .wl__input:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-color: var(--trust-lavender);
+    background-color: rgb(20 19 23 / 0.9);
+  }
+  .wl__input[aria-invalid='true'] {
+    border-color: var(--trust-lavender);
+    box-shadow: inset 3px 0 0 var(--trust-lavender);
+    background-color: rgb(105 48 249 / 0.1);
+  }
+  .wl__input:-webkit-autofill {
+    -webkit-text-fill-color: var(--text);
+    box-shadow: inset 0 0 0 100px var(--ink-800);
+    caret-color: var(--text);
+  }
+
+  .wl__error {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-block-start: 8px;
+    font-size: var(--fs-small);
+    line-height: 1.4;
+    color: var(--text);
+  }
+  .wl__error[hidden] {
+    display: none;
+  }
+  .wl__error :global(svg) {
+    flex: none;
+    margin-block-start: 1px;
+    color: var(--text-accent);
+  }
+
+  .wl__hp {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    inset-inline-start: -9999px;
+  }
+
+  .wl__submit-row {
+    margin-block-start: 4px;
+  }
+  .wl__submit {
+    inline-size: 100%;
+  }
+
+  /* no-JS note (only rendered while PUBLIC_WAITLIST_ENDPOINT is not set) */
+  .wl__noscript {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    font-size: var(--fs-small);
+    line-height: 1.45;
+    color: var(--text);
+    background: rgb(180 153 254 / 0.08);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .wl__noscript :global(svg) {
+    flex: none;
+    margin-block-start: 1px;
+    color: var(--text-accent);
+  }
+
+  /* ---------- status (live region: always rendered, visually clipped while empty or "quiet") ---------- */
+  .wl__status {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    align-items: flex-start;
+    gap: 10px;
+    border-radius: 14px;
+    font-size: var(--fs-small);
+    line-height: 1.45;
+    color: var(--text);
+  }
+  .wl__status[data-tone='info'],
+  .wl__status[data-tone='error'] {
+    position: static;
+    display: flex;
+    inline-size: auto;
+    block-size: auto;
+    padding: 12px 14px;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+    background: rgb(180 153 254 / 0.08);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .wl__status[data-tone='error'] {
+    background: rgb(105 48 249 / 0.14);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+  .wl__status-icon {
+    display: none;
+    flex: none;
+    margin-block-start: 1px;
+    color: var(--text-accent);
+  }
+  .wl__status[data-tone='info'] .wl__status-icon--info,
+  .wl__status[data-tone='error'] .wl__status-icon--error {
+    display: block;
+  }
+
+  .wl__privacy {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--text-subtle);
+  }
+  .wl__privacy a {
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    transition: color var(--dur-1) var(--ease-out);
+  }
+  .wl__privacy a:hover {
+    color: var(--text);
+  }
+
+  /* ---------- success ---------- */
+  .wl__success {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 14px;
+    padding-block: 24px;
+    text-align: center;
+  }
+  .wl__success[hidden] {
+    display: none;
+  }
+  .wl__check {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 88px;
+    block-size: 88px;
+    margin-block-end: 10px;
+  }
+  .wl__check-halo {
+    position: absolute;
+    inset: -40%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(157 103 251 / 0.55), rgb(105 48 249 / 0.2) 55%, rgb(105 48 249 / 0));
+    animation: wl-halo 1600ms var(--ease-out) both;
+  }
+  .wl__check-disc {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 100%;
+    block-size: 100%;
+    border-radius: 50%;
+    background: linear-gradient(160deg, var(--trust-violet-400), var(--trust-violet) 55%, var(--violet-700));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.35),
+      0 0 0 6px rgb(180 153 254 / 0.12),
+      0 18px 50px -12px rgb(105 48 249 / 0.9);
+    color: #fff;
+    animation: wl-disc 900ms var(--ease-out) both;
+  }
+  .wl__check-disc :global(.wl__check-icon) {
+    animation: wl-tick 700ms cubic-bezier(0.34, 1.56, 0.64, 1) 280ms both;
+  }
+  .wl__success-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-synthesis: none;
+    font-size: clamp(1.625rem, 1.2rem + 1.6vw, 2.25rem);
+    line-height: 1.12;
+    color: var(--text);
+    text-wrap: balance;
+    animation: wl-rise 800ms var(--ease-out) 380ms both;
+  }
+  .wl__success-title:focus {
+    outline: none;
+  }
+  .wl__success-text {
+    color: var(--text-muted);
+    animation: wl-rise 800ms var(--ease-out) 480ms both;
+  }
+  @keyframes wl-disc {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+  @keyframes wl-tick {
+    from {
+      opacity: 0;
+      transform: scale(0.3) rotate(-20deg);
+    }
+  }
+  @keyframes wl-halo {
+    0% {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    40% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.7;
+      transform: scale(1);
+    }
+  }
+  @keyframes wl-rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 12px, 0);
+    }
+  }
+</style>
