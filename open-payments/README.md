@@ -1,9 +1,10 @@
 # op-service
 
 Servicio Go interno de Trust. El contrato original es `op-service.openapi.yaml`.
-La fase 1 incluye servidor, configuración, modelos, validación, persistencia,
-idempotencia y CI. Los flujos financieros aún no están implementados: sus rutas
-responden `503 upstream_error`, sin crear recursos ni fingir pagos exitosos.
+Incluye servidor, configuración, modelos, validación, persistencia, idempotencia,
+cliente Open Payments, consentimiento, workers financieros, simulador QR y CI.
+Las validaciones locales usan HTTPS y PostgreSQL; la aceptación real con Test Wallet
+queda para el cierre con las credenciales configuradas por el operador.
 
 ## Entorno
 
@@ -79,7 +80,7 @@ local, conforme a la instrucción de realizar commits sin push.
 Las pruebas reales de Open Payments requieren una wallet Trust, clave Ed25519
 registrada y wallets de usuarios separados para recaudo, ingresos y pagador demo.
 El backend FastAPI aún no existe en este repositorio; la integración final requiere
-su API y receptor de webhooks. No se sustituyen estas validaciones con mocks.
+su API y receptor de webhooks. Las pruebas locales no certifican el comportamiento de la wallet real.
 
 Referencias: [Open Payments](https://openpayments.dev/),
 [pgx](https://github.com/jackc/pgx),
@@ -119,3 +120,30 @@ y management URL se reemplazan juntos. Los callbacks verifican hash/nonce antes
 de consumir el intento, y su consumo comparte transacción con el trabajo pendiente.
 Las colas usan leases, dueños y SKIP LOCKED; un worker antiguo no puede confirmar
 un lease reasignado. Los estados financieros terminales no admiten transiciones.
+
+
+## Flujos de Trust (fase 4)
+
+El arranque resuelve y registra el pool sin reiniciar autorizaciones existentes.
+El operador usa `/v1/admin/pool-wallets/{id}/authorize` y aprueba cada wallet.
+Las cuentas se asignan con SKIP LOCKED y exclusión por referencia activa. El pagador
+demo nunca se asigna a un comercio. Los desembolsos preparan incoming, quote y grant
+interactivo; el callback durable continúa el grant y el worker ejecuta la salida.
+Las transferencias fixed-send crean incoming sin importe y llaman a Complete antes
+de confirmar éxito. El simulador usa fixed-receive, quote y el grant del pagador.
+
+Cada salida incluye metadata.external_ref y un op_operation_id único. El checkpoint
+previo al POST evita repetir salidas tras un reinicio o una respuesta perdida. En
+ese caso se busca el outgoing por metadata y se mantiene processing mientras su
+resultado siga incierto. **La ausencia en un listado no autoriza un nuevo envío**.
+Si no puede encontrarse, se necesita conciliación del operador, no un reintento de
+pago. La aplicación nunca modifica montos ni reenvía automáticamente dinero.
+
+El QR usa formularios de un solo uso, límite por IP de conexión, máximo configurable
+y conversiones enteras de unidades mayores. El webhook se guarda una vez, se firma
+con HMAC-SHA256 en cada envío y se reintenta a 1 s, 5 s, 30 s y 2 min. La secuencia
+de conciliación se asigna al alcanzar estado terminal, sin saltarse pagos que
+terminen fuera de orden. Un sim completado ya tuvo al menos un intento de webhook.
+El saldo de recaudo es informativo; si las salidas exceden entradas observadas se
+omite ledger_balance, ya que el contrato no representa saldos negativos. Trust es
+responsable de la contabilidad real por comercio.

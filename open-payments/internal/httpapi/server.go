@@ -29,10 +29,11 @@ type Operation func(context.Context, pgx.Tx, Request) (persistence.Response, err
 
 // Server binds operation implementations to contract routes.
 type Server struct {
-	Config     config.Config
-	Store      *persistence.Store
-	Contract   *Contract
-	Operations map[string]Operation
+	Config            config.Config
+	Store             *persistence.Store
+	Contract          *Contract
+	Operations        map[string]Operation
+	BrowserOperations map[string]http.HandlerFunc
 }
 
 // New constructs the API without registering unfinished financial operations.
@@ -72,6 +73,10 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request, route Route) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 	r = r.WithContext(ctx)
+	if handler, ok := s.BrowserOperations[route.OperationID]; ok {
+		handler(w, r)
+		return
+	}
 	if route.OperationID == "getHealth" {
 		status := "ok"
 		if s.Store != nil {

@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sebastian-quintero-osorio/trust-open-payments/open-payments/internal/application"
 	"github.com/sebastian-quintero-osorio/trust-open-payments/open-payments/internal/config"
 	"github.com/sebastian-quintero-osorio/trust-open-payments/open-payments/internal/httpapi"
 	"github.com/sebastian-quintero-osorio/trust-open-payments/open-payments/internal/persistence"
@@ -43,6 +44,17 @@ func run() error {
 	if e != nil {
 		return errors.New("API contract initialization failed")
 	}
+	app, e := application.New(cfg, store, nil)
+	if e != nil {
+		return errors.New("financial service initialization failed")
+	}
+	if e = app.Bootstrap(ctx); e != nil {
+		return errors.New("pool wallet initialization failed")
+	}
+	app.Bind(api)
+	workerContext, stopWorkers := context.WithCancel(root)
+	waitWorkers := app.Start(workerContext)
+	defer func() { stopWorkers(); waitWorkers() }()
 	srv := &http.Server{Addr: ":8080", Handler: api.Handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
 	done := make(chan error, 1)
 	go func() { done <- srv.ListenAndServe() }()

@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
+	"github.com/sebastian-quintero-osorio/trust-open-payments/open-payments/internal/testutil"
 	"io"
 	"net/http"
 	"os"
@@ -30,6 +31,7 @@ func TestServiceProcess(t *testing.T) {
 		}
 		t.Skip("PostgreSQL integration requires TEST_DATABASE_URL")
 	}
+	dsn = testutil.DatabaseURL(t)
 	_, key, e := ed25519.GenerateKey(rand.Reader)
 	if e != nil {
 		t.Fatal(e)
