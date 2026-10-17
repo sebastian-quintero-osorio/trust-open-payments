@@ -8,16 +8,17 @@ Avisos dentro de la app (web y móvil, por polling) para comercio, prestamista y
 ## Endpoints
 | ★ | Método y ruta | Rol | Request | Response | Errores |
 |---|---|---|---|---|---|
-| | `GET /api/v1/notifications` | merchant, lender, admin | Paginación | `{"unread_count": int, "items": [Notificación], "next_offset"}` | — |
+| | `GET /api/v1/notifications` | merchant, lender, admin | Paginación | `{"unread_count": int, "items": [Notificación], "next_offset"}` | 422 `validation_error` (limit/offset fuera de rango) |
 | | `POST /api/v1/notifications/read-all` | merchant, lender, admin | — | `{"unread_count": 0, "updated": int}` | — |
-| | `POST /api/v1/notifications/{id}/read` | dueño | — | `Notificación` | 403 `forbidden`, 404 `not_found` |
+| | `POST /api/v1/notifications/{notification_id}/read` | dueño | — | `Notificación` | 403 `forbidden`, 404 `not_found` |
 
 `Notificación`:
 ```json
 {"id": "…", "type": "abono_received", "title": "Abono recibido · +$7,20 · Tienda La Esquina",
  "body": "Venta de $48,00 a las 10:42 a. m. Parte Trust $0,13, neto $7,07.",
- "data": {"loan_id": "…", "repayment_id": "…", "sale_id": "…",
-          "gross": {"value": "720", "asset_code": "USD", "asset_scale": 2}, "net": {"value": "707", "asset_code": "USD", "asset_scale": 2}},
+ "data": {"loan_id": "…", "repayment_id": "…", "sale_id": "…", "payout_id": "…",
+          "gross": {"value": "720", "asset_code": "USD", "asset_scale": 2}, "trust_cut": {"value": "13", "asset_code": "USD", "asset_scale": 2},
+          "net": {"value": "707", "asset_code": "USD", "asset_scale": 2}, "received": {"value": "650", "asset_code": "EUR", "asset_scale": 2}},
  "read_at": null, "created_at": "2026-10-16T15:42:09Z"}
 ```
 

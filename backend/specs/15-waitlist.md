@@ -17,7 +17,7 @@ Recibir lo que ya envía el formulario de la landing (`landing/src/components/wa
 - **R4. Honeypot**: `website` no vacío → responde como éxito (201 JSON o 303 form) sin guardar nada.
 - **R5. Respuesta del form**: 303 a `{LANDING_URL}/?lista=ok#lista-de-espera`; datos inválidos → 303 a `{LANDING_URL}/?lista=error#lista-de-espera` (el navegador ya valida `required` y `type=email`).
 - **R6. CORS**: el origen de la landing está en `CORS_ORIGINS` (middleware de `00-core`); el preflight `OPTIONS` permite `POST` con `Content-Type` y `Accept`.
-- **R7. Rate limit** en memoria por IP: máximo 10 peticiones por ventana de 60 s; la 11.ª → 429 `rate_limited` (también en el form). IP = primer valor de `X-Forwarded-For` (Caddy) o `request.client.host`. El limitador expone `reset()` para los tests.
+- **R7. Rate limit** en memoria por IP: máximo 10 peticiones por ventana de 60 s; la 11.ª → 429 `rate_limited` (en el form, 303 a `{LANDING_URL}/?lista=error#lista-de-espera`). IP = primer valor de `X-Forwarded-For` (Caddy) o `request.client.host`. El limitador expone `reset()` para los tests.
 - **R8.** No requiere token; no crea usuarios ni notificaciones.
 
 ## Datos

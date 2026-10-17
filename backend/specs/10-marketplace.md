@@ -11,13 +11,13 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 | ★ | Método y ruta | Rol | Request | Response | Errores |
 |---|---|---|---|---|---|
 | ★ | `POST /api/v1/loan-requests` | merchant | `{min_amount, max_amount, pct_bps}` | 201 `LoanRequest` | 422 `validation_error`, `asset_mismatch`, `pct_not_allowed`, `not_eligible`, `exceeds_cupo` · 409 `active_loan_exists`, `open_request_exists` |
-| ★ | `GET /api/v1/loan-requests?scope=mine\|market&status=&in_my_range=` | mine: merchant · market: lender | — | lista de `LoanRequest` | 403 `forbidden` |
-|  | `GET /api/v1/loan-requests/{id}` | dueño o lender (si `open`) | — | `LoanRequest` | 403 · 404 |
-|  | `POST /api/v1/loan-requests/{id}/cancel` | merchant dueño | — | `LoanRequest` | 403 · 404 · 409 `invalid_state` |
+| ★ | `GET /api/v1/loan-requests?scope=mine\|market&status=&in_my_range=` | mine: merchant · market: lender | — | lista de `LoanRequest` | 403 `forbidden` · 422 `validation_error` |
+|  | `GET /api/v1/loan-requests/{request_id}` | dueño o lender (si `open`) | — | `LoanRequest` | 403 · 404 |
+|  | `POST /api/v1/loan-requests/{request_id}/cancel` | merchant dueño | — | `LoanRequest` | 403 · 404 · 409 `invalid_state` |
 | ★ | `POST /api/v1/loan-offers` | lender | `{min_amount, max_amount, pct_bps, fee_bps, term_months?}` | 201 `LoanOffer` | 422 `validation_error`, `asset_mismatch`, `pct_not_allowed`, `wallet_required` |
 | ★ | `GET /api/v1/loan-offers?scope=mine\|market&status=&fit_min=&fit_max=&pct_bps=&fits_only=` | mine: lender · market: merchant | — | lista de `LoanOffer` + `count` | 403 · 422 `validation_error` |
-|  | `GET /api/v1/loan-offers/{id}` | dueño o merchant (si `open`) | — | `LoanOffer` | 403 · 404 |
-|  | `POST /api/v1/loan-offers/{id}/cancel` | lender dueño | — | `LoanOffer` | 403 · 404 · 409 `invalid_state` |
+|  | `GET /api/v1/loan-offers/{offer_id}` | dueño o merchant (si `open`) | — | `LoanOffer` | 403 · 404 |
+|  | `POST /api/v1/loan-offers/{offer_id}/cancel` | lender dueño | — | `LoanOffer` | 403 · 404 · 409 `invalid_state` |
 | ★ | `GET /api/v1/matches` | merchant, lender | — | `{"items": [Match]}` | — |
 
 `LoanRequest` (`merchant` y `credit` salen en `market` y en el detalle; en `mine`, al crear y al cancelar van en `null`):
@@ -48,8 +48,8 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 - **R4.** `scope` es obligatorio (si falta, 422 `validation_error`). `scope=mine` lista las del usuario (cualquier estado, `?status=` filtra); `scope=market` solo las `open` de otros. Rol que no corresponde al scope → 403. Listas con `limit`/`offset` de `00-core`, más recientes primero.
 - **R5.** `GET /loan-requests?scope=market`: cada ítem lleva `merchant` y `credit` (de `get_credit_profile` de ese negocio). `in_my_range=true` deja solo las que se cruzan con `[lender_range_min, lender_range_max]`; si el prestamista no tiene rango, se ignora.
 - **R6.** Cancelar: solo el dueño (403); `open → cancelled` (si no, 409 `invalid_state`). `record_event` en la misma transacción.
-- **R7.** `GET /loan-offers?scope=market`: `fit_min` y `fit_max` son enteros en unidades mínimas del asset de mercado y van con `pct_bps`, los tres juntos o ninguno (422 `validation_error`). Definen una solicitud hipotética; si no vienen, se usa la solicitud `open` del negocio.
-- **R8.** Si hay solicitud (R7), cada oferta lleva `proposal = fits(solicitud, oferta, cupo_disponible del negocio, AMOUNT_STEP)` y la respuesta trae `count` = ofertas con `proposal` no nula (todas, no solo la página). `fits_only=true` deja solo esas. Sin solicitud: `proposal` null y `count` = total.
+- **R7.** `GET /loan-offers?scope=market`: `fit_min` y `fit_max` son enteros en unidades mínimas del asset de mercado y van con `pct_bps`, los tres juntos o ninguno (422 `validation_error`). Definen una solicitud hipotética; si no vienen, se usa la solicitud `open` del negocio; y si tampoco tiene, la solicitud virtual de 13 R4 `{min_amount: MIN_LOAN_AMOUNT, max_amount: cupo_disponible, pct_bps: max(PCT_OPTIONS_BPS)}`.
+- **R8.** Si hay solicitud (R7), cada oferta lleva `proposal = fits(solicitud, oferta, cupo_disponible del negocio, AMOUNT_STEP)` y la respuesta trae `count` = ofertas con `proposal` no nula (todas, no solo la página). `fits_only=true` deja solo esas. No elegible o `cupo_disponible < MIN_LOAN_AMOUNT`: ninguna encaja (`count` 0). En `scope=mine`, `proposal` es null y `count` = total de ofertas que cumplen el filtro `status` (todas las páginas).
 - **R9.** `GET /matches` (sin paginar, máx. 200, por `received_at` desc). Merchant: su solicitud `open` contra cada oferta `open`, con su `cupo_disponible`. Lender: cada solicitud `open` contra cada oferta `open` suya, con el `cupo_disponible` de ese negocio. Solo los pares con `fits()` no nulo; `received_at = offer.created_at`.
 
 ## Datos

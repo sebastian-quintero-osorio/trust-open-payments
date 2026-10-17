@@ -11,7 +11,7 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 | ★ | Método y ruta | Rol | Request | Response | Errores |
 |---|---|---|---|---|---|
 |  | `POST /api/v1/auth/register` | público | `{email, password, role: merchant\|lender, first_name, last_name, city, business_name?}` | 201 `{access_token, token_type: "bearer", user: Me}` | 409 `already_exists`, 422 `validation_error` |
-| ★ | `POST /api/v1/auth/login` | público | `{email, password}` | 200 `{access_token, token_type: "bearer", user: Me}` | 401 `invalid_credentials` |
+| ★ | `POST /api/v1/auth/login` | público | `{email, password}` | 200 `{access_token, token_type: "bearer", user: Me}` | 401 `invalid_credentials`, 422 `validation_error` (forma) |
 | ★ | `GET /api/v1/me` | cualquiera | — | 200 `Me` | 401 `unauthorized` |
 |  | `PATCH /api/v1/me` | cualquiera | `{first_name?, last_name?, city?, lender_range?: {min: Money, max: Money} \| null}` | 200 `Me` | 422 `validation_error` / `asset_mismatch` |
 | ★ | `PUT /api/v1/me/payout-wallet` | merchant, lender | `{wallet_address}` | 200 `Me` | 403 `forbidden`, 409 `active_loan_exists`, 422 `wallet_not_found` / `invalid_url` / `asset_mismatch`, 502/503 `op_unavailable` |
@@ -30,7 +30,7 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 ```
 
 ## Reglas
-- **R1.** Email se guarda y se compara en minúsculas (login insensible a mayúsculas). Contraseña ≥ 8 caracteres, con bcrypt (`core/security.py`).
+- **R1.** Email se guarda y se compara en minúsculas (login insensible a mayúsculas). Contraseña de 8 a 72 bytes UTF-8, con bcrypt (`core/security.py`); fuera de ese rango, 422 `validation_error` en register. En login, una contraseña de más de 72 bytes responde 401 `invalid_credentials` sin llamar a bcrypt.
 - **R2.** Register: `role` solo `merchant` o `lender` (`admin` → 422 `validation_error`); `business_name` obligatorio si es `merchant` (422) e ignorado si es `lender`; email repetido → 409 `already_exists`. Devuelve token, igual que login.
 - **R3.** Login: email inexistente o contraseña errada → 401 `invalid_credentials`, mismo mensaje en los dos casos. JWT según `00-core` (`sub`, `role`, `exp`).
 - **R4. `initials`**: negocio → regla de `MerchantRef` sobre `business_name`; prestamista y admin → inicial de `first_name` + inicial de `last_name`, en mayúscula. **`public_name`**: regla de `LenderRef` para todos los roles.

@@ -3,7 +3,7 @@
 Estado: ☐ pendiente · Fase: 0 · Dueño: — · Carpeta: `app/core/`
 
 ## Stack
-Python 3.12 · FastAPI · SQLAlchemy 2.0 **sync** · Pydantic v2 + pydantic-settings · httpx · PyJWT · bcrypt · psycopg 3 · pytest. Dependencias con `uv` (`backend/pyproject.toml`). Base de datos **Postgres** también en tests (nada de SQLite: usamos índices parciales, `FOR UPDATE SKIP LOCKED` y JSONB). Tablas con `Base.metadata.create_all()` al arrancar; Alembic queda para después.
+Python 3.12 · FastAPI · SQLAlchemy 2.0 **sync** · Pydantic v2 (`pydantic[email]`, para `EmailStr`) + pydantic-settings · httpx · PyJWT · bcrypt · psycopg 3 · pytest. Dependencias con `uv` (`backend/pyproject.toml`). Base de datos **Postgres** también en tests (nada de SQLite: usamos índices parciales, `FOR UPDATE SKIP LOCKED` y JSONB). Tablas con `Base.metadata.create_all()` al arrancar; Alembic queda para después.
 
 ## Estructura
 ```
@@ -27,7 +27,7 @@ backend/
 - Base `/api/v1`. JSON en `snake_case`. OpenAPI automático en `/docs`.
 - **Auth**: `Authorization: Bearer <JWT>` (HS256, `JWT_SECRET`). Claims: `sub` (user id), `role`, `exp` (`JWT_EXPIRES_HOURS`, 168 por defecto). Dependencias: `current_user` y `require_role("merchant" | "lender" | "admin")`. Web y app móvil usan el mismo token.
 - **Roles**: `merchant` (comercio), `lender` (prestamista), `admin` (operador de Trust). Un usuario tiene un solo rol.
-- **IDs**: UUID v4 (string).
+- **IDs**: UUID v4 (string). Los ids de ruta se declaran `str` (con el mismo nombre del YAML: `{loan_id}`, `{request_id}`, …) y se validan en el service: un id que no es UUID válido → 404 `not_found`, nunca 422.
 - **Fechas**: se guardan en UTC (`timestamptz`) y se devuelven en ISO 8601 con `Z`. "Hoy", "por hora" y "periodos" se calculan en `TIMEZONE` (`America/Bogota`) con `core/clock.py` (`now()`, que se puede congelar en tests, `today_local()`, `local_day_bounds(date)` y `format_hora(dt)` → `"10:42 a. m."` en `TIMEZONE`, sin cero inicial, para descripciones congeladas y avisos).
 - **Listas**: `?limit=` (50 por defecto, máximo 200) y `?offset=` → `{"items": [...], "next_offset": int | null}`.
 - **CORS**: `CORS_ORIGINS` (web y landing). La app móvil no lo necesita.
@@ -64,7 +64,7 @@ Formato único (también para errores de validación de FastAPI, que se re-mapea
 | 429 | `rate_limited` (15) |
 | 502/503 | `op_unavailable` (op-service caído o 5xx) |
 
-Cada spec puede agregar códigos propios y debe listarlos en su tabla de endpoints. Códigos propios ya usados (mismo significado en todas las specs): 401 `invalid_signature`, `signature_expired` (07) · 409 `pool_exhausted` (03, 06), `collection_account_not_active` (03, 16), `sim_disabled` (03) · 422 `wallet_not_found`, `invalid_url` (04), `collection_account_required`, `disbursement_rejected` (11).
+Cada spec puede agregar códigos propios y debe listarlos en su tabla de endpoints. Códigos propios ya usados (mismo significado en todas las specs): 401 `invalid_signature`, `signature_expired` (07) · 409 `pool_exhausted` (03, 06), `collection_account_not_active` (03, 16), `sim_disabled`, `sim_payer_not_authorized` (03) · 422 `wallet_not_found`, `invalid_url` (04), `invalid_amount` (03), `collection_account_required`, `disbursement_rejected` (11).
 
 ## Auditoría y notificaciones
 - `core/events.py`: `record_event(db, entity_type, entity_id, type, data=None, actor_id=None)` escribe en `events` **dentro de la misma transacción** del cambio de estado. Todo cambio de estado de `loans`, `payouts`, `collection_accounts` y `webhook_events` deja un evento.
@@ -87,7 +87,7 @@ Cada spec puede agregar códigos propios y debe listarlos en su tabla de endpoin
 | `TRUST_REVENUE_WALLET_ADDRESS` | — | Receptor de la parte Trust |
 | `TRUST_SHARE_BPS`, `TRUST_LEG_MIN` | 2000, 10 | Parte de Trust (spec 05); pata Trust mínima (spec 07) |
 | `TRUST_CUT_POLICY` | prorated | `prorated` \| `literal` (spec 05) |
-| `MIN_LOAN_AMOUNT`, `AMOUNT_STEP`, `CUPO_CAP` | 5000, 5000, 1000000 | Unidades mínimas del asset de mercado |
+| `MIN_LOAN_AMOUNT`, `AMOUNT_STEP`, `CUPO_CAP` | 50000, 5000, 1000000 | Unidades mínimas del asset de mercado |
 | `PCT_OPTIONS_BPS` | 1000,1500,2000 | Porcentajes permitidos |
 | `DEFAULT_TERM_MONTHS`, `REPRICE_STEP_BPS`, `REPRICE_MAX_DELTA_BPS` | 3, 250, 500 | Términos y recalculo |
 | `MIN_MONTHS`, `SCORING_POLICY` | 3, v1 | Scoring (spec 09) |
@@ -118,7 +118,7 @@ Las specs de módulo usan exactamente estas funciones. Si una firma cambia, se c
 | `modules.sales.service.today_summary(db, merchant_id, day) -> TodaySummary` | 07 | `TodaySummary(sales_total, sales_count, merchant_total, abonado_total)`; la usan `/sales/today` y 13-dashboard |
 | `modules.loans.service.on_disbursement_update(db, loan, payment)` | 11 | El worker la llama con cada GET del pago |
 | `modules.loans.service.expire_pending(db, now) -> int` | 11 | Job del worker |
-| `modules.loans.service.close_period(db, loan_id, now) -> LoanPctChange` | 11 | Job diario y `/dev/loans/{id}/close-period` |
+| `modules.loans.service.close_period(db, loan_id, now) -> LoanPctChange` | 11 | Job diario y `/dev/loans/{loan_id}/close-period` |
 | `modules.notifications.service.notify(db, user_id, type, title, body, data)` | 14 | Todos |
 | `modules.notifications.catalog.render(type, audience, **vars) -> tuple[str, str]` | 14 | Título y cuerpo del catálogo |
 | `core.money.format_es(m) -> str` · `core.clock.format_hora(dt) -> str` | 00 | Textos de avisos y descripciones congeladas |
@@ -140,4 +140,4 @@ Las specs de módulo usan exactamente estas funciones. Si una firma cambia, se c
 - [ ] **AC-3.** Sin token, un endpoint protegido da 401 `unauthorized`; con rol incorrecto, 403 `forbidden` (→ `test_ac3_auth_roles`).
 - [ ] **AC-4.** `Money.from_api` rechaza floats, negativos y strings no numéricos; `bps_of(4800, 1500) == 720` (→ `test_ac4_money`).
 - [ ] **AC-5.** `clock.local_day_bounds` usa el día de Bogotá (una venta del 17 oct a las 03:00 UTC cuenta como del 16 oct, porque en Bogotá son las 22:00 del 16) (→ `test_ac5_local_day`).
-- [ ] **AC-6.** Test de contrato: el conjunto (método, ruta) de `app.openapi()` es igual al de `contracts/trust-api.openapi.yaml`, y `conftest` expone `assert_contract(response, operation_id)`, que valida status y body contra el schema del YAML (`jsonschema`, resolviendo `$ref`). Cada test de endpoint de las specs lo llama al menos una vez (→ `test_ac6_contract_routes`).
+- [ ] **AC-6.** Test de contrato: el conjunto (método, ruta) de `app.openapi()` es igual al de `contracts/trust-api.openapi.yaml` (comparando también los nombres de los parámetros de ruta), y `conftest` expone `assert_contract(response, operation_id)`, que valida status y body contra el schema del YAML (`jsonschema`, resolviendo `$ref`). Cada test de endpoint de las specs lo llama al menos una vez (→ `test_ac6_contract_routes`).

@@ -11,8 +11,8 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 | ★ | Método y ruta | Rol | Request | Response | Errores |
 |---|---|---|---|---|---|
 |  | `GET /api/v1/admin/dashboard` | admin | — | 200 `AdminDashboard` | 401 `unauthorized`, 403 `forbidden` |
-|  | `POST /api/v1/admin/payouts/{id}/retry` | admin | — | 200 `PayoutOut` | 404 `not_found`, 409 `invalid_state` / `collection_account_not_active`, 422 `wallet_required` |
-|  | `POST /api/v1/admin/collection-accounts/{id}/revoke` | admin | — | 200 `{collection_account: CollectionAccountOut, held_payouts: int}` | 404 `not_found`, 502/503 `op_unavailable` |
+|  | `POST /api/v1/admin/payouts/{payout_id}/retry` | admin | — | 200 `PayoutOut` | 404 `not_found`, 409 `invalid_state` / `collection_account_not_active`, 422 `wallet_required` |
+|  | `POST /api/v1/admin/collection-accounts/{collection_account_id}/revoke` | admin | — | 200 `{collection_account: CollectionAccountOut, held_payouts: int}` | 404 `not_found`, 502/503 `op_unavailable` |
 
 ```json
 // AdminDashboard (montos agrupados por asset: una entrada por asset_code/asset_scale)
@@ -40,6 +40,7 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
   - `trust_revenue` = Σ `sent_total` de las patas `trust` en cualquier estado (las `completed` aportan todo su monto; una fallida, lo que alcanzó a enviar).
   - `retained_funds` = Σ (`amount − sent_total`) de las patas `failed_final` o `held` (todas las patas).
   - `in_flight` = Σ (`amount − sent_total`) de las patas `pending` o `processing`.
+  - Cada lista (también `trust_pending`) trae una entrada por cada asset presente en `payouts`/`loans`; si un grupo no suma nada, va `"0"` en ese asset; sin ninguna fila, una entrada `"0"` en el asset de mercado (nunca lista vacía).
 - **R3.** `trust_pending` = Σ `loans.trust_pending` por asset del crédito. Los conteos por estado incluyen todos los valores del enum, también en 0.
 - **R4.** `retained_payouts`: las patas `failed_final` o `held`, más recientes primero, máximo 50, con el `MerchantRef` de la venta.
 - **R5. Reintentar**: bloquea (`FOR UPDATE`) la cuenta de recaudo de la venta y después la pata. Estado distinto de `failed_final` / `held` → 409 `invalid_state`; cuenta no `active` → 409 `collection_account_not_active`; `amount − sent_total ≤ 0` → 409 `invalid_state`; pata `merchant` con `receiver_wallet_url` null (07 R4): toma el `payout_wallet_url` actual del negocio o, si sigue sin wallet, 422 `wallet_required`. Si pasa: `status = pending`, `attempt += 1`, `current_debit_amount = amount − sent_total`, `op_transfer_id`, `failure_code` y `last_error` a null, `next_attempt_at = clock.now()`, y `record_event(db, "payout", id, "manual_retry", {"attempt", "current_debit_amount"}, actor_id=admin.id)`. El worker (08) la envía con la clave `payout:{id}:{attempt}`.

@@ -20,7 +20,7 @@ Ninguno.
 - **R5.** `lender_net = abono − trust_cut`. Invariantes: `merchant_amount + lender_net + trust_cut == amount`, `0 ≤ trust_cut ≤ abono`. El llamador elige la política con `TRUST_CUT_POLICY`.
 
 **Términos (`terms.py`)**
-- **R6.** `build_terms(principal, pct_bps, fee_bps, term_months, request_pct_bps, cfg)` → `Terms` congelado con: `principal`, `fee_bps`, `fee_amount = bps_of(principal, fee_bps)`, `total_repayable = principal + fee_amount`, `trust_share_bps = cfg.TRUST_SHARE_BPS`, `term_months`, `monthly_minimum = ceil(total_repayable / term_months)` (entero: `-(-total // term_months)`), `pct_initial_bps = pct_bps`, `pct_max_bps = max(pct_bps, request_pct_bps)` si viene `request_pct_bps`, si no `pct_bps + cfg.REPRICE_MAX_DELTA_BPS`, `pct_min_bps = max(500, pct_bps − 500)`. `Terms.to_dict()` da el snapshot para `loans.terms`.
+- **R6.** `build_terms(principal, pct_bps, fee_bps, term_months, request_pct_bps, cfg)` → `Terms` congelado con: `principal`, `fee_bps`, `fee_amount = bps_of(principal, fee_bps)`, `total_repayable = principal + fee_amount`, `trust_share_bps = cfg.TRUST_SHARE_BPS`, `term_months`, `monthly_minimum = ceil(total_repayable / term_months)` (entero: `-(-total // term_months)`), `pct_initial_bps = pct_bps`, `pct_max_bps = max(pct_bps, request_pct_bps)` si viene `request_pct_bps`, si no `pct_bps + cfg.REPRICE_MAX_DELTA_BPS`, `pct_min_bps = max(500, pct_bps − 500)`. `Terms.to_dict()` da el bloque `terms` del snapshot que 11 guarda en `loans.terms`.
 - **R7.** `principal ≤ 0`, `fee_bps < 0` o `term_months < 1` → `ValueError`.
 
 **Matching (`matching.py`)**

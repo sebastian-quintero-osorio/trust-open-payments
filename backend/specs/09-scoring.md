@@ -11,7 +11,7 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 | ★ | Método y ruta | Rol | Request | Response | Errores |
 |---|---|---|---|---|---|
 | ★ | `GET /api/v1/me/credit-profile` | merchant | — | `CreditProfileOut` | — |
-| ★ | `GET /api/v1/merchants/{id}/credit-profile` | lender | — | `MerchantCreditView` | 403 `forbidden` · 404 `not_found` |
+| ★ | `GET /api/v1/merchants/{merchant_id}/credit-profile` | lender | — | `MerchantCreditView` | 403 `forbidden` · 404 `not_found` |
 
 `CreditProfileOut`:
 ```json
@@ -38,7 +38,7 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 - **R2.** `get_credit_profile(db, merchant_id) -> CreditProfile(assessment, cupo_total, cupo_usado, cupo_disponible)`. Reutiliza el último `credit_assessments` del negocio si `computed_at` cae en el día local de hoy (`local_day_bounds(today_local())`), su `policy_version == SCORING_POLICY` **y** no hay ninguna venta del negocio con `created_at > computed_at` (así `/dev/seed` y las ventas nuevas invalidan la caché). Si no, `build_features` → `policies.scoring.assess` → inserta una fila nueva (`features` y `reasons` como jsonb, asset de mercado, `computed_at = now`).
 - **R3.** `cupo_usado` = `principal` del crédito no terminado del negocio (cualquier estado no terminal de `01-data-model`), 0 si no hay. `cupo_disponible = max(0, cupo_total − cupo_usado)`.
 - **R4.** `GET /me/credit-profile` siempre responde 200 (un negocio sin ventas sale no elegible, cupo 0 y su razón). `active_months` sale de `assessment.features`.
-- **R5.** `GET /merchants/{id}/credit-profile`: 404 si `id` no existe o no es `merchant`. 403 salvo que el negocio tenga una solicitud `open` o algún crédito (en cualquier estado) con este prestamista.
+- **R5.** `GET /merchants/{merchant_id}/credit-profile`: 404 si `id` no existe o no es `merchant`. 403 salvo que el negocio tenga una solicitud `open` o algún crédito (en cualquier estado) con este prestamista.
 - **R6.** `sales_band` se arma con `avg_monthly_sales_3m` y los cortes fijos `SALES_BANDS = [0, 250000, 500000, 1000000, 2500000, 5000000, 10000000, 20000000]` (unidades mínimas del asset de mercado): `min` = mayor corte ≤ promedio; `max` = siguiente corte, o `null` en el último tramo. Nunca se devuelve el promedio exacto ni `features`.
 
 ## Datos
@@ -56,8 +56,8 @@ Reloj congelado el 16 oct 2026 10:00 (Bogotá).
 - [ ] **AC-3.** Dado un assessment de hoy, cuando se inserta una venta nueva (o el reloj pasa al 17 oct local), entonces la siguiente llamada crea una fila nueva (→ `test_ac3_cache_invalidated_by_sale_or_day`).
 - [ ] **AC-4.** Dado un assessment de hoy con `cupo_total` 600.000 y un crédito `active` de 200.000, cuando `get_credit_profile`, entonces `cupo_usado` 200.000 y `cupo_disponible` 400.000; con el crédito en `pending_disbursement` igual; con el crédito `paid`, disponible 600.000 (→ `test_ac4_cupo_disponible`).
 - [ ] **AC-5.** Dado un negocio con un solo mes activo, cuando hace `GET /api/v1/me/credit-profile`, entonces 200 con `eligible` falso, `cupo_total` Money en 0, `unlocks_at` `2026-12-01T05:00:00Z` y `reasons` no vacío (→ `test_ac5_me_profile_not_eligible`).
-- [ ] **AC-6.** Dado un prestamista sin relación con el negocio, cuando pide `GET /api/v1/merchants/{id}/credit-profile`, entonces 403 `forbidden`; cuando el negocio publica una solicitud `open`, entonces 200 con `sales_band` 1.000.000–2.500.000 (promedio 1.600.000) y sin `features` ni promedio exacto (→ `test_ac6_lender_view_requires_relation`).
-- [ ] **AC-7.** Dado un negocio que llama `GET /api/v1/merchants/{id}/credit-profile`, entonces 403; dado un prestamista con un `id` inexistente, entonces 404 (→ `test_ac7_lender_view_roles_and_404`).
+- [ ] **AC-6.** Dado un prestamista sin relación con el negocio, cuando pide `GET /api/v1/merchants/{merchant_id}/credit-profile`, entonces 403 `forbidden`; cuando el negocio publica una solicitud `open`, entonces 200 con `sales_band` 1.000.000–2.500.000 (promedio 1.600.000) y sin `features` ni promedio exacto (→ `test_ac6_lender_view_requires_relation`).
+- [ ] **AC-7.** Dado un negocio que llama `GET /api/v1/merchants/{merchant_id}/credit-profile`, entonces 403; dado un prestamista con un `id` inexistente, entonces 404 (→ `test_ac7_lender_view_roles_and_404`).
 
 ## Fuera de alcance
 - Endpoint admin para recalcular, otras versiones de política y consentimiento formal para compartir el perfil (Ley 1581).

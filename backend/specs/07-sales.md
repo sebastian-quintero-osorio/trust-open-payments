@@ -13,7 +13,7 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 | ★ | `POST /api/v1/webhooks/puntored/payments` | — (HMAC, sin JWT) | Header `X-Puntored-Signature: t=<unix>,v1=<hex>` + body `PuntoredPaymentEvent` (OpenAPI) | 200 `{"status": "processed" \| "duplicate" \| "unmatched" \| "ignored"}` | 401 `invalid_signature`, 401 `signature_expired`, 400 `bad_request` (JSON ilegible o sin `event_id`/`type`) |
 | ★ | `GET /api/v1/sales/today?since=` | merchant | `since` opcional (ISO, el `next_since` anterior) | Feed del día (abajo) | 422 `validation_error` |
 | | `GET /api/v1/sales?from=&to=` | merchant | Fechas locales `YYYY-MM-DD` inclusivas + paginación | `{"items": [Fila], "next_offset"}` | 422 `validation_error` |
-| | `GET /api/v1/sales/{id}` | merchant (dueño), admin | — | `{"sale", "repayment" \| null, "payouts": [...]}` | 403 `forbidden`, 404 `not_found` |
+| | `GET /api/v1/sales/{sale_id}` | merchant (dueño), admin | — | `{"sale", "repayment" \| null, "payouts": [...]}` | 403 `forbidden`, 404 `not_found` |
 
 `Fila` = `{sale_id, paid_at, amount, merchant_amount, abono_amount, payout_status}` (Money en los montos).
 
@@ -29,14 +29,14 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
            "amount": {"value": "4800", "asset_code": "USD", "asset_scale": 2},
            "merchant_amount": {"value": "4080", "asset_code": "USD", "asset_scale": 2},
            "abono_amount": {"value": "720", "asset_code": "USD", "asset_scale": 2}, "payout_status": "in_progress"}],
- "next_since": "2026-10-16T15:42:01.204Z"}
+ "next_since": "2026-10-16T15:42:01.204312Z"}
 ```
 
-`GET /sales/{id}`: `sale {id, amount, paid_at, bre_b_reference, payer_bank, incoming_payment_url, source, status}` · `repayment {id, loan_id, abono, trust_cut, lender_net, pct_applied_bps} | null` · `payouts [{id, leg, amount, sent_total, status, attempt, receive (Money o null), incoming_payment_url, outgoing_payment_url, completed_at, failure_code}]`.
+`GET /sales/{sale_id}`: `sale {id, amount, paid_at, bre_b_reference, payer_bank, incoming_payment_url, source, status}` · `repayment {id, loan_id, abono, trust_cut, lender_net, pct_applied_bps} | null` · `payouts [{id, leg, amount, sent_total, status, attempt, receive (Money o null), incoming_payment_url, outgoing_payment_url, completed_at, failure_code}]`.
 
 ## Reglas
 - **R1. Firma.** `raw = await request.body()` antes de parsear. El header son pares `k=v` separados por coma; exige `t` entero y al menos un `v1`. Válida si para algún secreto de `PUNTORED_WEBHOOK_SECRETS` y algún `v1`: `hmac.compare_digest(hmac_sha256(secreto, f"{t}.".encode() + raw).hexdigest(), v1)`. Sin header, mal formado o sin coincidencia → 401 `invalid_signature`; firma válida con `|clock.now() − t| > 300 s` → 401 `signature_expired`. Con 401 no se escribe nada.
-- **R2. Router.** Firma válida → `json.loads(raw)` → `process_puntored_event(db, event, "puntored")` → commit → 200 `{"status": result.status}`. Excepción inesperada → rollback y 500 (Go reintenta; el dedup lo hace seguro). La ruta no usa JWT ni depende de CORS.
+- **R2. Router.** Declara `x_puntored_signature: str | None = Header(None)` y no usa un modelo Pydantic para el body (el schema del YAML se publica con `openapi_extra`); nunca responde 422. Firma válida → `json.loads(raw)` → `process_puntored_event(db, event, "puntored")` → commit → 200 `{"status": result.status}`. Excepción inesperada → rollback y 500 (Go reintenta; el dedup lo hace seguro). La ruta no usa JWT ni depende de CORS.
 - **R3. `process_puntored_event(db, event, source) -> WebhookResult(status, sale_id | None)`.** No hace commit (lo hace quien llama: router o worker) y no llama a Go. Pasos en orden:
   1. `INSERT webhook_events (event_id, source, type, payload, received_at) ON CONFLICT (event_id) DO NOTHING` (el `status` final se escribe al terminar). Si no insertó → `duplicate` y no toca nada más.
   2. `type != "qr_payment.received"` → `ignored`.
@@ -56,9 +56,9 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 - **R6. Descripción congelada** (≤ 200, con `{hora}` = `clock.format_hora(paid_at)`, formato `10:42 a. m.`, nunca `now()`): lender `Abono venta {hora} · {negocio}` · merchant `Venta {hora} · {negocio}` · trust `Parte Trust venta {hora} · {negocio}`.
 - **R7. Estado de entrega agregado** (`payout_status` de una venta; 12 y 13 usan el mismo vocabulario): `failed` si alguna pata `failed_final`; si no `held` si alguna `held`; si no `in_progress` si alguna `pending`/`processing`; si no `completed` (también sin patas). Las patas `skipped` se ignoran.
 - **R8. Cifras del comercio.** `abono_amount` es el abono **bruto** (incluye la parte Trust: "15 % a tu crédito"). `merchant_amount = amount − abono` (abono del repayment, 0 si no hay; así cuentan también las ventas `seed`). `rule` = `{merchant_bps: 10000 − pct_bps, lender_bps: pct_bps}` del crédito `active`, o `{10000, 0}`.
-- **R9. `/sales/today`.** Día `today_local()` con `local_day_bounds`, ventas del negocio por `paid_at` (todas las fuentes). `summary` sobre todo el día; `rows` (orden `paid_at` desc) solo con `created_at > since` si viene `since`. `next_since` = máximo `created_at` de las ventas del día (o el `since` recibido; null si no hay ventas). `wallet_today = merchant_total` (la app lo rotula "En tu wallet Puntored hoy"). `live` siempre `true`.
+- **R9. `/sales/today`.** Día `today_local()` con `local_day_bounds`, ventas del negocio por `paid_at` (todas las fuentes). `summary` sobre todo el día; `rows` (orden `paid_at` desc) solo con `created_at > since` si viene `since`. `next_since` = máximo `created_at` de las ventas del día (o el `since` recibido; null si no hay ventas), serializado con precisión de microsegundos (isoformat completo). `wallet_today = merchant_total` (la app lo rotula "En tu wallet Puntored hoy"). `live` siempre `true`.
 - **R10. `today_summary(db, merchant_id, day) -> TodaySummary(sales_total, sales_count, merchant_total, abonado_total)`** en `sales/service.py` calcula `summary`; 13-dashboard usa la misma función.
-- **R11.** `/sales` y `/sales/{id}`: el negocio solo ve sus ventas (ajena → 403); en el detalle ve las tres patas.
+- **R11.** `/sales` y `/sales/{sale_id}`: el negocio solo ve sus ventas (ajena → 403); en el detalle ve las tres patas. `GET /sales`: orden `paid_at` desc, luego `id`; sin `from`/`to`, todo el historial (todas las fuentes).
 
 ## Datos
 - Lee: `users`, `collection_accounts`, `loans` · Escribe: `webhook_events`, `sales`, `repayments`, `payouts`, `loans` (`allocated_total`, `trust_earned`, `trust_pending`, `status`, `paid_at`), `collection_accounts` (`ledger_in`), `events`, `notifications`.
@@ -81,7 +81,7 @@ Crédito tipo (CT): principal 200.000, `fee_bps` 1000 (cargo 20.000, total 220.0
 - [ ] **AC-11.** Dado un negocio sin payout wallet y sin crédito, la pata merchant queda `held` con `receiver_wallet_url` null (→ `test_ac11_no_wallet_holds_merchant_leg`)
 - [ ] **AC-12.** Con `NOTIFY_SALE_SPLIT=true` el negocio recibe un `sale_split`; con `false`, ninguno (→ `test_ac12_sale_split_notification`)
 - [ ] **AC-13.** Dado CT y hoy (16 oct) ventas de 4.800, 2.600, 1.250 y 8.500 más una de ayer, `GET /sales/today` da `summary` 17.150 / 4 / merchant 14.578 / abonado 2.572, `rule` 8500/1500, `wallet_today` 14.578 y 4 filas desc; con `since = next_since` y una venta nueva, `rows` trae solo esa y `sales_count` 5 (→ `test_ac13_sales_today`)
-- [ ] **AC-14.** `GET /sales/{id}` de una venta ajena → 403; de una propia → las 3 patas con estado, intento y URLs (→ `test_ac14_sale_detail_owner`)
+- [ ] **AC-14.** `GET /sales/{sale_id}` de una venta ajena → 403; de una propia → las 3 patas con estado, intento y URLs (→ `test_ac14_sale_detail_owner`)
 
 ## Fuera de alcance
 - Reversos y contracargos (`qr_payment.reversed` se guarda y se ignora) · liberar patas `held` (16-admin) · Puntored real.
