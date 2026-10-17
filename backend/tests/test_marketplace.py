@@ -527,3 +527,18 @@ def test_matches_lender_many_requests_and_roles(client, db, make_merchant, make_
     assert response.json() == {"items": []}
     _error(client.get(MATCHES, headers=auth(make_admin())), 403, "forbidden", "listMatches")
     assert db.scalar(select(CreditAssessment.id).where(CreditAssessment.merchant_id == big.id)) is not None
+
+
+def test_money_with_thousands_of_digits_is_422(client, db, make_merchant, make_lender, auth):
+    """(revisión final) 00-core "Dinero": `int()` fallaba sobre 4300 dígitos (500); más de 19 dígitos → 422."""
+    merchant = _eligible(db, make_merchant).user
+    lender = make_lender()
+    huge = {"value": "9" * 5000, "asset_code": "COP", "asset_scale": 2}
+    body = {"min_amount": cop(1_000_000).to_api(), "max_amount": huge, "pct_bps": 1500}
+    for url, user, operation, extra in (
+        (REQUESTS, merchant, "createLoanRequest", {}),
+        (OFFERS, lender, "createLoanOffer", {"fee_bps": 500}),
+    ):
+        error = _error(client.post(url, json={**body, **extra}, headers=auth(user)), 422, "validation_error", operation)
+        assert "demasiado grande" in str(error["details"])
+    assert db.scalar(select(LoanRequest.id)) is None and db.scalar(select(LoanOffer.id)) is None

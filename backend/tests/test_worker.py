@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app import worker
 from app.core import clock
 from app.core.db import SessionLocal
+from app.core.errors import AppError
 from app.core.events import Event
 from app.core.money import Money
 from app.integrations.op.boot import adopt_collection_accounts
@@ -33,6 +34,7 @@ from app.integrations.op.schemas import (
     SimQrPaymentList,
 )
 from app.main import create_app
+from app.modules.admin.service import dashboard, revoke_collection_account
 from app.modules.loans import service as loans_service
 from app.modules.loans.models import Loan
 from app.modules.notifications.models import Notification
@@ -830,8 +832,17 @@ def test_r8_reconcile_item_error_isolated(db, fake_op, ct, monkeypatch):
     run_once(db, fake_op, NOW)
     db.expire_all()
     references = set(db.scalars(select(Sale.bre_b_reference)))
-    assert references == {second.bre_b_reference}
+    assert references == {second.bre_b_reference}  # el item que falla no frena a los demás
+    # (revisión final) R8: el cursor no pasa el item que lanzó (antes saltaba a `next_after` y, si su webhook también
+    # se había perdido, la venta nunca se registraba): la próxima reconciliación lo repite.
+    assert _cursor(db, "sim_qr_payments") == first.seq - 1
+
+    monkeypatch.setattr(worker, "process_puntored_event", real)
+    run_once(db, fake_op, NOW + 31 * S)
+    db.expire_all()
+    assert set(db.scalars(select(Sale.bre_b_reference))) == {first.bre_b_reference, second.bre_b_reference}
     assert _cursor(db, "sim_qr_payments") == second.seq
+    assert fake_op.calls_to("list_sim_qr_payments")[-1].args["after"] == first.seq - 1
 
 
 def _sim_body(account: CollectionAccount, amount: Money) -> CreateSimQrPaymentRequest:
@@ -858,3 +869,145 @@ def test_worker_thread_survives_tick_errors(monkeypatch, settings):
     finally:
         stop()
     assert len(calls) >= 3
+
+
+# ── Revisión final ────────────────────────────────────────────────────────────
+
+
+def test_r4_lost_response_then_revoke_keeps_tracking(db, fake_op, base, make_admin, monkeypatch):
+    """(revisión final) R4 + 16 R6: Go creó las transferencias pero la respuesta se perdió (timeout = OpUnavailable) y
+    la cuenta se revoca antes del reintento. Antes las 3 patas quedaban `held` sin `op_transfer_id` mientras Go
+    entregaba la plata (ledger_out 0, fondos retenidos de más). Ahora quedan `pending` (`submit_unknown`), J1 repite
+    la misma clave, el 201 guardado las pasa a `processing` y J2 contabiliza la entrega."""
+    real = fake_op.create_transfer
+
+    def lost_response(body, idempotency_key):
+        real(body, idempotency_key)  # Go la crea…
+        raise OpUnavailable("timeout")  # …pero la respuesta no llega
+
+    monkeypatch.setattr(fake_op, "create_transfer", lost_response)
+    run_once(db, fake_op, NOW, reconcile=False)
+    monkeypatch.setattr(fake_op, "create_transfer", real)
+    assert len(fake_op.transfers) == 3
+    legs = _legs(db, base.sale_id)
+    assert all(len(_events(db, p.id, "submit_unknown")) == 1 for p in legs.values())
+
+    # El operador revoca con Go caído: la revocación local se queda (16 R6.3) y no retiene las patas ambiguas.
+    fake_op.fail_next("revoke_collection_account", OpUnavailable("down"))
+    with pytest.raises(AppError) as raised:
+        revoke_collection_account(db, fake_op, make_admin(), str(base.account.id))
+    assert raised.value.status == 503
+    legs = _legs(db, base.sale_id)
+    assert {leg: p.status for leg, p in legs.items()} == dict.fromkeys(LEGS, "pending")
+    assert _refresh(db, base.account).status == "revoked"
+
+    run_once(db, fake_op, NOW + 11 * S, reconcile=False)  # misma clave → 201 repetido
+    assert _keys(fake_op)[-3:] == [f"payout:{legs[leg].id}:1" for leg in LEGS]
+    legs = _legs(db, base.sale_id)
+    assert all(p.status == "processing" and p.op_transfer_id is not None for p in legs.values())
+    for transfer in fake_op.transfers:
+        fake_op.complete_transfer(transfer.id)
+    run_once(db, fake_op, NOW + 12 * S, reconcile=False)
+
+    legs = _legs(db, base.sale_id)
+    assert {leg: p.status for leg, p in legs.items()} == dict.fromkeys(LEGS, "completed")
+    assert _refresh(db, base.account).ledger_out == SALE_AMOUNT.value == sum(
+        int(t.sent_amount.value) for t in fake_op.transfers
+    )
+    assert dashboard(db).retained_funds[0].value == "0"
+    assert len(_notifications(db, "abono_received")) == 1
+
+
+def test_r4_ambiguous_leg_is_held_on_definite_409(db, fake_op, base):
+    """(revisión final) R4: una pata `submit_unknown` cuyo envío Go nunca creó sigue `pending` al revocarse la cuenta
+    por otra pata (409 `collection_account_not_active`); al repetir su clave Go responde la misma 409 (nada se creó
+    con esa clave) y recién ahí queda `held`."""
+    fake_op.fail_next("create_transfer", OpUnavailable("timeout"))  # lender: Go no la creó
+    run_once(db, fake_op, NOW, reconcile=False)
+    legs = _legs(db, base.sale_id)
+    assert (legs["lender"].status, legs["merchant"].status) == ("pending", "processing")
+    assert len(_events(db, legs["lender"].id, "submit_unknown")) == 1
+
+    fake_op.revoke_collection_account(base.account.op_collection_account_id)  # Go la revoca por su lado
+    fake_op.fail_transfer(legs["merchant"].op_transfer_id, "grant_revoked", retryable=False)
+    run_once(db, fake_op, NOW + 5 * S, reconcile=False)  # J2: grant_revoked; la lender sigue esperando su reintento
+    legs = _legs(db, base.sale_id)
+    assert (legs["lender"].status, legs["merchant"].status) == ("pending", "held")
+    assert _refresh(db, base.account).status == "revoked"
+
+    run_once(db, fake_op, NOW + 11 * S, reconcile=False)  # J1 repite payout:{id}:1 → 409 definitiva
+    legs = _legs(db, base.sale_id)
+    assert legs["lender"].status == "held" and legs["lender"].op_transfer_id is None
+    assert _keys(fake_op).count(f"payout:{legs['lender'].id}:1") == 2
+
+
+def test_r8_reconcile_commits_per_item_no_deadlock_with_live_webhook(db, fake_op, ct, monkeypatch):
+    """(revisión final) R8: J5 confirma cada item en su propia transacción. Antes la página entera iba en una
+    transacción con SAVEPOINTs: la cuenta bloqueada por el item 1 seguía tomada y el webhook en vivo del item 2
+    (que ya había insertado su `webhook_events`) esperaba esa cuenta mientras J5 esperaba su fila → deadlock (500)."""
+    e1, e2 = _event(ct.account, cop(10_000)), _event(ct.account, cop(20_000))
+    op_account = ct.account.op_collection_account_id
+
+    def sim(seq, event):
+        return SimQrPayment(
+            id=uuid.uuid4(), seq=seq, collection_account_id=op_account, amount=Amount(**event["data"]["amount"]),
+            bre_b_reference=event["data"]["bre_b_reference"], status="completed",
+            webhook_event=PuntoredPaymentEvent.model_validate(event), created_at=NOW,
+        )
+
+    items = [sim(1, e1), sim(2, e2)]
+    monkeypatch.setattr(fake_op, "list_sim_qr_payments", lambda after=0, limit=100: SimQrPaymentList(
+        items=[i for i in items if i.seq > after], next_after=2))
+    live: dict[str, str] = {}
+
+    def live_webhook():
+        try:
+            with SessionLocal() as session:
+                live["status"] = process_puntored_event(session, e2, "puntored").status
+                session.commit()
+        except Exception as exc:  # noqa: BLE001
+            live["error"] = type(exc).__name__
+
+    results: list[str] = []
+    real = process_puntored_event
+
+    def spy(db_, event, source):
+        if str(event.event_id) == e2["event_id"]:  # el webhook en vivo del item 2 llega a mitad de la página
+            thread = threading.Thread(target=live_webhook)
+            thread.start()
+            thread.join(5)
+            assert not thread.is_alive(), "el webhook en vivo quedó esperando un bloqueo de J5"
+        result = real(db_, event, source)
+        results.append(result.status)
+        return result
+
+    monkeypatch.setattr(worker, "process_puntored_event", spy)
+    worker.job_reconcile(db, fake_op, NOW)
+
+    assert live == {"status": "processed"}
+    assert results == ["processed", "duplicate"]
+    db.expire_all()
+    assert db.scalar(select(func.count()).select_from(Sale)) == 2
+    assert _cursor(db, "sim_qr_payments") == 2
+
+
+def test_r8_cursor_stops_before_processing_item(db, fake_op, ct, monkeypatch):
+    """(revisión final) R8: un pago del simulador que sigue `processing` todavía no tiene venta: el cursor no lo pasa
+    (los siguientes sí se procesan y luego dan `duplicate`)."""
+    events = [_event(ct.account, cop(n)) for n in (10_000, 20_000, 30_000)]
+    statuses = ["completed", "processing", "completed"]
+    items = [
+        SimQrPayment(
+            id=uuid.uuid4(), seq=seq, collection_account_id=ct.account.op_collection_account_id,
+            amount=Amount(**event["data"]["amount"]), bre_b_reference=event["data"]["bre_b_reference"],
+            status=status, webhook_event=PuntoredPaymentEvent.model_validate(event) if status == "completed" else None,
+            created_at=NOW,
+        )
+        for seq, (event, status) in enumerate(zip(events, statuses, strict=True), start=1)
+    ]
+    monkeypatch.setattr(fake_op, "list_sim_qr_payments", lambda after=0, limit=100: SimQrPaymentList(
+        items=[i for i in items if i.seq > after], next_after=3))
+    worker.job_reconcile(db, fake_op, NOW)
+    db.expire_all()
+    assert db.scalar(select(func.count()).select_from(Sale)) == 2
+    assert _cursor(db, "sim_qr_payments") == 1

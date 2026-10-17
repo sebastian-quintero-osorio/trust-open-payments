@@ -1,3 +1,4 @@
+from ipaddress import ip_address, ip_network
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -32,12 +33,29 @@ _OPENAPI_EXTRA = {
 }
 
 
+def _trusted_proxy(host: str) -> bool:
+    """`host` está en `TRUSTED_PROXIES` (IP o nombre exacto, o dentro de una red CIDR)."""
+    for entry in get_settings().trusted_proxies:
+        if entry == host:
+            return True
+        try:
+            if ip_address(host) in ip_network(entry, strict=False):
+                return True
+        except ValueError:  # `host` o `entry` no es una IP/red (p. ej. "testclient")
+            continue
+    return False
+
+
 def client_ip(request: Request) -> str:
-    """R7: primer valor de `X-Forwarded-For` (Caddy) o la IP de la conexión."""
-    forwarded = request.headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
-    if forwarded:
-        return forwarded
-    return request.client.host if request.client else "desconocida"
+    """R7: la IP de la conexión; el primer valor de `X-Forwarded-For` solo si la conexión viene de un proxy de
+    `TRUSTED_PROXIES` (Caddy reescribe el header). Sin esa condición cualquiera inventaba una IP por petición y se
+    saltaba el límite."""
+    peer = request.client.host if request.client else None
+    if peer is not None and _trusted_proxy(peer):
+        forwarded = request.headers.get("x-forwarded-for", "").split(",", 1)[0].strip()
+        if forwarded:
+            return forwarded
+    return peer or "desconocida"
 
 
 def _back_to_landing(ok: bool) -> RedirectResponse:

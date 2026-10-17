@@ -10,6 +10,7 @@ from app import __version__
 from app.core.config import get_settings
 from app.core.db import SessionLocal, engine
 from app.core.errors import register_error_handlers
+from app.core.limits import SMALL_MAX_BODY_BYTES, BodySizeLimitMiddleware
 from app.integrations.op.boot import adopt_collection_accounts
 from app.integrations.op.client import OpClient, get_op_client
 from app.integrations.op.fake import FakeOpClient
@@ -19,6 +20,7 @@ from app.modules.dashboard.router import router as dashboard_router
 from app.modules.loans.router import router as loans_router
 from app.modules.marketplace.router import router as marketplace_router
 from app.modules.notifications.router import router as notifications_router
+from app.modules.platform.dev import DevGuardMiddleware
 from app.modules.platform.router import dev_router
 from app.modules.platform.router import router as platform_router
 from app.modules.platform.service import log_market_asset_warnings
@@ -59,6 +61,11 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="Trust API", version=__version__, lifespan=lifespan)
     register_error_handlers(app)  # antes de CORS, para que CORS envuelva también los 500
+    app.add_middleware(DevGuardMiddleware, prefix=f"{API_PREFIX}/dev")  # 03 R3 antes de leer el cuerpo
+    app.add_middleware(  # 413 antes de leer un cuerpo enorme (también dentro de CORS)
+        BodySizeLimitMiddleware,
+        per_path={f"{API_PREFIX}{path}": SMALL_MAX_BODY_BYTES for path in ("/webhooks/puntored/payments", "/waitlist")},
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

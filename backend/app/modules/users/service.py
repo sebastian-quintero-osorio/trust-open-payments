@@ -38,6 +38,7 @@ OP_WALLET_ERRORS = {
     "wallet_not_found": "No encontramos esa wallet. Revisa la dirección.",
     "invalid_url": "La dirección de la wallet no es válida. Usa https://… o $host/ruta.",
 }
+WALLET_ADDRESS_MAX = 2048  # una URL más larga no es una wallet address real
 
 _dummy_hash: str | None = None
 
@@ -197,6 +198,9 @@ def set_payout_wallet(db: Session, op: OpClient, user: User, wallet_address: str
         raise AppError(403, "forbidden")
     if _has_open_loan(db, user.id):
         raise _active_loan_error()
+    if "\x00" in wallet_address or len(wallet_address) > WALLET_ADDRESS_MAX:
+        # Nunca es una URL válida y el `\u0000` rompería el insert del evento (500): 422 `invalid_url` sin Go.
+        raise AppError(422, "invalid_url", OP_WALLET_ERRORS["invalid_url"])
     user_id, role = user.id, user.role
     db.commit()  # nunca se llama a op-service con una transacción abierta
 

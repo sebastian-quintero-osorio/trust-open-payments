@@ -6,12 +6,17 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, EmailStr, Field, StringConstraints, field_validator
 
 from app.core.money import MoneySchema
+from app.core.text import NoNul
 from app.modules.users.models import User
 
 PASSWORD_MIN_BYTES = 8
 PASSWORD_MAX_BYTES = 72  # límite de bcrypt
+NAME_MAX = 120  # first_name, last_name y business_name (como `nombre` de la lista de espera, 15)
+CITY_MAX = 80  # como `ciudad` de la lista de espera (15)
 
-NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+# Texto que termina en una columna de `users`: sin espacios de borde, no vacío, acotado y sin `\u0000` (422, no 500).
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=NAME_MAX), NoNul]
+CityStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=CITY_MAX), NoNul]
 
 
 # ── Referencias (00-core) ─────────────────────────────────────────────────────
@@ -63,7 +68,7 @@ class RegisterRequest(BaseModel):
     role: Literal["merchant", "lender"]
     first_name: NonEmptyStr
     last_name: NonEmptyStr
-    city: NonEmptyStr
+    city: CityStr
     business_name: NonEmptyStr | None = None
 
     @field_validator("password")
@@ -129,7 +134,7 @@ class UpdateMeRequest(BaseModel):
 
     first_name: NonEmptyStr | None = None
     last_name: NonEmptyStr | None = None
-    city: NonEmptyStr | None = None
+    city: CityStr | None = None
     lender_range: Range | None = None  # `null` explícito lo borra; ausente no lo toca (`model_fields_set`)
 
     @field_validator("first_name", "last_name", "city", mode="before")

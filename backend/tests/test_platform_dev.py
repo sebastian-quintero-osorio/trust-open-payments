@@ -8,10 +8,12 @@ from urllib.parse import parse_qsl, urlsplit
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session
 
-from app.core import clock
+from app.core import clock, security
+from app.core.config import Settings
 from app.core.db import get_db
 from app.core.money import Money, bps_of
 from app.integrations.op.client import OpError, OpUnavailable, get_op_client
@@ -29,7 +31,9 @@ from app.modules.users.models import User
 from tests.helpers import assert_contract, cop
 from tests.test_data_model import _loan
 
-SEED_EMAILS = ["marta@demo.trust", "trigal@demo.trust", "nova@demo.trust", "camilo@demo.trust", "admin@demo.trust"]
+# Los que devuelve el seed con DEMO_PASSWORD; admin@demo.trust también se crea, pero su contraseña no se publica (R5).
+SEED_EMAILS = ["marta@demo.trust", "trigal@demo.trust", "nova@demo.trust", "camilo@demo.trust"]
+ADMIN_EMAIL = "admin@demo.trust"
 RETURN_URL = "https://app.trustservices.com.co/op/return?client=web&loan_id=L"
 NOW = datetime(2026, 10, 17, 15, 42, tzinfo=UTC)  # 10:42 a. m. en Bogotá
 
@@ -418,7 +422,6 @@ def test_seed_users_and_wallets(client, db, dev, settings):
         "trigal@demo.trust": ("merchant", "Panadería El Trigal", "trust2026"),
         "nova@demo.trust": ("merchant", "Papelería Nova", "trust2026"),
         "camilo@demo.trust": ("lender", "Camilo Pardo", "trust2026"),
-        "admin@demo.trust": ("admin", "Operador Trust", "trust2026"),
     }
     marta, trigal, nova = (_user(db, f"{s}@demo.trust") for s in ("marta", "trigal", "nova"))
     camilo, admin = _user(db, "camilo@demo.trust"), _user(db, "admin@demo.trust")
@@ -438,6 +441,49 @@ def test_seed_users_and_wallets(client, db, dev, settings):
     for email in SEED_EMAILS:  # todos con DEMO_PASSWORD
         login = client.post("/api/v1/auth/login", json={"email": email, "password": settings.demo_password})
         assert login.status_code == 200, email
+
+
+def _login(client, email: str, password: str):
+    return client.post("/api/v1/auth/login", json={"email": email, "password": password})
+
+
+def test_seed_admin_password_is_secret(client, db, dev, settings, monkeypatch):
+    """(revisión final) R5: admin@demo.trust nunca entra con DEMO_PASSWORD (publicada en el README y en la respuesta
+    de /dev/seed). Sin DEMO_ADMIN_PASSWORD queda sin contraseña utilizable; con ella, entra solo con esa, y la
+    contraseña sigue valiendo aunque se apague DEV_ENDPOINTS_ENABLED (por eso no puede ser pública)."""
+    result = _seed(client)
+    assert ADMIN_EMAIL not in [u["email"] for u in result["users"]]
+    assert _user(db, ADMIN_EMAIL).role == "admin"
+    _error(_login(client, ADMIN_EMAIL, settings.demo_password), 401, "invalid_credentials", "login")
+
+    # Un admin sembrado antes de este cambio (con DEMO_PASSWORD) pierde esa contraseña al volver a sembrar.
+    admin = _user(db, ADMIN_EMAIL)
+    admin.password_hash = security.hash_password(settings.demo_password)
+    db.commit()
+    assert _login(client, ADMIN_EMAIL, settings.demo_password).status_code == 200
+    _seed(client)
+    _error(_login(client, ADMIN_EMAIL, settings.demo_password), 401, "invalid_credentials", "login")
+
+    secret = "una-clave-larga-del-operador"
+    monkeypatch.setattr(settings, "demo_admin_password", secret)
+    result = _seed(client)
+    assert ADMIN_EMAIL not in [u["email"] for u in result["users"]] and secret not in str(result)
+    response = _login(client, ADMIN_EMAIL, secret)
+    assert response.status_code == 200, response.text
+    assert_contract(response, "login")
+    _error(_login(client, ADMIN_EMAIL, settings.demo_password), 401, "invalid_credentials", "login")
+    monkeypatch.setattr(settings, "dev_endpoints_enabled", False)
+    assert _login(client, ADMIN_EMAIL, secret).status_code == 200
+
+
+def test_demo_admin_password_validation():
+    """(revisión final) DEMO_ADMIN_PASSWORD corta, igual a DEMO_PASSWORD o igual a la publicada: la app no arranca."""
+    base = {"database_url": "postgresql://x", "jwt_secret": "x" * 32}
+    for bad in ("corta", "trust2026", "otra-clave-de-demo"):
+        with pytest.raises(ValidationError):
+            Settings(**base, demo_password="otra-clave-de-demo", demo_admin_password=bad)
+    assert Settings(**base).demo_admin_password == ""
+    assert Settings(**base, demo_admin_password="una-clave-larga-del-operador").demo_admin_password
 
 
 def test_seed_assigns_accounts_and_history_idempotent(client, db, dev, fake_op, settings, freeze):
@@ -699,3 +745,45 @@ def _assert_history(db: Session, marta: User, account: CollectionAccount, settin
     _assert_monthly_average(db, marta.id, 16_000_000)
     assert db.scalar(select(func.count()).select_from(Payout)) == 0
     assert timedelta(0) <= clock.now() - max(s.paid_at for s in sales) < timedelta(days=5)  # hasta ayer (casi)
+
+
+# ── Revisión final ────────────────────────────────────────────────────────────
+
+JSON = {"Content-Type": "application/json"}
+
+
+def test_dev_disabled_is_404_before_reading_the_body(client, db, fake_op):
+    """(revisión final) R3: con /dev apagado, un cuerpo malformado también es 404 (antes, FastAPI lo decodificaba
+    antes de la guarda y daba 422)."""
+    for path, operation in (("/api/v1/dev/seed", "devSeed"), ("/api/v1/dev/sales/simulate", "devSimulateSale")):
+        for raw in (b"{", b"[1, 2]", b"\x00\xff"):
+            _error(client.post(path, content=raw, headers=JSON), 404, "not_found", operation)
+    _error(client.post("/api/v1/dev"), 404, "not_found", "devSeed")
+    assert _counts(db)["users"] == 0
+    assert fake_op.calls == []
+
+
+def test_dev_seed_tolerates_any_body(client, db, dev):
+    """(revisión final) R4: el YAML de devSeed no declara 422. Cuerpo ilegible o que no es objeto → sin opciones;
+    `with_active_loan_for_marta` solo cuenta si es exactamente `true`."""
+    for raw in (b"{", b"[]", b'"texto"', b"null", b'{"with_active_loan_for_marta": "true"}', b"[" * 5000):
+        response = client.post("/api/v1/dev/seed", content=raw, headers=JSON)
+        assert response.status_code == 200, (raw[:20], response.text)
+        assert_contract(response, "devSeed")
+        assert response.json()["loans"] == 2  # El Trigal y Nova; sin el crédito de Marta
+    response = client.post("/api/v1/dev/seed", json={"with_active_loan_for_marta": True})
+    assert response.status_code == 200, response.text
+    assert response.json()["loans"] == 3
+
+
+def test_simulate_sale_rejects_amount_above_bigint(client, db, dev, fake_op, make_merchant):
+    """(revisión final) 00-core "Dinero" / R11: un monto mayor que BIGINT_MAX es 422 antes de llamar a Go (antes Go
+    creaba el pago y la venta se perdía como `invalid_payload`)."""
+    merchant = make_merchant()
+    _account(db, fake_op, merchant)
+    for value in (str(2**63), "1" + "0" * 30, "9" * 5000):
+        amount = {"value": value, "asset_code": "COP", "asset_scale": 2}
+        response = client.post("/api/v1/dev/sales/simulate", json={"merchant_id": str(merchant.id), "amount": amount})
+        error = _error(response, 422, "validation_error", "devSimulateSale")
+        assert "demasiado grande" in str(error["details"])
+    assert fake_op.calls_to("create_sim_qr_payment") == []

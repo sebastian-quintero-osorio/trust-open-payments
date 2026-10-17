@@ -70,6 +70,8 @@ API = "/api/v1"
 DEFAULT_PG_URL = "postgresql://trust:trust@localhost:5433/postgres"
 TRUST_WALLET = "https://ilp.interledger-test.dev/trust-revenue"
 CORS_ORIGIN = "http://localhost:3000"
+ADMIN_EMAIL = "admin@demo.trust"
+ADMIN_PASSWORD = secrets.token_urlsafe(18)  # DEMO_ADMIN_PASSWORD del servidor: el seed no la devuelve (03 R5)
 
 # Cifras de la demo (specs 03, 05, 07, 10, 13): COP con escala 2, montos en centavos.
 CUPO_TOTAL = 600_000_000  # $6.000.000 (grado A)
@@ -324,7 +326,7 @@ class Demo:
         self.step("GET /notifications + read-all (Marta)", self.notifications_marta)
         self.step("GET /notifications + read-all (Camilo)", self.notifications_camilo)
         self.step("POST /waitlist (JSON)", self.waitlist)
-        self.step("GET /admin/dashboard (admin@demo.trust)", self.admin_dashboard)
+        self.step(f"GET /admin/dashboard ({ADMIN_EMAIL})", self.admin_dashboard)
         if self.mock is not None:
             self.step("Mock op-service: ventas simuladas y webhooks entregados", self.mock_webhooks)
 
@@ -352,19 +354,20 @@ class Demo:
     def seed(self) -> str:
         body = self.api.post("/dev/seed", "devSeed", json={})
         users = {u["email"]: u for u in body["users"]}
-        eq(len(users), 5, "usuarios sembrados")
-        for email in ("marta@demo.trust", "camilo@demo.trust", "admin@demo.trust"):
+        eq(len(users), 4, "usuarios sembrados con DEMO_PASSWORD")
+        for email in ("marta@demo.trust", "camilo@demo.trust"):
             check(email in users, f"falta {email} en el seed")
+        check(ADMIN_EMAIL not in users, "el seed no debe publicar la contraseña del admin")
         eq(body["open_offers"], 4, "seed.open_offers")
         eq(body["loans"], 2, "seed.loans")
         check(body["seed_sales"] > 0, "el seed no creó historial de ventas")
         self.seeded = users
         self.ids["marta"] = users["marta@demo.trust"]["id"]
         self.ids["camilo"] = users["camilo@demo.trust"]["id"]
-        return f"users=5 seed_sales={body['seed_sales']} open_offers=4 loans=2"
+        return f"users=4 (+ admin) seed_sales={body['seed_sales']} open_offers=4 loans=2"
 
     def login_as(self, email: str) -> str:
-        password = self.seeded[email]["password"]
+        password = ADMIN_PASSWORD if email == ADMIN_EMAIL else self.seeded[email]["password"]
         body = self.api.post("/auth/login", "login", json={"email": email, "password": password})
         eq(body["token_type"], "bearer", "login.token_type")
         eq(body["user"]["email"], email, "login.user.email")
@@ -714,7 +717,7 @@ class Demo:
         return "201 created · 200 exists"
 
     def admin_dashboard(self) -> str:
-        token = self.login_as("admin@demo.trust")
+        token = self.login_as(ADMIN_EMAIL)
         body = self.api.get("/admin/dashboard", "getAdminDashboard", token)
         loans = body["loans_by_status"]
         eq(loans["active"], 3, "loans_by_status.active")
@@ -805,6 +808,7 @@ def server_env(args: argparse.Namespace, port: int) -> dict[str, str]:
             "OP_CLIENT": args.op_client,
             "OP_FAKE_AUTO_COMPLETE": "true",
             "DEV_ENDPOINTS_ENABLED": "true",
+            "DEMO_ADMIN_PASSWORD": ADMIN_PASSWORD,
             "WORKER_ENABLED": "true",
             "WORKER_INTERVAL_SECONDS": "1",
             "TRUST_REVENUE_WALLET_ADDRESS": TRUST_WALLET,

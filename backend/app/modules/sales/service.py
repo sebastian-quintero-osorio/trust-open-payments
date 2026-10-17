@@ -28,7 +28,7 @@ from app.core.config import get_settings
 from app.core.deps import PageParams, next_offset, parse_id
 from app.core.errors import AppError
 from app.core.events import record_event
-from app.core.money import BIGINT_MAX, Money, MoneySchema, market_money
+from app.core.money import BIGINT_MAX, VALUE_MAX_DIGITS, Money, MoneySchema, market_money
 from app.integrations.op.schemas import PuntoredPaymentData
 from app.modules.loans.models import NON_TERMINAL_LOAN_STATUSES, Loan, LoanStatus
 from app.modules.notifications.catalog import render
@@ -66,6 +66,7 @@ logger = logging.getLogger(__name__)
 PAYMENT_RECEIVED = "qr_payment.received"
 SIGNATURE_TOLERANCE_SECONDS = 300
 DESCRIPTION_MAX = 200
+MAX_JSON_DEPTH = 64  # niveles de objetos/listas de un evento (el del YAML tiene 3)
 LEG_ORDER = (PayoutLeg.LENDER, PayoutLeg.MERCHANT, PayoutLeg.TRUST)
 DESCRIPTIONS = {  # R6
     PayoutLeg.LENDER: "Abono venta {hora} · {negocio}",
@@ -185,17 +186,31 @@ def _strip_nul(value: Any) -> Any:
     return value
 
 
+def _too_deep(value: Any, limit: int = MAX_JSON_DEPTH) -> bool:
+    """Profundidad de objetos/listas sin recursión: lo que sigue (`_has_nul`, `_strip_nul`, JSONB) sí es recursivo."""
+    stack = [(value, 1)]
+    while stack:
+        node, depth = stack.pop()
+        if isinstance(node, dict | list):
+            if depth > limit:
+                return True
+            children = node.values() if isinstance(node, dict) else node
+            stack.extend((child, depth + 1) for child in children)
+    return False
+
+
 def parse_event(raw: bytes) -> dict[str, Any]:
     """R2: `json.loads(raw)`; JSON ilegible, que no es objeto o sin `event_id`/`type` (texto) → 400 `bad_request`.
 
-    También 400 lo que Postgres no puede guardar (NaN/Infinity, números que desbordan a `inf`, `\\u0000`): si no,
-    el insert del paso 1 da 500 y Go reintenta para siempre.
+    También 400 lo que Postgres no puede guardar (NaN/Infinity, números que desbordan a `inf`, `\\u0000`) y el JSON
+    anidado a más de 64 niveles (`RecursionError` al leerlo o al guardarlo): si no, el insert del paso 1 da 500 y Go
+    reintenta para siempre.
     """
     try:
         event = json.loads(raw, parse_constant=_reject_constant, parse_float=_finite_float)
-    except ValueError:  # incluye JSONDecodeError y UnicodeDecodeError
+    except (ValueError, RecursionError):  # ValueError incluye JSONDecodeError y UnicodeDecodeError
         raise AppError(400, "bad_request", BAD_EVENT) from None
-    if not isinstance(event, dict) or _has_nul(event):
+    if not isinstance(event, dict) or _too_deep(event) or _has_nul(event):
         raise AppError(400, "bad_request", BAD_EVENT)
     event_id, event_type = event.get("event_id"), event.get("type")
     if not isinstance(event_id, str) or not event_id.strip() or not isinstance(event_type, str):
@@ -301,6 +316,8 @@ def process_puntored_event(db: Session, event: dict[str, Any], source: str) -> W
     data = payment.data
     if not data.bre_b_reference.strip():  # sin referencia no hay dedup posible (R3.5): cuenta como campo faltante
         return _unmatched(db, webhook, "invalid_payload", now)
+    if len(data.amount.value) > VALUE_MAX_DIGITS:  # `int()` fallaría sobre 4300 dígitos (500 y Go reintentaría)
+        return _unmatched(db, webhook, "invalid_payload", now)
     amount = data.amount.to_money()
     if amount.value > BIGINT_MAX:  # cabe en el patrón del YAML pero no en `sales.amount`: dato inválido, no 500
         return _unmatched(db, webhook, "invalid_payload", now)
@@ -360,6 +377,11 @@ def process_puntored_event(db: Session, event: dict[str, Any], source: str) -> W
     db.add(sale)
     db.flush()  # la venta existe antes que su abono y sus patas (llaves foráneas)
 
+    # 6b. `trust_pending` es plata de la cuenta donde se acumuló: si esta venta llega por otra cuenta, sale antes como
+    #     pata Trust de esa cuenta (R3.9), nunca debitada de una cuenta que no la recibió.
+    if active is not None and active.trust_pending > 0:
+        _flush_trust_pending_of_other_account(db, active, account, merchant)
+
     # 7. División.
     state = None
     if active is not None:
@@ -416,6 +438,52 @@ def process_puntored_event(db: Session, event: dict[str, Any], source: str) -> W
     return WebhookResult("processed", sale.id)
 
 
+def _trust_wallet(sale: Sale, trust_amount: int) -> str | None:
+    trust_wallet = get_settings().trust_revenue_wallet_address or None
+    if trust_amount > 0 and trust_wallet is None:
+        logger.error("TRUST_REVENUE_WALLET_ADDRESS vacío: la pata Trust de la venta %s queda held", sale.id)
+    return trust_wallet
+
+
+def _add_leg(
+    db: Session,
+    sale: Sale,
+    loan_id: uuid.UUID | None,
+    leg: PayoutLeg,
+    amount: int,
+    receiver: str | None,
+    held: bool,
+    business_name: str,
+    **event_data: Any,
+) -> Payout:
+    """R4: receptor congelado, asset de la venta, `attempt = 1`, `current_debit_amount = amount`."""
+    status = PayoutStatus.HELD if held or receiver is None else PayoutStatus.PENDING
+    payout = Payout(
+        id=uuid.uuid4(),
+        sale_id=sale.id,
+        loan_id=loan_id,
+        leg=leg,
+        receiver_wallet_url=receiver,
+        amount=amount,
+        asset_code=sale.asset_code,
+        asset_scale=sale.asset_scale,
+        description=_description(DESCRIPTIONS[leg], sale.paid_at, business_name),
+        status=status,
+        attempt=1,
+        current_debit_amount=amount,
+        sent_total=0,
+    )
+    db.add(payout)
+    record_event(
+        db,
+        "payout",
+        payout.id,
+        "created",
+        {"sale_id": str(sale.id), "leg": leg, "amount": amount, "status": status, **event_data},
+    )
+    return payout
+
+
 def _create_legs(
     db: Session,
     sale: Sale,
@@ -425,8 +493,7 @@ def _create_legs(
     trust_amount: int,
     held: bool,
 ) -> list[Payout]:
-    """R4: receptor congelado, asset de la venta, `attempt = 1`, `current_debit_amount = amount`."""
-    settings = get_settings()
+    """R4: las patas de la venta con monto > 0."""
     business_name = merchant.business_name or ""
     loan_id = loan.id if loan is not None else None
     legs: list[tuple[PayoutLeg, int, str | None]] = []
@@ -435,41 +502,46 @@ def _create_legs(
     merchant_wallet = loan.merchant_payout_wallet_url if loan is not None else merchant.payout_wallet_url
     legs.append((PayoutLeg.MERCHANT, split.merchant_amount, merchant_wallet))
     if loan is not None:
-        trust_wallet = settings.trust_revenue_wallet_address or None
-        if trust_amount > 0 and trust_wallet is None:
-            logger.error("TRUST_REVENUE_WALLET_ADDRESS vacío: la pata Trust de la venta %s queda held", sale.id)
-        legs.append((PayoutLeg.TRUST, trust_amount, trust_wallet))
+        legs.append((PayoutLeg.TRUST, trust_amount, _trust_wallet(sale, trust_amount)))
+    return [
+        _add_leg(db, sale, loan_id, leg, amount, receiver, held, business_name)
+        for leg, amount, receiver in legs
+        if amount > 0
+    ]
 
-    created = []
-    for leg, amount, receiver in legs:
-        if amount <= 0:
-            continue
-        status = PayoutStatus.HELD if held or receiver is None else PayoutStatus.PENDING
-        payout = Payout(
-            id=uuid.uuid4(),
-            sale_id=sale.id,
-            loan_id=loan_id,
-            leg=leg,
-            receiver_wallet_url=receiver,
-            amount=amount,
-            asset_code=sale.asset_code,
-            asset_scale=sale.asset_scale,
-            description=_description(DESCRIPTIONS[leg], sale.paid_at, business_name),
-            status=status,
-            attempt=1,
-            current_debit_amount=amount,
-            sent_total=0,
-        )
-        db.add(payout)
-        record_event(
-            db,
-            "payout",
-            payout.id,
-            "created",
-            {"sale_id": str(sale.id), "leg": leg, "amount": amount, "status": status},
-        )
-        created.append(payout)
-    return created
+
+def _flush_trust_pending_of_other_account(db: Session, loan: Loan, account: CollectionAccount, merchant: User) -> None:
+    """R3.9: lo pendiente (`trust_pending > 0`) se acumuló en la cuenta de la venta con el último abono con parte
+    Trust (el mayor `allocated_after`: crece con cada abono). Si no es `account`, sale ya como pata Trust de esa venta
+    (que no tiene pata Trust: si la hubiera tenido, habría barrido lo pendiente) y lo pendiente vuelve a 0. La pata
+    queda `held` si esa venta o su cuenta ya no está activa (fondos retenidos en esa cuenta, 16).
+
+    No bloquea la otra cuenta (el orden de 00-core es cuenta → crédito): si la revocan a la vez y la pata nace
+    `pending`, el worker recibe 409 `collection_account_not_active` y la retiene (08 R4).
+    """
+    last_sale = db.scalar(
+        select(Sale)
+        .join(Repayment, Repayment.sale_id == Sale.id)
+        .where(Repayment.loan_id == loan.id, Repayment.trust_cut_amount > 0)
+        .order_by(Repayment.allocated_after.desc())
+        .limit(1)
+    )
+    if last_sale is None or last_sale.collection_account_id == account.id:
+        return
+    other = db.get(CollectionAccount, last_sale.collection_account_id)
+    held = last_sale.status == SaleStatus.HELD or other is None or other.status != CollectionAccountStatus.ACTIVE
+    amount, loan.trust_pending = loan.trust_pending, 0
+    _add_leg(
+        db,
+        last_sale,
+        loan.id,
+        PayoutLeg.TRUST,
+        amount,
+        _trust_wallet(last_sale, amount),
+        held,
+        merchant.business_name or "",
+        reason="trust_pending_account_changed",
+    )
 
 
 def _mark_paid(db: Session, loan: Loan, merchant: User, sale: Sale, now: datetime) -> None:

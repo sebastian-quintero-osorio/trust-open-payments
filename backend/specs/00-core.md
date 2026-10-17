@@ -31,9 +31,11 @@ backend/
 - **Fechas**: se guardan en UTC (`timestamptz`) y se devuelven en ISO 8601 con `Z`. "Hoy", "por hora" y "periodos" se calculan en `TIMEZONE` (`America/Bogota`) con `core/clock.py` (`now()`, que se puede congelar en tests, `today_local()`, `local_day_bounds(date)` y `format_hora(dt)` → `"10:42 a. m."` en `TIMEZONE`, sin cero inicial, para descripciones congeladas y avisos).
 - **Listas**: `?limit=` (50 por defecto, máximo 200) y `?offset=` (de 0 a `BIGINT_MAX`; si no, 422 `validation_error`) → `{"items": [...], "next_offset": int | null}`.
 - **CORS**: `CORS_ORIGINS` (web y landing). La app móvil no lo necesita.
+- **Texto de entrada**: todo texto que termina en una columna `text`/JSONB rechaza `\u0000` (Postgres no lo guarda): 422, nunca 500.
+- **Tamaño del cuerpo**: más de 1 MiB (64 KiB en el webhook de Puntored y en la lista de espera) → 413 `payload_too_large`, antes de leerlo entero (`core/limits.py`; tope de transporte, como el de un proxy, no se lista por endpoint).
 
 ## Dinero
-- En la base: `BIGINT` en unidades mínimas + `asset_code` + `asset_scale` en la misma fila. Nunca float ni Decimal. Un `value` de entrada mayor que `BIGINT_MAX` (`2^63 − 1`, en `core/money.py`) es un dato inválido (422 `validation_error` en la API), nunca un 500.
+- En la base: `BIGINT` en unidades mínimas + `asset_code` + `asset_scale` en la misma fila. Nunca float ni Decimal. Un `value` de entrada mayor que `BIGINT_MAX` (`2^63 − 1`, en `core/money.py`) es un dato inválido (422 `validation_error` en la API), nunca un 500; con más de 19 dígitos se rechaza en el schema, antes de `int()` (que falla sobre 4300 dígitos).
 - En la API, entrada y salida, siempre el objeto **Money** (igual que Open Payments):
   ```json
   {"value": "4800000", "asset_code": "COP", "asset_scale": 2}
@@ -61,6 +63,7 @@ Formato único (también para errores de validación de FastAPI, que se re-mapea
 | 404 | `not_found` |
 | 409 | conflicto de estado: `invalid_state`, `already_exists`, `active_loan_exists`, `open_request_exists` |
 | 422 | `validation_error`, `asset_mismatch`, `exceeds_cupo`, `not_eligible`, `wallet_required`, `no_overlap`, `pct_not_allowed` |
+| 413 | `payload_too_large` (cuerpo por encima del tope) |
 | 429 | `rate_limited` (15) |
 | 502/503 | `op_unavailable` (op-service caído o 5xx) |
 
@@ -76,6 +79,7 @@ Cada spec puede agregar códigos propios y debe listarlos en su tabla de endpoin
 | `DATABASE_URL` | — | Postgres |
 | `JWT_SECRET`, `JWT_EXPIRES_HOURS` | —, 168 | Auth |
 | `CORS_ORIGINS` | — | Lista separada por comas |
+| `TRUSTED_PROXIES` | — | IPs o redes CIDR de los proxies cuyo `X-Forwarded-For` se cree (spec 15); vacío: la IP de la conexión |
 | `TIMEZONE` | America/Bogota | Día local |
 | `MARKET_ASSET_CODE`, `MARKET_ASSET_SCALE` | COP, 2 | Asset único del MVP |
 | `OP_CLIENT` | fake | `fake` \| `http` (spec 02) |
@@ -96,7 +100,8 @@ Cada spec puede agregar códigos propios y debe listarlos en su tabla de endpoin
 | `APP_WEB_URL` | https://app.trustservices.com.co | `return_url` del desembolso |
 | `WORKER_ENABLED`, `WORKER_INTERVAL_SECONDS` | true, 2 | Worker (spec 08) |
 | `DEV_ENDPOINTS_ENABLED` | false | Habilita `/dev/*` (spec 03) |
-| `DEMO_PASSWORD` | trust2026 | Contraseña de los usuarios del seed (spec 03) |
+| `DEMO_PASSWORD` | trust2026 | Contraseña de los usuarios del seed salvo el admin (spec 03) |
+| `DEMO_ADMIN_PASSWORD` | — | Contraseña de admin@demo.trust (spec 03): ≥ 12 caracteres y distinta de `DEMO_PASSWORD` y de `trust2026` (si no, la app no arranca); vacía, el admin del seed no puede entrar |
 | `DEMO_MERCHANT_WALLET_URL`, `DEMO_LENDER_WALLET_URL` | `https://ilp.interledger-test.dev/demo-<slug>` | Wallets del seed; con `OP_CLIENT=http`, wallets reales en el asset de mercado (spec 03) |
 | `LANDING_URL` | https://trustservices.com.co | Destino del 303 del formulario sin JS (spec 15) |
 
