@@ -38,6 +38,8 @@ from sqlalchemy.orm import Session  # noqa: E402
 from app.core import clock, security  # noqa: E402
 from app.core.config import Settings, get_settings  # noqa: E402
 from app.core.db import SessionLocal, engine  # noqa: E402
+from app.integrations.op.client import get_op_client, set_op_client  # noqa: E402
+from app.integrations.op.fake import FakeOpClient  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.models import Base  # noqa: E402
 from app.modules.users.models import User, UserRole  # noqa: E402
@@ -46,6 +48,11 @@ from tests.helpers import assert_contract, cop  # noqa: E402, F401  (conftest ex
 security.BCRYPT_ROUNDS = 4  # bcrypt rápido en tests
 
 _ALL_TABLES = ", ".join(table.name for table in Base.metadata.sorted_tables)
+
+# El FakeOpClient del proceso de tests (02 R21): ids deterministas (`salt="test"`) y sin auto-completar. Es el
+# singleton de `get_op_client()` (worker, lifespan) y el override de la dependencia en la app de `client`.
+FAKE_OP = FakeOpClient(salt="test", auto_complete=False)
+set_op_client(FAKE_OP)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -64,6 +71,7 @@ def _schema() -> Iterator[None]:
 def _clean_state() -> Iterator[None]:
     with engine.begin() as conn:
         conn.execute(text(f"TRUNCATE TABLE {_ALL_TABLES} RESTART IDENTITY CASCADE"))
+    FAKE_OP.reset()
     yield
     clock.unfreeze()
 
@@ -85,16 +93,17 @@ def db() -> Iterator[Session]:
 
 
 @pytest.fixture
-def client() -> Iterator[TestClient]:
-    with TestClient(create_app()) as test_client:
-        yield test_client
+def fake_op() -> FakeOpClient:
+    """El FakeOpClient de la app (el de `get_op_client()`), ya reiniciado: para configurarlo e inspeccionarlo."""
+    return FAKE_OP
 
 
 @pytest.fixture
-def fake_op() -> Any:
-    # TODO(spec 02): devolver el FakeOpClient de la app (`get_op_client()` con salt="test", sin auto-completar)
-    # y hacer `fake_op.reset()` entre tests.
-    raise NotImplementedError("fake_op llega con la spec 02 (FakeOpClient)")
+def client(fake_op: FakeOpClient) -> Iterator[TestClient]:
+    app = create_app()
+    app.dependency_overrides[get_op_client] = lambda: fake_op
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 @pytest.fixture

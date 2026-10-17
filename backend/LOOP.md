@@ -32,8 +32,9 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 |---|---|---|
 | 00-core | ☑ | ver log |
 | 01-data-model | ☑ | ver log |
-| 02-op-client | ◐ | — |
-| 03 → 16 | ☐ | — |
+| 02-op-client | ☑ | ver log |
+| 03-platform-dev | ◐ | — |
+| 04 → 16 | ☐ | — |
 
 ## Decisiones
 
@@ -50,6 +51,10 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - Dependencia `httpx2` (dev): legítima (Tom Christie, github.com/pydantic/httpx2); el TestClient de Starlette 1.8 la exige.
 - `trust_dev` ya tiene tablas creadas por `create_all`: si una spec agrega columnas, hay que recrear esa base (`DROP SCHEMA public CASCADE; CREATE SCHEMA public;`).
 
+- (02) set_wallet con defaults (sin asset = asset de mercado); fail_payment agregado para probar desembolsos fallidos; set_op_client() para que tests, rutas, lifespan y worker usen la misma instancia.
+- (02) Al arrancar con el fake se adoptan las cuentas de recaudo y el seq del simulador continúa sobre el máximo BREB-SIM guardado (evita referencias duplicadas tras reinicio).
+- (02) HttpOpClient convierte cualquier httpx.HTTPError (incl. DecodingError) en OpUnavailable.
+
 ## Cambios de contrato
 
 (ninguno)
@@ -62,3 +67,4 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 
 - 2026-10-17 01:45 · Iteración 1: Docker (OrbStack) arriba, Postgres en `backend/docker-compose.yml`, bases creadas, LOOP.md creado. Empiezan 00-core + 01-data-model.
 - 2026-10-17 02:40 · Specs 00-core y 01-data-model ☑: proyecto uv, core, 15 tablas, arnés de tests con `assert_contract`. 14 tests pasan, 1 skip planificado (rutas completas, fase final). Revisor encontró 8 fallas; todas corregidas.
+- 2026-10-17 02:47 · Spec 02-op-client ☑: OpClient Protocol, HttpOpClient (según op-service.openapi.yaml) y FakeOpClient con controles. 48 tests pasan. El revisor encontró 3 fallas; corregidas.

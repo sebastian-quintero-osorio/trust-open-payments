@@ -13,6 +13,8 @@ from app.core.money import Money
 
 CONTRACT_PATH = Path(__file__).resolve().parents[2] / "contracts" / "trust-api.openapi.yaml"
 CONTRACT_URI = "urn:trust-api"
+OP_CONTRACT_PATH = CONTRACT_PATH.with_name("op-service.openapi.yaml")
+OP_CONTRACT_URI = "urn:op-service"
 HTTP_METHODS = ("get", "put", "post", "delete", "patch", "options", "head", "trace")
 
 
@@ -33,9 +35,33 @@ def contract() -> dict[str, Any]:
 
 
 @cache
+def op_contract() -> dict[str, Any]:
+    """`contracts/op-service.openapi.yaml` (contrato con Go; solo se lee)."""
+    with OP_CONTRACT_PATH.open(encoding="utf-8") as fh:
+        return yaml.safe_load(fh)
+
+
+@cache
 def _registry() -> Registry:
-    resource = Resource.from_contents(contract(), default_specification=DRAFT202012)
-    return Registry().with_resource(CONTRACT_URI, resource)
+    return Registry().with_resources(
+        [
+            (CONTRACT_URI, Resource.from_contents(contract(), default_specification=DRAFT202012)),
+            (OP_CONTRACT_URI, Resource.from_contents(op_contract(), default_specification=DRAFT202012)),
+        ]
+    )
+
+
+def assert_op_schema(data: Any, pointer: str) -> None:
+    """Valida un JSON contra `contracts/op-service.openapi.yaml`. `pointer`: un schema de `components/schemas`
+    (`"Transfer"`) o un puntero JSON completo (`"/paths/~1v1~1collection-accounts/get/..."`)."""
+    ref = OP_CONTRACT_URI + "#" + (pointer if pointer.startswith("/") else _pointer("components", "schemas", pointer))
+    validator = Draft202012Validator(
+        {"$ref": ref}, registry=_registry(), format_checker=Draft202012Validator.FORMAT_CHECKER
+    )
+    errors = sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path))
+    assert not errors, f"{pointer}: no cumple op-service.openapi.yaml:\n" + "\n".join(
+        f"- {'/'.join(str(p) for p in e.absolute_path) or '<raíz>'}: {e.message}" for e in errors
+    )
 
 
 def _pointer(*parts: str) -> str:
