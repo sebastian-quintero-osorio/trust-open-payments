@@ -29,11 +29,11 @@ backend/
 - **Roles**: `merchant` (comercio), `lender` (prestamista), `admin` (operador de Trust). Un usuario tiene un solo rol.
 - **IDs**: UUID v4 (string). Los ids de ruta se declaran `str` (con el mismo nombre del YAML: `{loan_id}`, `{request_id}`, …) y se validan en el service: un id que no es UUID válido → 404 `not_found`, nunca 422.
 - **Fechas**: se guardan en UTC (`timestamptz`) y se devuelven en ISO 8601 con `Z`. "Hoy", "por hora" y "periodos" se calculan en `TIMEZONE` (`America/Bogota`) con `core/clock.py` (`now()`, que se puede congelar en tests, `today_local()`, `local_day_bounds(date)` y `format_hora(dt)` → `"10:42 a. m."` en `TIMEZONE`, sin cero inicial, para descripciones congeladas y avisos).
-- **Listas**: `?limit=` (50 por defecto, máximo 200) y `?offset=` → `{"items": [...], "next_offset": int | null}`.
+- **Listas**: `?limit=` (50 por defecto, máximo 200) y `?offset=` (de 0 a `BIGINT_MAX`; si no, 422 `validation_error`) → `{"items": [...], "next_offset": int | null}`.
 - **CORS**: `CORS_ORIGINS` (web y landing). La app móvil no lo necesita.
 
 ## Dinero
-- En la base: `BIGINT` en unidades mínimas + `asset_code` + `asset_scale` en la misma fila. Nunca float ni Decimal.
+- En la base: `BIGINT` en unidades mínimas + `asset_code` + `asset_scale` en la misma fila. Nunca float ni Decimal. Un `value` de entrada mayor que `BIGINT_MAX` (`2^63 − 1`, en `core/money.py`) es un dato inválido (422 `validation_error` en la API), nunca un 500.
 - En la API, entrada y salida, siempre el objeto **Money** (igual que Open Payments):
   ```json
   {"value": "4800000", "asset_code": "COP", "asset_scale": 2}

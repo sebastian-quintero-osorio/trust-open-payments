@@ -28,7 +28,7 @@ from app.core.config import get_settings
 from app.core.deps import PageParams, next_offset, parse_id
 from app.core.errors import AppError
 from app.core.events import record_event
-from app.core.money import Money, MoneySchema, market_money
+from app.core.money import BIGINT_MAX, Money, MoneySchema, market_money
 from app.integrations.op.schemas import PuntoredPaymentData
 from app.modules.loans.models import NON_TERMINAL_LOAN_STATUSES, Loan, LoanStatus
 from app.modules.notifications.catalog import render
@@ -65,7 +65,6 @@ logger = logging.getLogger(__name__)
 
 PAYMENT_RECEIVED = "qr_payment.received"
 SIGNATURE_TOLERANCE_SECONDS = 300
-BIGINT_MAX = 2**63 - 1  # columnas de dinero en bigint
 DESCRIPTION_MAX = 200
 LEG_ORDER = (PayoutLeg.LENDER, PayoutLeg.MERCHANT, PayoutLeg.TRUST)
 DESCRIPTIONS = {  # R6

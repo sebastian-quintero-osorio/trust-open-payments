@@ -39,8 +39,10 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 | 06-recaudo | ☑ | ver log |
 | 07-sales | ☑ | ver log |
 | 08-worker | ◐ (faltan AC-9, AC-10) | ver log |
-| 09-scoring | ◐ | — |
-| 10 → 16 | ☐ | — |
+| 09-scoring | ☑ | ver log |
+| 10-marketplace | ☑ | ver log |
+| 11-loans | ◐ | — |
+| 12 → 16 | ☐ | — |
 
 ## Decisiones
 
@@ -80,6 +82,11 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - (08) Eventos de patas: `processing`, `completed`, `retry_scheduled`, `held`, `failed_final`; cuenta revocada por el worker: `revoked` con `{reason, source: "worker"}`.
 - (14) `render()` omite el `.` del texto que sigue a un valor que ya termina en `.` (p. ej. "10:42 a. m.").
 
+- (09) get_credit_profile hace commit al insertar un assessment: llamarlo antes de tomar locks (11 R6). Solo cuentan ventas con paid_at ≤ now en el asset de mercado; months_on_platform cuenta meses completos como edad.
+
+- (10) scope=market con status distinto de open → lista vacía; admin en /matches → 403; los endpoints rechazan rol incorrecto (403) antes de buscar el id (404).
+- (10) Dinero de entrada por encima de BIGINT_MAX (core/money.py) → 422 validation_error en toda la API; offset de paginación acotado a bigint.
+
 ## Cambios de contrato
 
 (ninguno)
@@ -111,3 +118,5 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - 2026-10-17 03:57 · Spec 06-recaudo ☑: GET/POST /me/collection-account y ensure_collection_account (commit antes de Go, reintento tras revocación o pool agotado). Se activó 03 AC-6. 127 tests pasan, 3 skips (03 AC-8 → 07, 03 AC-11 → 09/11, rutas completas → final).
 - 2026-10-17 04:30 · Spec 07-sales ☑: webhook de Puntored (HMAC sobre el cuerpo crudo, dedup, división en 3 patas, parte Trust con mínimo y barrido al pagar), ventas de hoy con cursor, historial y detalle. Catálogo de notificaciones y notify() creados (14 completa endpoints). Se activó 03 AC-8. 150 tests, 2 skips (03 AC-11, rutas completas). Revisor: 7 fallas corregidas (cursor que perdía ventas, created_at tras el lock, payloads con NaN/\u0000/montos fuera de bigint).
 - 2026-10-17 05:05 · Spec 08-worker ◐ (código completo; AC-9/AC-10 se activan con 11): run_once con J1–J6, envío y consulta de transferencias con reintentos y backoff, reconciliación del simulador, cierre diario. 182 tests, 4 skips. Revisor: 5 fallas corregidas (404 de Go dejaba la pata en processing para siempre, reintento sobre cuenta revocada).
+- 2026-10-17 05:38 · Spec 09-scoring ☑: features por mes/semana/día local, perfil con caché diaria, cupo usado/disponible, vista del prestamista con franja de ventas. El seed deja a Tienda La Esquina en grado A con cupo $6.000.000.
+- 2026-10-17 05:38 · Spec 10-marketplace ☑: solicitudes, ofertas (count sobre todas las páginas, solicitud virtual), matches y cancelaciones. 209 tests, 4 skips (03 AC-11 y 08 AC-9/10 → 11; rutas completas → final). Revisor: 4 fallas corregidas (montos y offset fuera de bigint daban 500).

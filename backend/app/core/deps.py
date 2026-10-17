@@ -9,6 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.db import DbSession
 from app.core.errors import AppError
+from app.core.money import BIGINT_MAX
 from app.core.security import decode_access_token
 from app.modules.users.models import User
 
@@ -44,12 +45,12 @@ def require_role(*roles: str) -> Callable[[User], User]:
 
 
 class PageParams:
-    """`?limit=` (50 por defecto, de 1 a 200) y `?offset=` (desde 0) de las listas `{items, next_offset}`."""
+    """`?limit=` (50 por defecto, de 1 a 200) y `?offset=` (de 0 a `BIGINT_MAX`) de las listas paginadas."""
 
     def __init__(
         self,
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
-        offset: Annotated[int, Query(ge=0)] = 0,
+        offset: Annotated[int, Query(ge=0, le=BIGINT_MAX)] = 0,  # más allá desborda el OFFSET de Postgres
     ):
         self.limit = limit
         self.offset = offset

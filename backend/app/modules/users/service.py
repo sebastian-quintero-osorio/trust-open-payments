@@ -11,7 +11,7 @@ from app.core import security
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.core.events import record_event
-from app.core.money import MoneySchema, market_money
+from app.core.money import BIGINT_MAX, MoneySchema, market_money
 from app.integrations.op.client import OpClient, OpError, OpUnavailable
 from app.modules.loans.models import NON_TERMINAL_LOAN_STATUSES, Loan
 from app.modules.notifications.models import Notification
@@ -166,6 +166,8 @@ def update_me(db: Session, user: User, body: UpdateMeRequest) -> User:
                 )
             if not 0 < low.value <= high.value:
                 raise _validation_error("lender_range", "El mínimo debe ser mayor que 0 y no superar el máximo.")
+            if low.value > BIGINT_MAX or high.value > BIGINT_MAX:  # columnas `bigint`: dato inválido, no 500
+                raise _validation_error("lender_range", "El monto es demasiado grande.")
             user.lender_range_min, user.lender_range_max = low.value, high.value
     for name in ("first_name", "last_name", "city"):
         if name in fields:

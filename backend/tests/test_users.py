@@ -360,6 +360,8 @@ def test_patch_me_fields(client, db, make_merchant, make_lender, auth):
     _error(client.patch("/api/v1/me", json=usd, headers=auth(camilo)), 422, "asset_mismatch", "updateMe")
     _error(client.patch("/api/v1/me", json=_range(cop(0), cop(1_000_000)), headers=auth(camilo)), 422,
            "validation_error", "updateMe")
+    _error(client.patch("/api/v1/me", json=_range(cop(1_000_000), cop(10**18)), headers=auth(camilo)), 422,
+           "validation_error", "updateMe")  # no cabe en `lender_range_max` (bigint): 422, no 500
     same = client.patch("/api/v1/me", json=_range(cop(1_000_000), cop(1_000_000)), headers=auth(camilo))
     assert same.status_code == 200
     cleared = client.patch("/api/v1/me", json={"lender_range": None}, headers=auth(camilo))

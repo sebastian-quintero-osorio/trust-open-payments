@@ -281,7 +281,7 @@ def test_ac10_fake_wallet_authorize(client, dev, fake_op):
     assert fake_op.calls_to("get_payment") == []  # sin efectos laterales (auto-completar)
 
 
-@pytest.mark.skip(reason="depende de specs 09 y 11")
+@pytest.mark.skip(reason="depende de spec 11")
 def test_ac11_dev_close_period(client, db, dev):
     result = _seed(client, with_active_loan_for_marta=True)
     assert result["loans"] == 3

@@ -289,7 +289,7 @@ def test_api_helpers(make_merchant, make_lender):
     with TestClient(_app_with_test_routes()) as client:
         assert client.get("/api/v1/_test/page").json() == {"limit": 50, "offset": 0}
         assert client.get("/api/v1/_test/page?limit=200&offset=400").json() == {"limit": 200, "offset": 400}
-        for query in ("limit=0", "limit=201", "offset=-1", "limit=abc"):
+        for query in ("limit=0", "limit=201", "offset=-1", "limit=abc", f"offset={2**63}"):
             _assert_error(client.get(f"/api/v1/_test/page?{query}"), 422, "validation_error")
 
         item_id = uuid.uuid4()

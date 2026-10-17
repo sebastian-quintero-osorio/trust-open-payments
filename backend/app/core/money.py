@@ -10,6 +10,7 @@ from app.core.config import get_settings
 from app.core.errors import AppError
 
 VALUE_PATTERN = r"^(0|[1-9][0-9]*)$"
+BIGINT_MAX = 2**63 - 1  # tope de las columnas de dinero (`bigint`): un `value` mayor es 422, nunca 500
 _VALUE_RE = re.compile(VALUE_PATTERN)
 
 
