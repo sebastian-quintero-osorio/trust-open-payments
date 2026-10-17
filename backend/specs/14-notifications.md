@@ -14,11 +14,11 @@ Avisos dentro de la app (web y móvil, por polling) para comercio, prestamista y
 
 `Notificación`:
 ```json
-{"id": "…", "type": "abono_received", "title": "Abono recibido · +$7,20 · Tienda La Esquina",
- "body": "Venta de $48,00 a las 10:42 a. m. Parte Trust $0,13, neto $7,07.",
+{"id": "…", "type": "abono_received", "title": "Abono recibido · +$7.200 · Tienda La Esquina",
+ "body": "Venta de $48.000 a las 10:42 a. m. Parte Trust $130,90, neto $7.069,10.",
  "data": {"loan_id": "…", "repayment_id": "…", "sale_id": "…", "payout_id": "…",
-          "gross": {"value": "720", "asset_code": "USD", "asset_scale": 2}, "trust_cut": {"value": "13", "asset_code": "USD", "asset_scale": 2},
-          "net": {"value": "707", "asset_code": "USD", "asset_scale": 2}, "received": {"value": "650", "asset_code": "EUR", "asset_scale": 2}},
+          "gross": {"value": "720000", "asset_code": "COP", "asset_scale": 2}, "trust_cut": {"value": "13090", "asset_code": "COP", "asset_scale": 2},
+          "net": {"value": "706910", "asset_code": "COP", "asset_scale": 2}, "received": {"value": "177", "asset_code": "USD", "asset_scale": 2}},
  "read_at": null, "created_at": "2026-10-16T15:42:09Z"}
 ```
 
@@ -45,7 +45,7 @@ Variables: `{negocio}` = business_name · `{prestamista}` = LenderRef.public_nam
 
 ### Comportamiento
 - **R1. `notify(db, user_id, type, title, body, data)`** inserta en la transacción de quien llama (no hace commit). `type` fuera del catálogo → `ValueError`.
-- **R2. Textos.** `catalog.render(type, audience, **vars) -> (title, body)` arma título y cuerpo desde la tabla (`audience` = `merchant` | `lender` | `admin`). Los emisores llaman `notify(db, user_id, type, *render(...), data)`. Montos con `money.format_es` (`$48.000`; con `asset_scale > 0`, `$480,00`) y porcentaje con espacio (`15 %`, `12,5 %`). `data` lleva ids y Money crudos para enlazar y re-formatear en la app.
+- **R2. Textos.** `catalog.render(type, audience, **vars) -> (title, body)` arma título y cuerpo desde la tabla (`audience` = `merchant` | `lender` | `admin`). Los emisores llaman `notify(db, user_id, type, *render(...), data)`. Montos con `money.format_es` (punto de miles; coma y decimales solo si la parte decimal no es cero: `$48.000`, `$130,90`; con `asset_scale` 0 nunca hay decimales) y porcentaje con espacio (`15 %`, `12,5 %`). `data` lleva ids y Money crudos para enlazar y re-formatear en la app.
 - **R3. Copy.** Tuteo; nunca "goteo", "gotereado" ni "gota a gota" para Trust; sin tasas ni rendimientos (COPY §0).
 - **R4. Admins.** "Cada admin" = un `notify` por usuario con `role = admin`.
 - **R5. Lista.** Solo las del usuario, orden `created_at` desc. `unread_count` = total del usuario con `read_at` null (no depende de la página).
@@ -62,7 +62,7 @@ Variables: `{negocio}` = business_name · `{prestamista}` = LenderRef.public_nam
 - [ ] **AC-1.** Dadas 3 notificaciones propias (1 leída) y 2 de otro usuario, cuando listo, entonces 3 items en orden desc y `unread_count` 2; con `limit=2`, `next_offset` 2 (→ `test_ac1_list_own`)
 - [ ] **AC-2.** `read-all` deja `unread_count` 0 y `updated` 2; las del otro usuario siguen sin leer; una segunda llamada da `updated` 0 (→ `test_ac2_read_all`)
 - [ ] **AC-3.** Leer una propia pone `read_at`; repetir no lo cambia; una ajena → 403; una inexistente → 404 (→ `test_ac3_read_one`)
-- [ ] **AC-4.** `render("abono_received", "lender", bruto=Money(720, "USD", 2), negocio="Tienda La Esquina", …)` da el título `Abono recibido · +$7,20 · Tienda La Esquina`; `format_es(Money(48000, "COP", 0))` da `$48.000` y `format_es(Money(48000, "USD", 2))` da `$480,00` (→ `test_ac4_catalog_render`)
+- [ ] **AC-4.** `render("abono_received", "lender", bruto=cop(7_200), negocio="Tienda La Esquina", …)` da el título `Abono recibido · +$7.200 · Tienda La Esquina`; `format_es(cop(48_000)) == "$48.000"`, `format_es(cop("130,90")) == "$130,90"`, `format_es(Money(706_910, "COP", 2)) == "$7.069,10"` y, con escala 0, `format_es(Money(48_000, "COP", 0)) == "$48.000"` (→ `test_ac4_catalog_render`)
 - [ ] **AC-5.** Un `notify` dentro de una transacción que hace rollback no deja fila; un `type` fuera del catálogo lanza `ValueError` (→ `test_ac5_notify_transactional`)
 - [ ] **AC-6.** Cada uno de los 13 `type` de 00-core tiene textos en `catalog` para cada `audience` que lo recibe (→ `test_ac6_catalog_complete`)
 

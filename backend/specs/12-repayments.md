@@ -5,8 +5,6 @@ Estado: ☐ pendiente · Fase: 3 · Dueño: — · Carpeta: `app/modules/repayme
 ## Objetivo
 Mostrar cada abono (bruto, parte Trust, neto, recibido) y su traza venta → abono → transferencias Open Payments → crédito. "Cada abono es trazable hasta la venta que lo originó." (COPY 13d).
 
-Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifras de COPY.md ÷ 10 (venta $48.000 → `4800`).
-
 ## Endpoints
 | ★ | Método y ruta | Rol | Request | Response | Errores |
 |---|---|---|---|---|---|
@@ -19,29 +17,29 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
  "merchant": {"id": "…", "business_name": "Tienda La Esquina", "city": "Bucaramanga", "initials": "TL"},
  "lender": {"id": "…", "public_name": "Camilo P."},
  "paid_at": "2026-10-16T15:42:00Z",
- "abono": {"value": "720", "asset_code": "USD", "asset_scale": 2},
- "trust_cut": {"value": "13", "asset_code": "USD", "asset_scale": 2},
- "lender_net": {"value": "707", "asset_code": "USD", "asset_scale": 2},
+ "abono": {"value": "720000", "asset_code": "COP", "asset_scale": 2},
+ "trust_cut": {"value": "13090", "asset_code": "COP", "asset_scale": 2},
+ "lender_net": {"value": "706910", "asset_code": "COP", "asset_scale": 2},
  "pct_applied_bps": 1500,
- "delivery": {"status": "completed", "received": {"value": "650", "asset_code": "EUR", "asset_scale": 2}}}
+ "delivery": {"status": "completed", "received": {"value": "177", "asset_code": "USD", "asset_scale": 2}}}
 ```
 
 Traza:
 ```json
 {"id": "…",
- "sale": {"id": "…", "amount": {"value": "4800", "asset_code": "USD", "asset_scale": 2}, "paid_at": "2026-10-16T15:42:00Z",
+ "sale": {"id": "…", "amount": {"value": "4800000", "asset_code": "COP", "asset_scale": 2}, "paid_at": "2026-10-16T15:42:00Z",
           "bre_b_reference": "BREB-SIM-000123", "incoming_payment_url": "https://ilp.interledger-test.dev/…/incoming-payments/…"},
- "repayment": {"abono": {"value": "720", "asset_code": "USD", "asset_scale": 2}, "trust_cut": {"value": "13", "asset_code": "USD", "asset_scale": 2},
-               "lender_net": {"value": "707", "asset_code": "USD", "asset_scale": 2}, "pct_applied_bps": 1500,
-               "allocated_before": {"value": "0", "asset_code": "USD", "asset_scale": 2}, "allocated_after": {"value": "720", "asset_code": "USD", "asset_scale": 2}},
- "payouts": [{"id": "…", "leg": "lender", "amount": {"value": "707", "asset_code": "USD", "asset_scale": 2},
-              "sent_total": {"value": "707", "asset_code": "USD", "asset_scale": 2}, "status": "completed", "attempt": 1,
-              "receive": {"value": "650", "asset_code": "EUR", "asset_scale": 2}, "incoming_payment_url": "…", "outgoing_payment_url": "…",
+ "repayment": {"abono": {"value": "720000", "asset_code": "COP", "asset_scale": 2}, "trust_cut": {"value": "13090", "asset_code": "COP", "asset_scale": 2},
+               "lender_net": {"value": "706910", "asset_code": "COP", "asset_scale": 2}, "pct_applied_bps": 1500,
+               "allocated_before": {"value": "0", "asset_code": "COP", "asset_scale": 2}, "allocated_after": {"value": "720000", "asset_code": "COP", "asset_scale": 2}},
+ "payouts": [{"id": "…", "leg": "lender", "amount": {"value": "706910", "asset_code": "COP", "asset_scale": 2},
+              "sent_total": {"value": "706910", "asset_code": "COP", "asset_scale": 2}, "status": "completed", "attempt": 1,
+              "receive": {"value": "177", "asset_code": "USD", "asset_scale": 2}, "incoming_payment_url": "…", "outgoing_payment_url": "…",
               "completed_at": "2026-10-16T15:42:09Z", "failure_code": null}],
  "loan": {"id": "…", "status": "active", "pct_bps": 1500,
           "merchant": {"id": "…", "business_name": "Tienda La Esquina", "city": "Bucaramanga", "initials": "TL"}, "lender": {"id": "…", "public_name": "Camilo P."},
-          "principal": {"value": "200000", "asset_code": "USD", "asset_scale": 2}, "total_repayable": {"value": "220000", "asset_code": "USD", "asset_scale": 2},
-          "allocated_total": {"value": "720", "asset_code": "USD", "asset_scale": 2}, "delivered_total": {"value": "720", "asset_code": "USD", "asset_scale": 2}}}
+          "principal": {"value": "200000000", "asset_code": "COP", "asset_scale": 2}, "total_repayable": {"value": "220000000", "asset_code": "COP", "asset_scale": 2},
+          "allocated_total": {"value": "720000", "asset_code": "COP", "asset_scale": 2}, "delivered_total": {"value": "720000", "asset_code": "COP", "asset_scale": 2}}}
 ```
 
 ## Reglas
@@ -59,12 +57,12 @@ Traza:
 - `07-sales` (repayments, patas, vocabulario de entrega) · `08-worker` (`receive_*`, `sent_total`, URLs) · `00-core` (MerchantRef, LenderRef, paginación, `local_day_bounds`).
 
 ## Criterios de aceptación
-Base: el crédito tipo (CT) y la venta del AC-1 de 07 (4.800 → abono 720, trust_cut 13, lender_net 707).
-- [ ] **AC-1.** Dado el prestamista A con ese abono y el prestamista B con otro, cuando A lista, entonces ve 1 item: abono 720, trust_cut 13, lender_net 707, pct 1500, merchant `TL`, lender `Camilo P.`, delivery `in_progress`, received null (→ `test_ac1_lender_lists_own`)
-- [ ] **AC-2.** Dada la pata lender `completed` con `receive` 650 EUR (scale 2), delivery es `completed` con ese Money; con la pata `held` es `held` y con `failed_final` es `failed` (→ `test_ac2_delivery_status`)
+Base: el crédito tipo (CT) y la venta del AC-1 de 07 ($48.000 → abono $7.200, trust_cut $130,90, lender_net $7.069,10).
+- [ ] **AC-1.** Dado el prestamista A con ese abono y el prestamista B con otro, cuando A lista, entonces ve 1 item: abono $7.200, trust_cut $130,90, lender_net $7.069,10, pct 1500, merchant `TL`, lender `Camilo P.`, delivery `in_progress`, received null (→ `test_ac1_lender_lists_own`)
+- [ ] **AC-2.** Dada la pata lender `completed` con `receive` `{"value": "177", "asset_code": "USD", "asset_scale": 2}` (wallet del prestamista en USD), delivery es `completed` con ese Money; con la pata `held` es `held` y con `failed_final` es `failed` (→ `test_ac2_delivery_status`)
 - [ ] **AC-3.** El negocio ve sus abonos; un prestamista con `loan_id` de un crédito ajeno → 403; `loan_id` inexistente → 404 (→ `test_ac3_visibility_and_loan_filter`)
 - [ ] **AC-4.** Con `from=to=2026-10-16`, aparece el abono de una venta de `2026-10-17T03:00Z` (22:00 del 16 en Bogotá) y no el de una de `2026-10-17T05:00Z` (→ `test_ac4_local_date_filter`)
-- [ ] **AC-5.** `GET /repayments/{repayment_id}` devuelve venta (4.800, `bre_b_reference`, `incoming_payment_url`) → abono (allocated 0 → 720) → patas con `attempt`, `sent_total` y URLs → crédito; el prestamista ve 2 patas (lender, trust) y el negocio 3 (→ `test_ac5_trace`)
+- [ ] **AC-5.** `GET /repayments/{repayment_id}` devuelve venta ($48.000, `bre_b_reference`, `incoming_payment_url`) → abono (allocated $0 → $7.200) → patas con `attempt`, `sent_total` y URLs → crédito; el prestamista ve 2 patas (lender, trust) y el negocio 3 (→ `test_ac5_trace`)
 - [ ] **AC-6.** Dados 3 abonos, `limit=2` da 2 items y `next_offset` 2; `offset=2` da 1 y `next_offset` null (→ `test_ac6_pagination`)
 
 ## Fuera de alcance

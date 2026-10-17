@@ -5,8 +5,6 @@ Estado: ☐ pendiente · Fase: 1 · Dueño: — · Carpeta: `app/modules/sales/`
 ## Objetivo
 Recibir cada pago Bre-B (webhook de Puntored, simulado por op-service), dividirlo en una sola transacción (venta → abono → patas) y mostrarle al comercio sus ventas del día con su división (COPY 13c `division-en-vivo`).
 
-Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifras de COPY.md ÷ 10 (venta $48.000 → `4800`).
-
 ## Endpoints
 | ★ | Método y ruta | Rol | Request | Response | Errores |
 |---|---|---|---|---|---|
@@ -20,15 +18,15 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 `GET /sales/today` (hoy 16 oct, crédito al 15 %):
 ```json
 {"date": "2026-10-16", "live": true,
- "summary": {"sales_total": {"value": "61200", "asset_code": "USD", "asset_scale": 2}, "sales_count": 14,
-             "merchant_total": {"value": "52020", "asset_code": "USD", "asset_scale": 2},
-             "abonado_total": {"value": "9180", "asset_code": "USD", "asset_scale": 2}},
+ "summary": {"sales_total": {"value": "61200000", "asset_code": "COP", "asset_scale": 2}, "sales_count": 14,
+             "merchant_total": {"value": "52020000", "asset_code": "COP", "asset_scale": 2},
+             "abonado_total": {"value": "9180000", "asset_code": "COP", "asset_scale": 2}},
  "rule": {"merchant_bps": 8500, "lender_bps": 1500},
- "wallet_today": {"value": "52020", "asset_code": "USD", "asset_scale": 2},
+ "wallet_today": {"value": "52020000", "asset_code": "COP", "asset_scale": 2},
  "rows": [{"sale_id": "…", "paid_at": "2026-10-16T15:42:00Z",
-           "amount": {"value": "4800", "asset_code": "USD", "asset_scale": 2},
-           "merchant_amount": {"value": "4080", "asset_code": "USD", "asset_scale": 2},
-           "abono_amount": {"value": "720", "asset_code": "USD", "asset_scale": 2}, "payout_status": "in_progress"}],
+           "amount": {"value": "4800000", "asset_code": "COP", "asset_scale": 2},
+           "merchant_amount": {"value": "4080000", "asset_code": "COP", "asset_scale": 2},
+           "abono_amount": {"value": "720000", "asset_code": "COP", "asset_scale": 2}, "payout_status": "in_progress"}],
  "next_since": "2026-10-16T15:42:01.204312Z"}
 ```
 
@@ -67,20 +65,20 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 - `05-policies` (`split_sale`) · `06-recaudo` (cuentas de recaudo) · `11-loans` (créditos `active`; el paso a `paid` lo hace esta spec, ver máquina de estados en 01) · `14-notifications` (`notify` y textos) · `00-core` (`clock`, `record_event`, `money`).
 
 ## Criterios de aceptación
-Crédito tipo (CT): principal 200.000, `fee_bps` 1000 (cargo 20.000, total 220.000), `trust_share_bps` 2000, `pct_bps` 1500, `allocated_total` 0, `trust_pending` 0, `active`. Con CT, `T(r) = floor(r / 55)`. Config por defecto (`TRUST_LEG_MIN` 10, `TRUST_CUT_POLICY` prorated).
-- [ ] **AC-1.** Dado CT, cuando llega un webhook firmado con una venta de 4.800, entonces 200 `processed`, 1 venta, repayment (abono 720, trust_cut 13, lender_net 707, pct 1500, allocated 0 → 720), patas `pending` lender 707 / merchant 4.080 / trust 13, `ledger_in` 4.800, `trust_earned` 13, `trust_pending` 0 (→ `test_ac1_webhook_splits_sale`)
+Crédito tipo (CT): principal $2.000.000, `fee_bps` 1000 (cargo $200.000, total $2.200.000), `trust_share_bps` 2000, `pct_bps` 1500, `allocated_total` $0, `trust_pending` $0, `active`. Con CT, `T(r) = floor(r / 55)` con `r` en centavos. Config por defecto (`TRUST_LEG_MIN` $100, `TRUST_CUT_POLICY` prorated).
+- [ ] **AC-1.** Dado CT, cuando llega un webhook firmado con una venta de $48.000, entonces 200 `processed`, 1 venta, repayment (abono $7.200, trust_cut $130,90, lender_net $7.069,10, pct 1500, allocated $0 → $7.200), patas `pending` lender $7.069,10 / merchant $40.800 / trust $130,90, `ledger_in` $48.000, `trust_earned` $130,90, `trust_pending` $0 (→ `test_ac1_webhook_splits_sale`)
 - [ ] **AC-2.** Dado un header ausente o firmado con un secreto ajeno → 401 `invalid_signature`; firmado bien con `t = now − 301` → 401 `signature_expired`; en ambos casos `webhook_events` vacío (→ `test_ac2_rejects_bad_signature`)
 - [ ] **AC-3.** Dado `PUNTORED_WEBHOOK_SECRETS="viejo,nuevo"` y un body con espacios y claves en otro orden, cuando se firma con `nuevo` sobre esos bytes exactos, entonces 200 (→ `test_ac3_secret_rotation_raw_body`)
 - [ ] **AC-4.** Dado el mismo `event_id` dos veces, la segunda da `duplicate`; con otro `event_id` y el mismo `bre_b_reference` también `duplicate` (webhook_event `ignored`); queda 1 venta con 3 patas (→ `test_ac4_dedup`)
-- [ ] **AC-5.** Dada una cuenta desconocida, una wallet que no cuadra o un monto en EUR → 200 `unmatched`, webhook_event `unmatched` con su `error`, sin venta (→ `test_ac5_unmatched`)
+- [ ] **AC-5.** Dada una cuenta desconocida, una wallet que no cuadra o un monto en USD → 200 `unmatched`, webhook_event `unmatched` con su `error`, sin venta (→ `test_ac5_unmatched`)
 - [ ] **AC-6.** Dado `type = qr_payment.reversed` → 200 `ignored`, sin venta (→ `test_ac6_ignores_other_types`)
-- [ ] **AC-7.** Dado un negocio sin crédito, una venta de 4.800 crea solo la pata merchant 4.800 a `users.payout_wallet_url`, con `loan_id` null y sin repayment (→ `test_ac7_no_loan_full_to_merchant`)
-- [ ] **AC-8.** Dado CT, una venta de 1.000 da abono 150, trust_cut 2, patas lender 148 / merchant 850, sin pata trust y `trust_pending` 2 (→ `test_ac8_trust_pending_below_min`)
-- [ ] **AC-9.** Dado CT con `allocated_total` 219.800 y `trust_pending` 2, una venta de 4.800 da abono 200, trust_cut 4, lender 196, merchant 4.600, pata trust 6 (bajo el mínimo, pero sale porque `paid_off`), `trust_pending` 0, crédito `paid` con `paid_at` y `loan_paid` para los dos (→ `test_ac9_last_sale_pays_off`)
+- [ ] **AC-7.** Dado un negocio sin crédito, una venta de $48.000 crea solo la pata merchant $48.000 a `users.payout_wallet_url`, con `loan_id` null y sin repayment (→ `test_ac7_no_loan_full_to_merchant`)
+- [ ] **AC-8.** Dado CT, una venta de $10.000 da abono $1.500, trust_cut $27,27, patas lender $1.472,73 / merchant $8.500, sin pata trust (bajo `TRUST_LEG_MIN`) y `trust_pending` $27,27 (→ `test_ac8_trust_pending_below_min`)
+- [ ] **AC-9.** Dado CT con `allocated_total` $2.198.000 y `trust_pending` $27,27, una venta de $48.000 da abono $2.000, trust_cut $36,37, lender $1.963,63, merchant $46.000, pata trust $63,64 (bajo el mínimo, pero sale porque `paid_off`), `trust_pending` $0, crédito `paid` con `paid_at` y `loan_paid` para los dos (→ `test_ac9_last_sale_pays_off`)
 - [ ] **AC-10.** Dada una cuenta `revoked`, la venta queda `held`, sus patas `held`, el crédito asigna igual y `ledger_in` suma (→ `test_ac10_revoked_account_holds`)
 - [ ] **AC-11.** Dado un negocio sin payout wallet y sin crédito, la pata merchant queda `held` con `receiver_wallet_url` null (→ `test_ac11_no_wallet_holds_merchant_leg`)
 - [ ] **AC-12.** Con `NOTIFY_SALE_SPLIT=true` el negocio recibe un `sale_split`; con `false`, ninguno (→ `test_ac12_sale_split_notification`)
-- [ ] **AC-13.** Dado CT y hoy (16 oct) ventas de 4.800, 2.600, 1.250 y 8.500 más una de ayer, `GET /sales/today` da `summary` 17.150 / 4 / merchant 14.578 / abonado 2.572, `rule` 8500/1500, `wallet_today` 14.578 y 4 filas desc; con `since = next_since` y una venta nueva, `rows` trae solo esa y `sales_count` 5 (→ `test_ac13_sales_today`)
+- [ ] **AC-13.** Dado CT y hoy (16 oct) ventas de $48.000, $26.000, $12.500 y $85.000 más una de ayer, `GET /sales/today` da `summary` $171.500 / 4 / merchant $145.775 / abonado $25.725 (abonos $7.200, $3.900, $1.875 y $12.750, como COPY 13c), `rule` 8500/1500, `wallet_today` $145.775 y 4 filas desc; con `since = next_since` y una venta nueva, `rows` trae solo esa y `sales_count` 5 (→ `test_ac13_sales_today`)
 - [ ] **AC-14.** `GET /sales/{sale_id}` de una venta ajena → 403; de una propia → las 3 patas con estado, intento y URLs (→ `test_ac14_sale_detail_owner`)
 
 ## Fuera de alcance

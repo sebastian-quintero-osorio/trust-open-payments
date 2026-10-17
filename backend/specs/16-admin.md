@@ -5,8 +5,6 @@ Estado: ☐ pendiente · Fase: 3 · Dueño: — · Carpeta: `app/modules/admin/`
 ## Objetivo
 Que el operador de Trust vea cuánto ganó Trust y cuánta plata está retenida en recaudo, y pueda reintentar una pata atascada o revocar una cuenta de recaudo.
 
-Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifras de COPY.md ÷ 10 (abono $7.200 → `720`).
-
 ## Endpoints
 | ★ | Método y ruta | Rol | Request | Response | Errores |
 |---|---|---|---|---|---|
@@ -16,21 +14,21 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 
 ```json
 // AdminDashboard (montos agrupados por asset: una entrada por asset_code/asset_scale)
-{"trust_revenue":  [{"value": "220",  "asset_code": "USD", "asset_scale": 2}],
- "trust_pending":  [{"value": "35",   "asset_code": "USD", "asset_scale": 2}],
- "retained_funds": [{"value": "4600", "asset_code": "USD", "asset_scale": 2}],
- "in_flight":      [{"value": "0",    "asset_code": "USD", "asset_scale": 2}],
+{"trust_revenue":  [{"value": "220000",  "asset_code": "COP", "asset_scale": 2}],
+ "trust_pending":  [{"value": "35000",   "asset_code": "COP", "asset_scale": 2}],
+ "retained_funds": [{"value": "4600000", "asset_code": "COP", "asset_scale": 2}],
+ "in_flight":      [{"value": "0",       "asset_code": "COP", "asset_scale": 2}],
  "payouts_by_status": {"pending": 0, "processing": 0, "completed": 2, "failed_final": 1, "held": 1, "skipped": 0},
  "loans_by_status": {"pending_acceptance": 0, "pending_disbursement": 0, "disbursing": 0, "active": 3, "paid": 0, "cancelled": 0, "rejected": 0, "expired": 0},
  "collection_accounts": {"active": 3, "revoked": 0},
  "retained_payouts": [{"id": "…", "leg": "lender", "status": "failed_final", "failure_code": "invalid_amount",
-   "amount": {"value": "720", "asset_code": "USD", "asset_scale": 2}, "sent_total": {"value": "200", "asset_code": "USD", "asset_scale": 2},
+   "amount": {"value": "720000", "asset_code": "COP", "asset_scale": 2}, "sent_total": {"value": "200000", "asset_code": "COP", "asset_scale": 2},
    "merchant": {"id": "…", "business_name": "Tienda La Esquina", "city": "Bucaramanga", "initials": "TL"}}]}
 // PayoutOut
 {"id": "…", "sale_id": "…", "loan_id": "…", "leg": "lender", "status": "pending", "attempt": 3,
- "amount": {"value": "720", "asset_code": "USD", "asset_scale": 2},
- "sent_total": {"value": "200", "asset_code": "USD", "asset_scale": 2},
- "current_debit_amount": {"value": "520", "asset_code": "USD", "asset_scale": 2},
+ "amount": {"value": "720000", "asset_code": "COP", "asset_scale": 2},
+ "sent_total": {"value": "200000", "asset_code": "COP", "asset_scale": 2},
+ "current_debit_amount": {"value": "520000", "asset_code": "COP", "asset_scale": 2},
  "failure_code": null, "next_attempt_at": "2026-10-17T15:42:00Z"}
 ```
 
@@ -58,9 +56,9 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 
 ## Criterios de aceptación
 - [ ] **AC-1.** Un negocio o un prestamista en cualquiera de los 3 endpoints → 403 `forbidden`; sin token → 401 (→ `test_ac1_admin_only`).
-- [ ] **AC-2.** Dadas dos patas `trust` `completed` de 150 y 70, una `lender` `failed_final` de 720 con `sent_total` 200 y una `merchant` `held` de 4080, el dashboard da `trust_revenue` 220, `retained_funds` 4600 (520 + 4080), `in_flight` 0 y `payouts_by_status` `{completed: 2, failed_final: 1, held: 1, …: 0}` (→ `test_ac2_dashboard_money`).
-- [ ] **AC-3.** Dados créditos con `trust_pending` 20 y 15 en USD, `trust_pending == [35 USD]`, y `loans_by_status` trae las 8 claves (→ `test_ac3_dashboard_loans`).
-- [ ] **AC-4.** Dada la pata `failed_final` de 720 con `sent_total` 200 y `attempt` 2, `retry` → 200, `status "pending"`, `attempt 3`, `current_debit_amount 520`, `op_transfer_id null` y un evento `manual_retry` con el `actor_id` del admin (→ `test_ac4_retry_payout`).
+- [ ] **AC-2.** Dadas dos patas `trust` `completed` de $1.500 y $700, una `lender` `failed_final` de $7.200 con `sent_total` $2.000 y una `merchant` `held` de $40.800, el dashboard da `trust_revenue` $2.200, `retained_funds` $46.000 ($5.200 + $40.800), `in_flight` $0 y `payouts_by_status` `{completed: 2, failed_final: 1, held: 1, …: 0}` (→ `test_ac2_dashboard_money`).
+- [ ] **AC-3.** Dados créditos con `trust_pending` $200 y $150 en COP, `trust_pending == [cop(350)]` (`"35000"`), y `loans_by_status` trae las 8 claves (→ `test_ac3_dashboard_loans`).
+- [ ] **AC-4.** Dada la pata `failed_final` de $7.200 con `sent_total` $2.000 y `attempt` 2, `retry` → 200, `status "pending"`, `attempt 3`, `current_debit_amount` $5.200 (`"520000"`), `op_transfer_id null` y un evento `manual_retry` con el `actor_id` del admin (→ `test_ac4_retry_payout`).
 - [ ] **AC-5.** `retry` de una pata `completed` → 409 `invalid_state`; de una `held` cuya cuenta está `revoked` → 409 `collection_account_not_active`; de una `merchant` `held` con `receiver_wallet_url` null y el negocio aún sin wallet → 422 `wallet_required` (si ya la vinculó, 200 y la pata toma esa wallet) (→ `test_ac5_retry_rejections`).
 - [ ] **AC-6.** Dada una cuenta `active` con 2 patas `pending` y 1 `processing`, `revoke` → 200, `held_payouts 2`, cuenta `revoked` con `revoked_at`, la `processing` igual, y el fake registró `revoke_collection_account(op_id)` (→ `test_ac6_revoke_account`).
 - [ ] **AC-7.** Con `fail_next("revoke_collection_account", OpUnavailable("x"))` → 503 `op_unavailable` y la cuenta queda `revoked` en la base; repetir → 200, `held_payouts 0`, y Go se llamó otra vez (→ `test_ac7_revoke_commit_before_op`).

@@ -10,7 +10,7 @@ Python 3.12 · FastAPI · SQLAlchemy 2.0 **sync** · Pydantic v2 (`pydantic[emai
 backend/
   pyproject.toml · Dockerfile · .env.example
   app/
-    main.py              # create_app(): routers, CORS, handlers de error, lifespan (crea tablas, con OP_CLIENT=fake carga collection_accounts en el fake (02 R15), arranca el worker)
+    main.py              # create_app(): routers, CORS, handlers de error, lifespan (crea tablas, verifica el asset de mercado (03 R1), con OP_CLIENT=fake carga collection_accounts en el fake (02 R15), arranca el worker)
     worker.py            # loop del worker (spec 08)
     core/                # config.py db.py security.py deps.py money.py clock.py errors.py events.py
     policies/            # funciones puras (spec 05): split.py scoring.py matching.py terms.py repricing.py
@@ -36,12 +36,12 @@ backend/
 - En la base: `BIGINT` en unidades mínimas + `asset_code` + `asset_scale` en la misma fila. Nunca float ni Decimal.
 - En la API, entrada y salida, siempre el objeto **Money** (igual que Open Payments):
   ```json
-  {"value": "4800", "asset_code": "USD", "asset_scale": 2}
+  {"value": "4800000", "asset_code": "COP", "asset_scale": 2}
   ```
-  `value` es un entero en string (48,00 USD). El frontend formatea; el backend no devuelve textos con formato de moneda. **Única excepción**: títulos y cuerpos de notificaciones (spec 14), con `money.format_es(m)` (`$48.000` con escala 0; `$480,00` con escala 2).
-- **Escala de los ejemplos**: en todas las specs, los montos son unidades mínimas del asset de mercado (USD, escala 2) = cifras de COPY.md ÷ 10 (venta $48.000 → `4800`, cupo $6.000.000 → `600000`). En prosa se escriben con puntos (`600.000`); en JSON, sin puntos.
+  `value` es un entero en string, en centavos ($48.000 COP). El frontend formatea; el backend no devuelve textos con formato de moneda. **Única excepción**: títulos y cuerpos de notificaciones (spec 14), con `money.format_es(m)`: punto de miles y decimales con coma solo si los centavos no son cero (`$48.000`, `$130,90`).
+- **Montos en las specs**: el asset es **COP con escala 2** (centavos). En prosa y en los criterios de aceptación los montos se escriben en **pesos**, igual que en COPY.md (`$48.000`, `$130,90`); en JSON y en código van en **centavos** (`"4800000"`, `13090`). Los tests usan `cop(48_000) == Money(4_800_000, "COP", 2)` y `cop("130,90") == Money(13_090, "COP", 2)` de `tests/helpers.py`.
 - `core/money.py`: `Money` (dataclass inmutable con `value: int`), `to_api()`, `from_api()` (valida patrón `^(0|[1-9][0-9]*)$` y asset), `bps_of(amount, bps) = amount * bps // 10000` (floor), `format_es(m)` (solo para avisos). Prohibido operar montos fuera de estas funciones.
-- MVP con **un solo asset de mercado**: `MARKET_ASSET_CODE` / `MARKET_ASSET_SCALE` (USD / 2 en la test wallet). Solicitudes, ofertas, créditos, cuentas de recaudo y wallets propias de negocios deben estar en ese asset (`422 asset_mismatch`). La wallet de un prestamista puede ser de otro asset (Open Payments convierte).
+- MVP con **un solo asset de mercado**: `MARKET_ASSET_CODE` / `MARKET_ASSET_SCALE` (COP / 2 en la test wallet; la escala es configurable y se verifica al arrancar, ver 03 R1). Solicitudes, ofertas, créditos, cuentas de recaudo y wallets propias de negocios deben estar en ese asset (`422 asset_mismatch`). La wallet de un prestamista puede ser de otro asset (Open Payments convierte).
 - Porcentajes en puntos básicos (`*_bps`, 15 % = 1500).
 
 ## Objetos de referencia (se reutilizan en todas las respuestas)
@@ -77,7 +77,7 @@ Cada spec puede agregar códigos propios y debe listarlos en su tabla de endpoin
 | `JWT_SECRET`, `JWT_EXPIRES_HOURS` | —, 168 | Auth |
 | `CORS_ORIGINS` | — | Lista separada por comas |
 | `TIMEZONE` | America/Bogota | Día local |
-| `MARKET_ASSET_CODE`, `MARKET_ASSET_SCALE` | USD, 2 | Asset único del MVP |
+| `MARKET_ASSET_CODE`, `MARKET_ASSET_SCALE` | COP, 2 | Asset único del MVP |
 | `OP_CLIENT` | fake | `fake` \| `http` (spec 02) |
 | `OP_SERVICE_BASE_URL`, `OP_SERVICE_API_KEY`, `OP_HTTP_TIMEOUT_SECONDS` | —, —, 10 | op-service |
 | `OP_FAKE_AUTO_COMPLETE` | true | El fake completa transferencias y pagos en `processing` al primer GET (`conftest` lo pone en false; spec 02) |
@@ -85,13 +85,13 @@ Cada spec puede agregar códigos propios y debe listarlos en su tabla de endpoin
 | `PUNTORED_WEBHOOK_SECRETS` | — | Lista separada por comas (spec 07) |
 | `NOTIFY_SALE_SPLIT` | true | Aviso `sale_split` por cada venta (spec 07) |
 | `TRUST_REVENUE_WALLET_ADDRESS` | — | Receptor de la parte Trust |
-| `TRUST_SHARE_BPS`, `TRUST_LEG_MIN` | 2000, 10 | Parte de Trust (spec 05); pata Trust mínima (spec 07) |
+| `TRUST_SHARE_BPS`, `TRUST_LEG_MIN` | 2000, 10000 ($100) | Parte de Trust (spec 05); pata Trust mínima (spec 07) |
 | `TRUST_CUT_POLICY` | prorated | `prorated` \| `literal` (spec 05) |
-| `MIN_LOAN_AMOUNT`, `AMOUNT_STEP`, `CUPO_CAP` | 50000, 5000, 1000000 | Unidades mínimas del asset de mercado |
+| `MIN_LOAN_AMOUNT`, `AMOUNT_STEP`, `CUPO_CAP` | 50000000 ($500.000), 5000000 ($50.000), 1000000000 ($10.000.000) | Centavos del asset de mercado |
 | `PCT_OPTIONS_BPS` | 1000,1500,2000 | Porcentajes permitidos |
 | `DEFAULT_TERM_MONTHS`, `REPRICE_STEP_BPS`, `REPRICE_MAX_DELTA_BPS` | 3, 250, 500 | Términos y recalculo |
 | `MIN_MONTHS`, `SCORING_POLICY` | 3, v1 | Scoring (spec 09) |
-| `MIN_SALES_PER_MONTH`, `SCORE_VOLUME_REF` | 10, 1000000 | Mes activo y ventas mensuales que dan volumen máximo (spec 05) |
+| `MIN_SALES_PER_MONTH`, `SCORE_VOLUME_REF` | 10, 1000000000 ($10.000.000) | Mes activo y ventas mensuales que dan volumen máximo (spec 05) |
 | `PENDING_LOAN_TTL_HOURS` | 48 | Expiración de créditos pendientes |
 | `APP_WEB_URL` | https://app.trustservices.com.co | `return_url` del desembolso |
 | `WORKER_ENABLED`, `WORKER_INTERVAL_SECONDS` | true, 2 | Worker (spec 08) |
@@ -131,13 +131,13 @@ Las specs de módulo usan exactamente estas funciones. Si una firma cambia, se c
 
 ## Tests
 - `pytest` contra Postgres (`TEST_DATABASE_URL`). Las tablas se recrean al iniciar la sesión de tests y se truncan entre tests.
-- `conftest.py` provee: `db`, `client` (TestClient con `WORKER_ENABLED=false`, `OP_CLIENT=fake` y `OP_FAKE_AUTO_COMPLETE=false`), `fake_op` (el FakeOpClient de la app, para inspeccionar llamadas; se hace `fake_op.reset()` entre tests), `make_merchant(...)`, `make_lender(...)`, `auth(user)` (headers) y `freeze(dt)` (congela `clock.now()`).
+- `conftest.py` provee: `db`, `client` (TestClient con `WORKER_ENABLED=false`, `OP_CLIENT=fake`, `OP_FAKE_AUTO_COMPLETE=false` y `TRUST_REVENUE_WALLET_ADDRESS=https://ilp.interledger-test.dev/trust-revenue`), `fake_op` (el FakeOpClient de la app, para inspeccionar llamadas; se hace `fake_op.reset()` entre tests), `make_merchant(...)`, `make_lender(...)`, `auth(user)` (headers) y `freeze(dt)` (congela `clock.now()`).
 - Los jobs del worker son funciones (`run_once(db, op, now, reconcile=True)`, spec 08) que los tests llaman directo.
 
 ## Criterios de aceptación
 - [ ] **AC-1.** `GET /api/v1/health` responde 200 con la app arrancada contra Postgres y las tablas creadas (→ `test_ac1_app_boots`).
 - [ ] **AC-2.** Un error de validación de FastAPI sale con el formato `{"error": {"code": "validation_error", ...}}` y HTTP 422 (→ `test_ac2_validation_error_format`).
 - [ ] **AC-3.** Sin token, un endpoint protegido da 401 `unauthorized`; con rol incorrecto, 403 `forbidden` (→ `test_ac3_auth_roles`).
-- [ ] **AC-4.** `Money.from_api` rechaza floats, negativos y strings no numéricos; `bps_of(4800, 1500) == 720` (→ `test_ac4_money`).
+- [ ] **AC-4.** `Money.from_api` rechaza floats, negativos y strings no numéricos; `bps_of(4_800_000, 1500) == 720_000` (→ `test_ac4_money`).
 - [ ] **AC-5.** `clock.local_day_bounds` usa el día de Bogotá (una venta del 17 oct a las 03:00 UTC cuenta como del 16 oct, porque en Bogotá son las 22:00 del 16) (→ `test_ac5_local_day`).
 - [ ] **AC-6.** Test de contrato: el conjunto (método, ruta) de `app.openapi()` es igual al de `contracts/trust-api.openapi.yaml` (comparando también los nombres de los parámetros de ruta), y `conftest` expone `assert_contract(response, operation_id)`, que valida status y body contra el schema del YAML (`jsonschema`, resolviendo `$ref`). Cada test de endpoint de las specs lo llama al menos una vez (→ `test_ac6_contract_routes`).

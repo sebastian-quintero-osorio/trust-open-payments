@@ -5,8 +5,6 @@ Estado: ☐ pendiente · Fase: 3 · Dueño: — · Carpeta: `app/modules/dashboa
 ## Objetivo
 Una sola llamada por pantalla de inicio: `cupo-dashboard` del comercio (COPY 13a) y `portafolio-prestamista` (COPY 13d). Solo lectura, sin llamar a Go.
 
-Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifras de COPY.md ÷ 10 (cupo $6.000.000 → `600000`, abonos de hoy $186.400 → `18640`).
-
 ## Endpoints
 | ★ | Método y ruta | Rol | Request | Response | Errores |
 |---|---|---|---|---|---|
@@ -17,16 +15,16 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 ```json
 {"greeting": {"first_name": "Marta", "business_name": "Tienda La Esquina", "city": "Bucaramanga", "initials": "TL"},
  "unread_notifications": 0,
- "credit": {"cupo_total": {"value": "600000", "asset_code": "USD", "asset_scale": 2},
-            "cupo_disponible": {"value": "400000", "asset_code": "USD", "asset_scale": 2},
+ "credit": {"cupo_total": {"value": "600000000", "asset_code": "COP", "asset_scale": 2},
+            "cupo_disponible": {"value": "400000000", "asset_code": "COP", "asset_scale": 2},
             "score": 780, "grade": "A", "eligible": true, "unlocks_at": null},
- "active_loan": {"id": "…", "status": "active", "principal": {"value": "200000", "asset_code": "USD", "asset_scale": 2},
+ "active_loan": {"id": "…", "status": "active", "principal": {"value": "200000000", "asset_code": "COP", "asset_scale": 2},
                  "pct_bps": 1500, "lender": {"id": "…", "public_name": "Camilo P."},
-                 "allocated": {"value": "64000", "asset_code": "USD", "asset_scale": 2}, "pct_paid_bps": 3200,
+                 "allocated": {"value": "64000000", "asset_code": "COP", "asset_scale": 2}, "pct_paid_bps": 3200,
                  "since": "2026-10-02T15:00:00Z", "is_late": false},
- "today": {"sales_total": {"value": "61200", "asset_code": "USD", "asset_scale": 2}, "sales_count": 14,
-           "merchant_total": {"value": "52020", "asset_code": "USD", "asset_scale": 2},
-           "abonado_total": {"value": "9180", "asset_code": "USD", "asset_scale": 2}},
+ "today": {"sales_total": {"value": "61200000", "asset_code": "COP", "asset_scale": 2}, "sales_count": 14,
+           "merchant_total": {"value": "52020000", "asset_code": "COP", "asset_scale": 2},
+           "abonado_total": {"value": "9180000", "asset_code": "COP", "asset_scale": 2}},
  "offers_fit_count": 3,
  "collection_account": {"qr_payload": "https://pay.trustservices.com.co/qr/2c4e6a80-…", "status": "active"},
  "next_action": "view_loan"}
@@ -36,22 +34,22 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 ```json
 {"greeting": {"first_name": "Camilo", "public_name": "Camilo P."},
  "unread_notifications": 2, "active_loans_count": 3,
- "totals": [{"asset_code": "USD", "asset_scale": 2,
-             "total_prestado": {"value": "550000", "asset_code": "USD", "asset_scale": 2},
-             "abonos_hoy": {"gross": {"value": "18640", "asset_code": "USD", "asset_scale": 2},
-                            "trust_cut": {"value": "339", "asset_code": "USD", "asset_scale": 2},
-                            "net": {"value": "18301", "asset_code": "USD", "asset_scale": 2}},
-             "recibido_hoy": {"value": "17680", "asset_code": "USD", "asset_scale": 2}}],
- "mi_rango": {"min": {"value": "100000", "asset_code": "USD", "asset_scale": 2}, "max": {"value": "250000", "asset_code": "USD", "asset_scale": 2}},
- "abonos_por_hora": [{"hour": "08:00", "amount": {"value": "3810", "asset_code": "USD", "asset_scale": 2}},
-                     {"hour": "09:00", "amount": {"value": "7150", "asset_code": "USD", "asset_scale": 2}},
-                     {"hour": "10:00", "amount": {"value": "7680", "asset_code": "USD", "asset_scale": 2}}],
+ "totals": [{"asset_code": "COP", "asset_scale": 2,
+             "total_prestado": {"value": "550000000", "asset_code": "COP", "asset_scale": 2},
+             "abonos_hoy": {"gross": {"value": "18640000", "asset_code": "COP", "asset_scale": 2},
+                            "trust_cut": {"value": "338908", "asset_code": "COP", "asset_scale": 2},
+                            "net": {"value": "18301092", "asset_code": "COP", "asset_scale": 2}},
+             "recibido_hoy": {"value": "17594182", "asset_code": "COP", "asset_scale": 2}}],
+ "mi_rango": {"min": {"value": "100000000", "asset_code": "COP", "asset_scale": 2}, "max": {"value": "250000000", "asset_code": "COP", "asset_scale": 2}},
+ "abonos_por_hora": [{"hour": "08:00", "amount": {"value": "3810000", "asset_code": "COP", "asset_scale": 2}},
+                     {"hour": "09:00", "amount": {"value": "7150000", "asset_code": "COP", "asset_scale": 2}},
+                     {"hour": "10:00", "amount": {"value": "7680000", "asset_code": "COP", "asset_scale": 2}}],
  "loans": [{"id": "…", "merchant": {"id": "…", "business_name": "Tienda La Esquina", "city": "Bucaramanga", "initials": "TL"},
-            "principal": {"value": "200000", "asset_code": "USD", "asset_scale": 2}, "pct_bps": 1500, "pct_paid_bps": 3200,
-            "today_gross": {"value": "9180", "asset_code": "USD", "asset_scale": 2}, "status": "active", "is_late": false}],
+            "principal": {"value": "200000000", "asset_code": "COP", "asset_scale": 2}, "pct_bps": 1500, "pct_paid_bps": 3200,
+            "today_gross": {"value": "9180000", "asset_code": "COP", "asset_scale": 2}, "status": "active", "is_late": false}],
  "last_repayments": [{"id": "…", "paid_at": "2026-10-16T15:42:00Z", "merchant": {"id": "…", "business_name": "Tienda La Esquina", "city": "Bucaramanga", "initials": "TL"},
-                      "gross": {"value": "720", "asset_code": "USD", "asset_scale": 2}, "trust_cut": {"value": "13", "asset_code": "USD", "asset_scale": 2},
-                      "net": {"value": "707", "asset_code": "USD", "asset_scale": 2}}]}
+                      "gross": {"value": "720000", "asset_code": "COP", "asset_scale": 2}, "trust_cut": {"value": "13090", "asset_code": "COP", "asset_scale": 2},
+                      "net": {"value": "706910", "asset_code": "COP", "asset_scale": 2}}]}
 ```
 
 ## Reglas
@@ -76,13 +74,13 @@ Escala de montos: unidades mínimas del asset de mercado (USD, escala 2) = cifra
 - `09-scoring` (`get_credit_profile`) · `05-policies` (`fits`) · `07-sales` (`today_summary`) · `14-notifications` (conteo de no leídas) · `00-core` (MerchantRef, LenderRef, `clock`).
 
 ## Criterios de aceptación
-- [ ] **AC-1.** Dado un `credit_assessment` de hoy (cupo_total 600.000, score 780, A, elegible), un crédito `active` de 200.000 con `fee_bps` 0 (total 200.000), `allocated_total` 64.000, `activated_at` 2 oct, prestamista Camilo P. y cuenta `active`, cuando Marta pide su dashboard, entonces `cupo_disponible` 400.000, `pct_paid_bps` 3200, `lender.public_name` "Camilo P.", `initials` "TL" y `next_action` `view_loan` (→ `test_ac1_merchant_dashboard_copy_numbers`)
-- [ ] **AC-2.** Dadas hoy ventas de 4.800, 2.600, 1.250 y 8.500 al 15 %, `today` da 17.150 / 4 / 14.578 / 2.572, igual que `summary` de `GET /sales/today` (→ `test_ac2_today_matches_sales_feed`)
-- [ ] **AC-3.** Dadas ofertas `open` A 100.000–250.000 al 15 %, B 350.000–500.000 al 15 % y C 100.000–200.000 al 20 % y `cupo_disponible` 400.000: con la solicitud 150.000–300.000 al 15 % el conteo es 1; sin solicitud es 3; si no es elegible, 0 (→ `test_ac3_offers_fit_count`)
+- [ ] **AC-1.** Dado un `credit_assessment` de hoy (cupo_total $6.000.000, score 780, A, elegible), un crédito `active` de $2.000.000 con `fee_bps` 0 (total $2.000.000), `allocated_total` $640.000, `activated_at` 2 oct, prestamista Camilo P. y cuenta `active`, cuando Marta pide su dashboard, entonces `cupo_disponible` $4.000.000, `pct_paid_bps` 3200, `lender.public_name` "Camilo P.", `initials` "TL" y `next_action` `view_loan` (→ `test_ac1_merchant_dashboard_copy_numbers`)
+- [ ] **AC-2.** Dadas hoy ventas de $48.000, $26.000, $12.500 y $85.000 al 15 %, `today` da $171.500 / 4 / $145.775 / $25.725 (abonos $7.200, $3.900, $1.875 y $12.750, como COPY 13c), igual que `summary` de `GET /sales/today` (07 AC-13) (→ `test_ac2_today_matches_sales_feed`)
+- [ ] **AC-3.** Dadas ofertas `open` A $1.000.000–$2.500.000 al 15 %, B $3.500.000–$5.000.000 al 15 % y C $1.000.000–$2.000.000 al 20 % y `cupo_disponible` $4.000.000: con la solicitud $1.500.000–$3.000.000 al 15 % el conteo es 1; sin solicitud es 3; si no es elegible, 0 (→ `test_ac3_offers_fit_count`)
 - [ ] **AC-4.** Dado un negocio sin payout wallet, sin cuenta ni crédito, entonces `active_loan` null, `collection_account` null, `today` en 0 con `sales_count` 0 y `next_action` `link_wallet` (→ `test_ac4_merchant_empty_state`)
-- [ ] **AC-5.** Dado un prestamista con 2 créditos `active` (200.000 y 150.000), 1 `disbursing` (200.000) y 1 `pending_disbursement` (100.000), entonces `active_loans_count` 2, `total_prestado` 550.000 y `loans` con 4 items, los `active` primero (→ `test_ac5_lender_totals`)
-- [ ] **AC-6.** Dados abonos de hoy a las 08:15 (bruto 720, trust 13, neto 707) y 10:05 (bruto 390) y uno de ayer, entonces `abonos_hoy.gross` 1.110, `net` = Σ lender_net de los dos, `abonos_por_hora` [08:00 → 720, 09:00 → 0, 10:00 → 390], `today_gross` por crédito y `last_repayments` con 3 items, el de 10:05 primero (→ `test_ac6_lender_hourly_and_last`)
-- [ ] **AC-7.** Dada una pata lender `completed` hoy con `sent_total` 707 y otra `completed` ayer, `recibido_hoy` es 707 (→ `test_ac7_received_today`)
+- [ ] **AC-5.** Dado un prestamista con 2 créditos `active` ($2.000.000 y $1.500.000), 1 `disbursing` ($2.000.000) y 1 `pending_disbursement` ($1.000.000), entonces `active_loans_count` 2, `total_prestado` $5.500.000 y `loans` con 4 items, los `active` primero (→ `test_ac5_lender_totals`)
+- [ ] **AC-6.** Dados abonos de hoy a las 08:15 (bruto $7.200, trust $130,90, neto $7.069,10) y 10:05 (bruto $3.900) y uno de ayer, entonces `abonos_hoy.gross` $11.100, `net` = Σ lender_net de los dos, `abonos_por_hora` [08:00 → $7.200, 09:00 → $0, 10:00 → $3.900], `today_gross` por crédito y `last_repayments` con 3 items, el de 10:05 primero (→ `test_ac6_lender_hourly_and_last`)
+- [ ] **AC-7.** Dada una pata lender `completed` hoy con `sent_total` $7.069,10 y otra `completed` ayer, `recibido_hoy` es $7.069,10 (→ `test_ac7_received_today`)
 - [ ] **AC-8.** Un merchant en `/dashboard/lender` → 403, y un lender en `/dashboard/merchant` → 403 (→ `test_ac8_roles`)
 
 ## Fuera de alcance
