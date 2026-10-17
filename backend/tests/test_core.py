@@ -313,6 +313,10 @@ def test_api_helpers(make_merchant, make_lender):
     assert lender_ref(lender).model_dump(mode="json") == {"id": str(lender.id), "public_name": "Camilo P."}
 
 
-@pytest.mark.skip(reason="se activa en la fase final del loop")
 def test_ac6_all_contract_routes_implemented(client):
-    assert set(_routes(client.app.openapi())) == set(_routes(contract()))
+    """Fase final: todas las (método, ruta) del YAML existen en la app, con los mismos parámetros de ruta, y ninguna
+    sobra."""
+    app_routes, yaml_routes = _routes(client.app.openapi()), _routes(contract())
+    assert set(yaml_routes) - set(app_routes) == set(), "rutas del YAML sin implementar"
+    assert set(app_routes) - set(yaml_routes) == set(), "rutas de la app que no están en el YAML"
+    assert app_routes == yaml_routes

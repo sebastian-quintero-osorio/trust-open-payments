@@ -1,7 +1,7 @@
 """Formato único de error: `{"error": {"code", "message", "details"}}` (00-core, "Errores")."""
 
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -55,17 +55,21 @@ async def _app_error(_: Request, exc: AppError) -> JSONResponse:
     return error_response(exc.status, exc.code, exc.message, exc.details)
 
 
-async def _validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
-    fields = [
+def validation_fields(errors: Sequence[Any]) -> list[dict[str, Any]]:
+    """`details.fields` de un `validation_error`, desde los errores de Pydantic (`exc.errors()`)."""
+    return [
         {
             "field": ".".join(str(part) for part in err.get("loc", ()) if part not in ("body", "query", "path")),
             "loc": [str(part) for part in err.get("loc", ())],
             "type": err.get("type", ""),
             "message": err.get("msg", ""),
         }
-        for err in exc.errors()
+        for err in errors
     ]
-    return error_response(422, "validation_error", details={"fields": fields})
+
+
+async def _validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
+    return error_response(422, "validation_error", details={"fields": validation_fields(exc.errors())})
 
 
 async def _http_error(_: Request, exc: StarletteHTTPException) -> JSONResponse:

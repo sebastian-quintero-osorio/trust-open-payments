@@ -44,8 +44,9 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 | 11-loans | ☑ | ver log |
 | 12-repayments | ☑ | ver log |
 | 13-dashboard | ☑ | ver log |
-| 14-notifications | ◐ | — |
-| 15 → 16 | ☐ | — |
+| 14-notifications | ☑ | ver log |
+| 15-waitlist | ☑ | ver log |
+| 16-admin | ☑ | ver log |
 
 ## Decisiones
 
@@ -101,6 +102,12 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 
 - (13) offers_fit_count y el count de GET /loan-offers?scope=market salen de la misma función; totals pone primero el asset de mercado y otros assets solo con datos; abonos_por_hora es GROUP BY de la hora local de la venta.
 
+- (14) Lista ordenada created_at desc, empates por id desc; el enum de type sale del catálogo.
+
+- (15) Content-Type distinto de urlencoded se lee como JSON; honeypot tras el rate limit; 429 JSON con Retry-After; NUL o JSON muy anidado → 422/303 error (antes 500).
+
+- (16) Reintento guarda la wallet completada en receiver_wallet_url; pata lender sin receptor → 409 invalid_state. Revocación bloquea patas en el mismo orden que el worker (sin deadlocks).
+
 ## Cambios de contrato
 
 (ninguno)
@@ -111,7 +118,7 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - ~~03 AC-8~~ cerrado con la spec 07.
 - ~~03 AC-11 y seed de créditos R9/R10~~ cerrados con la spec 11.
 - ~~08 AC-9 y AC-10~~ cerrados con la spec 11.
-- 00-core `test_ac6_all_contract_routes_implemented` → fase final.
+- ~~00-core `test_ac6_all_contract_routes_implemented`~~ activo desde la spec 16.
 
 ## Bloqueos
 
@@ -134,3 +141,6 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - 2026-10-17 06:19 · Spec 11-loans ☑: preview, crear (3 orígenes), aceptar/rechazar/cancelar con reapertura, desembolso con link de autorización y clave por intento, on_disbursement_update, expire_pending, close_period, listas y detalle. 232 tests, 1 skip (rutas completas, fase final). Revisor: 2 fallas corregidas (aceptar un crédito vencido lo revivía).
 - 2026-10-17 06:47 · Spec 12-repayments ☑: lista de abonos por rol con filtros locales y entrega, y traza venta → abono → pagos → crédito.
 - 2026-10-17 06:47 · Spec 13-dashboard ☑: dashboards de comercio y prestamista; con el seed dan cupo $4.000.000 de $6.000.000, 32 % pagado, 3 ofertas para ti, Camilo con 3 créditos y $5.500.000 prestados. 250+ tests, 1 skip (final). Revisor: fecha 9999-12-31 daba 500 en filtros locales, corregido.
+- 2026-10-17 07:16 · Spec 14-notifications ☑: lista con unread_count, leer todas y una; todos los emisores usan el catálogo y su data cumple NotificationData.
+- 2026-10-17 07:16 · Spec 15-waitlist ☑: JSON y urlencoded (sin python-multipart), upsert sin 409, honeypot, 303 para formularios, rate limit por IP y CORS.
+- 2026-10-17 07:16 · Spec 16-admin ☑: dashboard de ingresos y fondos retenidos por asset, reintento de patas y revocación de cuentas (commit local antes de Go). Se activó 00-core AC-6 completo: todas las rutas del YAML implementadas, sin extras. Suite completa sin skips.
