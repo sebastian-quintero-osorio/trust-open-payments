@@ -1,6 +1,6 @@
 # 08 · Worker: transferencias, desembolsos, reconciliación y jobs
 
-Estado: ◐ en curso · Fase: 1 · Dueño: Claude · Carpeta: `app/worker.py`
+Estado: ☑ hecho · Fase: 1 · Dueño: Claude · Carpeta: `app/worker.py`
 
 ## Objetivo
 Hacer en segundo plano todo lo que depende de Go por polling: mandar las patas que crea 07, seguir su estado y la contabilidad de entrega, seguir desembolsos, vencer créditos pendientes, reconciliar webhooks perdidos y cerrar periodos.

@@ -1,6 +1,6 @@
 # 03 · Plataforma y endpoints de demo
 
-Estado: ◐ en curso · Fase: 0 · Dueño: Claude · Carpeta: `app/modules/platform/`
+Estado: ☑ hecho · Fase: 0 · Dueño: Claude · Carpeta: `app/modules/platform/`
 
 ## Objetivo
 Salud y configuración pública para web, móvil y despliegue, más los atajos de demo (`/dev/*`): sembrar datos, simular ventas Bre-B, forzar el recalculo del % y aprobar pagos con la wallet falsa.
