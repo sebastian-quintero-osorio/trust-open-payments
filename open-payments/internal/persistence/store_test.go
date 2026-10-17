@@ -96,8 +96,8 @@ func TestReplayConflictRollbackExpiryAndRestart(t *testing.T) {
 	r, e = s.Execute(ctx, "POST /v1/transfers", key, sha256.Sum256([]byte(`{"a":2}`)), func(context.Context, pgx.Tx) (Response, error) {
 		return Response{Status: 422, Body: []byte(`{"error":{"code":"invalid_amount"}}`)}, nil
 	})
-	if e != nil || r.Replayed || r.Status != 422 {
-		t.Fatal("expired key not reusable", r, e)
+	if e != ErrConflict {
+		t.Fatal("financial intent lost after cache expiry", r, e)
 	}
 	t.Cleanup(func() {
 		_, e := s.Pool.Exec(context.Background(), "DELETE FROM resources WHERE id=$1", id)

@@ -12,6 +12,12 @@ import (
 	"time"
 )
 
+// ErrReconciliationRequired means a payment may already have moved funds. Losing
+// permission to inspect it must never turn it into a retryable financial failure.
+var ErrReconciliationRequired = errors.New("financial reconciliation required")
+
+func submitted(f Flow) bool { return f.Stage == "poll" || f.Stage == "outgoing_uncertain" }
+
 // Start runs workers and expiry/outbox maintenance until cancellation. The returned
 // wait function joins all goroutines before the database pool is closed.
 func (s *Service) Start(ctx context.Context) func() {
@@ -79,7 +85,12 @@ func (s *Service) RunOnce(ctx context.Context, owner string) (bool, error) {
 		e = s.executeFlow(step, &job)
 	}
 	if e != nil {
-		slog.Warn("financial workflow deferred", "resource_id", job.ResourceID, "job_id", job.ID, "stage_kind", job.Kind, "reason", "dependency_failure")
+		reason := "dependency_failure"
+		if errors.Is(e, ErrReconciliationRequired) {
+			reason = "reconciliation_required"
+			job.Kind = "poll"
+		}
+		slog.Warn("financial workflow deferred", "resource_id", job.ResourceID, "job_id", job.ID, "stage_kind", job.Kind, "reason", reason)
 		cleanup, stop := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
 		defer stop()
 		if re := s.Work.Resume(cleanup, job, job.Kind, time.Now().Add(s.Config.PollInterval)); re != nil {
@@ -236,10 +247,16 @@ func (s *Service) executeFlow(ctx context.Context, j *workflow.Job) error {
 				return e
 			}
 			if !usable {
+				if submitted(f) {
+					return ErrReconciliationRequired
+				}
 				return s.failFlow(ctx, *j, &f, "grant_revoked", session)
 			}
 		}
 		if e = s.Work.EnsureToken(ctx, db, j.GrantID, session, s.OP); e != nil {
+			if submitted(f) {
+				return ErrReconciliationRequired
+			}
 			return s.failFlow(ctx, *j, &f, failureCode(e), session)
 		}
 		switch f.Stage {
@@ -340,7 +357,7 @@ func (s *Service) pollFlow(ctx context.Context, j *workflow.Job, f *Flow, sessio
 	out, e := s.OP.GetOutgoing(ctx, f.Outgoing.ID, session.Grant.AccessToken.Value)
 	if e != nil {
 		if failureCode(e) == "grant_revoked" {
-			return s.failFlow(ctx, *j, f, "grant_revoked", session)
+			return ErrReconciliationRequired
 		}
 		return e
 	}
@@ -390,7 +407,7 @@ func (s *Service) pollFlow(ctx context.Context, j *workflow.Job, f *Flow, sessio
 		if out.DebitAmount.Domain().Validate(true) == nil && out.ReceiveAmount.Domain().Validate(true) == nil {
 			debit, e := out.DebitAmount.Domain().Compare(f.Amount.Domain())
 			if e != nil || debit != 0 {
-				return s.failFlow(ctx, *j, f, "invalid_amount", session)
+				return ErrReconciliationRequired
 			}
 			sent, e := out.SentAmount.Domain().Compare(out.DebitAmount.Domain())
 			received, re := incoming.ReceivedAmount.Domain().Compare(out.ReceiveAmount.Domain())
@@ -411,7 +428,7 @@ func (s *Service) pollFlow(ctx context.Context, j *workflow.Job, f *Flow, sessio
 		return s.completeFlow(ctx, *j, f)
 	}
 	if !incoming.ExpiresAt.IsZero() && time.Now().After(incoming.ExpiresAt) {
-		return s.failFlow(ctx, *j, f, "upstream_error", session)
+		return ErrReconciliationRequired
 	}
 	if e = s.updateProgress(ctx, j.ResourceID, *f); e != nil {
 		return e

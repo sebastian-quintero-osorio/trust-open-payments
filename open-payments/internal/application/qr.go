@@ -23,10 +23,6 @@ import (
 var qrTemplate = template.Must(template.New("qr").Parse(`<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Pagar con Trust</title><h1>{{.Name}}</h1><p>Bre-B simulado · {{.Asset}}</p><form method="post" action="{{.Action}}"><label>Monto <input name="amount" inputmode="decimal" required maxlength="100"></label><label>Banco <input name="payer_bank" maxlength="60"></label><input type="hidden" name="form_token" value="{{.Token}}"><button>Pagar</button></form></html>`))
 
 func (s *Service) qrPage(w http.ResponseWriter, r *http.Request) {
-	if !s.Config.SimEnabled {
-		http.NotFound(w, r)
-		return
-	}
 	id := r.PathValue("collection_account_id")
 	if _, e := uuid.Parse(id); e != nil {
 		http.NotFound(w, r)
@@ -37,6 +33,10 @@ func (s *Service) qrPage(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	if !s.Config.SimEnabled {
+		qrUnavailable(w)
+		return
+	}
 	token := newID()
 	if _, e = s.DB.Pool.Exec(r.Context(), "INSERT INTO qr_forms(token,account_id) VALUES($1,$2)", token, id); e != nil {
 		http.Error(w, "Servicio no disponible", http.StatusServiceUnavailable)
@@ -45,6 +45,12 @@ func (s *Service) qrPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; form-action 'self'; frame-ancestors 'none'")
 	_ = qrTemplate.Execute(w, map[string]any{"Name": v["display_name"], "Asset": v["asset_code"], "Action": "/qr/" + id + "/pay", "Token": token})
+}
+
+func qrUnavailable(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusServiceUnavailable)
+	_, _ = w.Write([]byte(`<!doctype html><html lang="es"><meta charset="utf-8"><title>Pagos Trust</title><h1>Pagos por QR no disponibles</h1><p>Los pagos por QR no están disponibles en este momento. Consulta al comercio por otro medio de pago.</p></html>`))
 }
 
 var majorAmount = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)?$`)
@@ -77,7 +83,7 @@ type formError struct{}
 func (*formError) Error() string { return "invalid amount" }
 func (s *Service) qrPay(w http.ResponseWriter, r *http.Request) {
 	if !s.Config.SimEnabled {
-		http.NotFound(w, r)
+		qrUnavailable(w)
 		return
 	}
 	id := r.PathValue("collection_account_id")

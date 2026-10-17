@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -19,9 +21,24 @@ import (
 // Store owns a concurrency-safe PostgreSQL connection pool.
 type Store struct{ Pool *pgxpool.Pool }
 
+// Four workers each retain a grant-lock connection and may open a transaction.
+// Reserve four additional connections for job acknowledgements and maintenance.
+const MinimumPoolConnections int32 = 12
+
 // Open validates connectivity before returning a usable store.
 func Open(ctx context.Context, dsn string) (*Store, error) {
-	p, e := pgxpool.New(ctx, dsn)
+	cfg, e := pgxpool.ParseConfig(dsn)
+	if e != nil {
+		return nil, errors.New("database configuration rejected")
+	}
+	if cfg.MaxConns < MinimumPoolConnections {
+		u, parseErr := url.Parse(dsn)
+		if parseErr != nil || strings.Contains(dsn, "pool_max_conns=") || (u != nil && u.Query().Has("pool_max_conns")) {
+			return nil, errors.New("pool_max_conns must be at least 12 for financial workers")
+		}
+		cfg.MaxConns = MinimumPoolConnections
+	}
+	p, e := pgxpool.NewWithConfig(ctx, cfg)
 	if e != nil {
 		return nil, errors.New("database configuration rejected")
 	}
@@ -120,7 +137,9 @@ func (s *Store) Execute(ctx context.Context, scope, key string, hash [32]byte, f
 	}
 	var r Response
 	var savedHash, headers []byte
-	e = tx.QueryRow(ctx, "SELECT request_hash,status,response_body,response_headers FROM idempotency_records WHERE scope=$1 AND key=$2", scope, key).Scan(&savedHash, &r.Status, &r.Body, &headers)
+	e = tx.QueryRow(ctx, `SELECT request_hash,status,response_body,response_headers FROM financial_receipts WHERE scope=$1 AND key=$2
+ UNION ALL SELECT request_hash,status,response_body,response_headers FROM idempotency_records WHERE scope=$1 AND key=$2
+ LIMIT 1`, scope, key).Scan(&savedHash, &r.Status, &r.Body, &headers)
 	if e == nil {
 		if string(savedHash) != string(hash[:]) {
 			return Response{}, ErrConflict
@@ -168,10 +187,21 @@ func (s *Store) Execute(ctx context.Context, scope, key string, hash [32]byte, f
 	if _, e = tx.Exec(ctx, "INSERT INTO idempotency_records(scope,key,request_hash,status,response_body,response_headers) VALUES($1,$2,$3,$4,$5,$6)", scope, key, hash[:], r.Status, r.Body, headers); e != nil {
 		return Response{}, e
 	}
+	if r.Status >= 200 && r.Status < 300 && financialScope(scope) {
+		if _, e = tx.Exec(ctx, "INSERT INTO financial_receipts(scope,key,request_hash,status,response_body,response_headers) VALUES($1,$2,$3,$4,$5,$6)", scope, key, hash[:], r.Status, r.Body, headers); e != nil {
+			return Response{}, e
+		}
+	}
 	if e = tx.Commit(ctx); e != nil {
 		return Response{}, fmt.Errorf("commit request: %w", e)
 	}
 	return r, nil
+}
+
+func financialScope(scope string) bool {
+	return scope == "POST /v1/payments" || scope == "POST /v1/transfers" ||
+		scope == "POST /v1/sim/puntored/qr-payments" ||
+		strings.HasPrefix(scope, "POST /qr/") && strings.HasSuffix(scope, "/pay")
 }
 
 // Cacheable follows the contract's definitive response policy.

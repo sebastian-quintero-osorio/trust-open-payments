@@ -26,7 +26,7 @@ func (c *Client) InteractiveGrant(ctx context.Context, w Wallet, finish, nonce s
 	if validURL(finish) != nil {
 		return Grant{}, &Error{Status: 422, Code: "invalid_url"}
 	}
-	access := Access(w, "outgoing-payment", []string{"create", "read"})
+	access := Access(w, "outgoing-payment", []string{"create", "read", "list"})
 	if debit != nil {
 		if e := debit.Domain().Validate(true); e != nil {
 			return Grant{}, e

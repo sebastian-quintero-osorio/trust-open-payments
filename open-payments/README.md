@@ -46,7 +46,10 @@ Se rechazan claves JSON duplicadas y documentos adicionales.
 
 La idempotencia usa locks transaccionales no bloqueantes por método/ruta/clave.
 La creación del recurso y su respuesta se guardan en una misma transacción.
-Se conservan 72 horas los 2xx y errores definitivos 400/404/409 de estado/422;
+La caché conserva 72 horas los 2xx y errores definitivos 400/404/409 de estado/422;
+los 2xx financieros tienen además recibos durables por método/ruta/clave sin vencimiento,
+para que limpiar la caché no permita repetir dinero. La migración recupera los recibos
+todavía presentes, incluidos los vencidos que no se hayan limpiado;
 los 401, 5xx y `request_in_progress` no se guardan. Los errores tampoco confirman
 mutaciones del recurso. Los replays conservan status, bytes y headers seguros.
 Un callback de repositorio **solo puede efectuar cambios locales**: los efectos
@@ -136,6 +139,10 @@ Cada salida incluye metadata.external_ref y un op_operation_id único. El checkp
 previo al POST evita repetir salidas tras un reinicio o una respuesta perdida. En
 ese caso se busca el outgoing por metadata y se mantiene processing mientras su
 resultado siga incierto. **La ausencia en un listado no autoriza un nuevo envío**.
+Una revocación, error de rotación o expiración del incoming después de intentar la
+salida mantiene `processing` con `retryable=false`; el log indica
+`reconciliation_required`. No se publica un fallo financiero por perder acceso al
+resultado. Los grants nuevos solicitan `list` además de `create` y `read`.
 Si no puede encontrarse, se necesita conciliación del operador, no un reintento de
 pago. La aplicación nunca modifica montos ni reenvía automáticamente dinero.
 

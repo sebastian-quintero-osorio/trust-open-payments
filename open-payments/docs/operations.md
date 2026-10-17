@@ -74,6 +74,18 @@ docker compose -f docker-compose.yml -f compose.op-service.yaml up --build -d
 ```
 
 El override une la API a `trust-payments` y conserva su conexión a PostgreSQL.
+
+El backend genera el retorno del desembolso usando `APP_WEB_URL` (por defecto,
+`https://app.trustservices.com.co`) y la ruta `/op/return`. Incluir esa ruta en
+`ALLOWED_RETURN_URL_PREFIXES` de op-service; permitir solo `/v1/health` sirve para
+la prueba manual, pero rechaza los desembolsos del backend:
+
+```dotenv
+ALLOWED_RETURN_URL_PREFIXES=https://app.trustservices.com.co/op/return,https://pay.trustservices.com.co/v1/health
+```
+
+Comprobar que el frontend publica `/op/return`. La configuración permite el
+retorno; no crea esa página ni certifica el HTTPS del despliegue.
 Si el backend corre directamente en el host, usar `compose.local.yaml` para
 op-service y `OP_SERVICE_BASE_URL=http://127.0.0.1:8080` en el backend.
 Si están en servidores distintos, hace falta conectividad privada entre ellos o
@@ -101,6 +113,37 @@ el override publica 8080 solamente en 127.0.0.1. El contenedor financiero corre 
 hacer backup antes de actualizar y conservar la clave privada que cifra los grants.
 
 ## 3. Autorizar el pool una vez
+
+### Actualizar una instalación existente
+
+La migración `005_financial_receipts.sql` conserva permanentemente las respuestas
+2xx de pagos, transferencias y pagos simulados por método/ruta/clave. Se aplica al
+arrancar y recupera los registros que aún existan en la caché, incluso vencidos.
+No borrar `financial_receipts` en tareas de limpieza: sus entradas evitan repetir
+operaciones financieras después de 72 horas.
+
+Los registros que una versión anterior ya eliminó no se pueden reconstruir de
+forma segura con esta migración. Antes de reactivar reintentos antiguos sin
+respuesta, conciliar esos intentos con los recursos existentes y la wallet.
+
+Los grants existentes conservan sus permisos originales. Los nuevos incluyen
+`list` para recuperar respuestas perdidas; rotar un token antiguo no añade ese
+permiso. Si un pago está incierto y su grant está revocado o bloqueado, mantenerlo
+en `processing` y conciliarlo con el proveedor. No crear otro pago para resolver
+un `reconciliation_required`, ni reautorizar y reenviar dinero a ciegas.
+
+El pool de PostgreSQL reserva al menos 12 conexiones para cuatro workers,
+transacciones y mantenimiento. Sin `pool_max_conns`, se eleva automáticamente el
+valor predeterminado cuando es menor. Un límite explícito menor a 12 impide el
+arranque con un error de configuración; usar al menos
+`pool_max_conns=12` si se necesita limitarlo. Dimensionar PostgreSQL para la suma
+de los pools de todas las réplicas.
+
+El QR incluido es un simulador. Con `SIM_ENABLED=false`, las cuentas activas
+conservan su enlace y la página responde 503 con un mensaje de indisponibilidad,
+sin crear formularios ni mover fondos. No representa una integración Bre-B real.
+
+### Aprobar consentimientos
 
 Con las variables del entorno configuradas y la API interna accesible:
 
