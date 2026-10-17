@@ -13,10 +13,12 @@ info:
     - **Auth**: `Authorization: Bearer <access_token>` (JWT de `POST /auth/login`, vence a los 7 días). Web y app usan el
       mismo token. Un usuario tiene un solo rol: `merchant` (comercio), `lender` (prestamista) o `admin` (operador de Trust).
       Sin token → 401 `unauthorized`. Rol o dueño incorrecto → 403 `forbidden`.
-    - **Dinero**: siempre el objeto `Money` `{"value": "4800", "asset_code": "USD", "asset_scale": 2}`. `value` es un entero
-      en unidades mínimas, serializado como string (aquí, 48,00 USD). El frontend formatea; el backend nunca manda montos
-      con formato, salvo en `title` y `body` de las notificaciones. En la demo (test wallet de Interledger) el asset es USD
-      con escala 2, y las cifras de la landing quedan divididas entre 10: la venta de $48.000 es `"4800"`.
+    - **Dinero**: siempre el objeto `Money` `{"value": "4800000", "asset_code": "COP", "asset_scale": 2}`. `value` es un
+      entero en unidades mínimas (centavos), serializado como string: aquí, $48.000 COP. El frontend formatea (punto de
+      miles; decimales solo si los centavos no son cero); el backend nunca manda montos con formato, salvo en `title` y
+      `body` de las notificaciones. El asset de mercado es **COP con escala 2** (`GET /config` → `market_asset`): todo lo
+      del comercio, las solicitudes, ofertas y créditos va en COP. Solo la wallet de un prestamista internacional puede
+      estar en otra moneda; Open Payments convierte y esos montos traen su propio `asset_code`.
     - **Porcentajes**: puntos básicos (`*_bps`, 15 % = 1500).
     - **Fechas**: ISO 8601 en UTC (`2026-10-16T15:42:00Z`). "Hoy" y "por hora" se calculan en America/Bogota; los filtros
       `from`/`to` son fechas locales `YYYY-MM-DD`.
@@ -1250,10 +1252,10 @@ components:
       required: [value, asset_code, asset_scale]
       properties:
         value: { type: string, pattern: '^(0|[1-9][0-9]*)$', description: 'Entero en unidades mínimas, como string' }
-        asset_code: { type: string, examples: [USD] }
+        asset_code: { type: string, examples: [COP] }
         asset_scale: { type: integer, minimum: 0, maximum: 255 }
       examples:
-        - { value: '4800', asset_code: USD, asset_scale: 2 }
+        - { value: '4800000', asset_code: COP, asset_scale: 2 }
     PositiveMoney:
       description: Money con valor mayor que 0
       allOf:
@@ -2006,7 +2008,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         type: { $ref: '#/components/schemas/NotificationType' }
-        title: { type: string, examples: ['Abono recibido · +$7,20 · Tienda La Esquina'] }
+        title: { type: string, examples: ['Abono recibido · +$7.200 · Tienda La Esquina'] }
         body: { type: string }
         data: { $ref: '#/components/schemas/NotificationData' }
         read_at: { type: [string, 'null'], format: date-time }
@@ -2142,7 +2144,7 @@ components:
     # ── platform / dev ──
     Health:
       type: object
-      required: [status, db, op, op_client, version, time]
+      required: [status, db, op, op_client, version, time, warnings]
       properties:
         status: { type: string, enum: [ok, degraded, down] }
         db: { type: string, enum: [ok, down] }
@@ -2150,6 +2152,10 @@ components:
         op_client: { type: string, enum: [fake, http] }
         version: { type: string }
         time: { type: string, format: date-time }
+        warnings:
+          type: array
+          items: { type: string }
+          description: 'Avisos de configuración; [] si todo está bien. Ejemplo: "market_asset_mismatch: expected COP/2, wallet COP/0" (la wallet real no coincide con MARKET_ASSET_CODE/SCALE; status pasa a degraded)'
     Config:
       type: object
       required: [market_asset, pct_options_bps, min_loan_amount, amount_step, cupo_cap, default_term_months, timezone, dev_endpoints_enabled, example_sale, example_splits]

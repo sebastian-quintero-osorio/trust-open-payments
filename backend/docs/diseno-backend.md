@@ -66,7 +66,7 @@ Prestamista ──consentimiento en su wallet──▶ op-service /v1/interact/f
 - POST ★ /auth/login (JWT para web y móvil)
 - GET ★ /me
 - PATCH /me (perfil, "Mi rango" del prestamista)
-- PUT ★ /me/payout-wallet → Go `GET /v1/wallet-addresses`. Para el negocio, el asset debe ser el asset de mercado `MARKET_ASSET_CODE` (USD en la demo; 422 si no) y, si ya tiene cuenta de recaudo, ser el de esa cuenta. Responde 409 si hay un crédito no terminado.
+- PUT ★ /me/payout-wallet → Go `GET /v1/wallet-addresses`. Para el negocio, el asset debe ser el asset de mercado `MARKET_ASSET_CODE` (COP con escala 2; 422 si no) y, si ya tiene cuenta de recaudo, ser el de esa cuenta. Responde 409 si hay un crédito no terminado.
 
 **recaudo**
 - GET ★ /me/collection-account (QR, wallet, estado)
@@ -172,7 +172,7 @@ Convenciones:
 
 **Lo que Go resuelve por dentro** (verificado):
 1. Usuarios de la test wallet, todos con KYC sandbox:
-   - "Trust": wallet cliente con llave Ed25519 de desarrollador + pool de 3–5 wallets de recaudo en el asset de la demo. Ojo: todas las wallets de un usuario y asset comparten un mismo saldo, así que el saldo real por negocio lo lleva el libro de Trust.
+   - "Trust": wallet cliente con llave Ed25519 de desarrollador + pool de 3–5 wallets de recaudo en COP (escala 2). Ojo: todas las wallets de un usuario y asset comparten un mismo saldo, así que el saldo real por negocio lo lleva el libro de Trust.
    - "Trust Ingresos": recibe la parte de Trust.
    - "Cliente demo": paga en el simulador; tiene su propio grant permanente, que el operador aprueba con la sesión de "Cliente demo".
    - Comercio y prestamista: uno o varios usuarios de prueba.
@@ -238,7 +238,7 @@ Un proceso (`uvicorn --workers 1`); corre cada 2 s y es idempotente.
 | events | Auditoría |
 
 ## 7.1 Variables de entorno de Trust
-`DATABASE_URL` · `JWT_SECRET` · `OP_CLIENT=fake|http` · `OP_SERVICE_BASE_URL=http://op-service:8080` · `OP_SERVICE_API_KEY` (= `INTERNAL_API_KEY` de Go) · `OP_HTTP_TIMEOUT_SECONDS=10` · `PUNTORED_WEBHOOK_SECRETS` (separados por comas; uno igual a `TRUST_WEBHOOK_SECRET` de Go) · `TRUST_REVENUE_WALLET_ADDRESS` (wallet "Trust Ingresos", receptor de la pata Trust; se resuelve al arrancar con `GET /v1/wallet-addresses`) · `TRUST_SHARE_BPS` · `TRUST_LEG_MIN` · `MARKET_ASSET_CODE=USD` y `MARKET_ASSET_SCALE=2` (un solo asset en el MVP) · `MIN_MONTHS=3` · `SCORING_POLICY=v1` · `APP_WEB_URL=https://app.trustservices.com.co` · `CORS_ORIGINS` (web y landing).
+`DATABASE_URL` · `JWT_SECRET` · `OP_CLIENT=fake|http` · `OP_SERVICE_BASE_URL=http://op-service:8080` · `OP_SERVICE_API_KEY` (= `INTERNAL_API_KEY` de Go) · `OP_HTTP_TIMEOUT_SECONDS=10` · `PUNTORED_WEBHOOK_SECRETS` (separados por comas; uno igual a `TRUST_WEBHOOK_SECRET` de Go) · `TRUST_REVENUE_WALLET_ADDRESS` (wallet "Trust Ingresos", receptor de la pata Trust; se resuelve al arrancar con `GET /v1/wallet-addresses`) · `TRUST_SHARE_BPS` · `TRUST_LEG_MIN` · `MARKET_ASSET_CODE=COP` y `MARKET_ASSET_SCALE=2` (un solo asset en el MVP; la test wallet soporta COP, verificado por el equipo) · `MIN_MONTHS=3` · `SCORING_POLICY=v1` · `APP_WEB_URL=https://app.trustservices.com.co` · `CORS_ORIGINS` (web y landing).
 
 ## 8. Despliegue EC2
 - docker compose con caddy (TLS automático), trust-api, op-service y postgres. Hay dos bases, `trust` y `opservice`, cada servicio con la suya.
