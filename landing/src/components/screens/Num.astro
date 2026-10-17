@@ -1,0 +1,35 @@
+---
+/**
+ * Amount that counts up once when its screen first becomes visible (see screen-anim.ts).
+ * Server-renders the final value (no-JS / reduced motion show it as is). A hidden "ghost" copy
+ * reserves the final width, so the count-up never shifts the layout.
+ */
+import { formatCOP } from '../../scripts/format';
+
+interface Props {
+  /** count up when visible (only the one amount where money arriving is the point) */
+  live?: boolean;
+  value: number;
+  /** "$" (default) or "+$" */
+  prefix?: string;
+  /** which edge stays put while counting */
+  align?: 'start' | 'end';
+  /** count-up start delay in ms */
+  delay?: number;
+  /** count-up duration in ms (screen-anim.ts defaults to 1500) */
+  ms?: number;
+  class?: string;
+}
+
+const { value, prefix = '$', align = 'start', delay = 0, ms, class: className, live } = Astro.props;
+const text = formatCOP(value, prefix);
+---
+
+<span
+  class:list={['sk-num', align === 'end' && 'sk-num--end', className]}
+  data-count={value}
+  data-live={live || undefined}
+  data-prefix={prefix}
+  data-delay={delay || undefined}
+  data-ms={ms || undefined}
+><span class="sk-num__ghost">{text}</span><span class="sk-num__val">{text}</span></span>

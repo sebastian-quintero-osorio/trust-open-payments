@@ -1,0 +1,360 @@
+---
+/**
+ * Footer (COPY.md §12). Ends with a large closing wordmark that rises from behind a soft horizon line
+ * ("finales limpios que permitan reconocer claramente la marca").
+ * Motion: rise + glow tied to scroll (named view timeline) inside @supports; static final state otherwise
+ * and with reduced motion.
+ */
+import Logo from '../ui/Logo.astro';
+
+const contactEmail = (import.meta.env.PUBLIC_CONTACT_EMAIL as string | undefined)?.trim();
+
+const groups = [
+  {
+    id: 'footer-producto',
+    title: 'Producto',
+    links: [
+      { label: 'Cómo funciona', href: '#como-funciona' },
+      { label: 'El match', href: '#match' },
+      { label: 'Confianza', href: '#confianza' },
+    ],
+  },
+  {
+    id: 'footer-para-ti',
+    title: 'Para ti',
+    links: [
+      { label: 'Comercios', href: '#comercios' },
+      { label: 'Prestamistas', href: '#prestamistas' },
+      { label: 'Lista de espera', href: '#lista-de-espera' },
+    ],
+  },
+  {
+    id: 'footer-ayuda',
+    title: 'Ayuda',
+    links: [
+      { label: 'Preguntas frecuentes', href: '#preguntas' },
+      ...(contactEmail ? [{ label: 'Contacto', href: `mailto:${contactEmail}` }] : []),
+    ],
+  },
+];
+
+// legal pages live outside this one-pager: each link renders only once its URL is configured
+const termsUrl = (import.meta.env.PUBLIC_TERMS_URL as string | undefined)?.trim();
+const privacyUrl = (import.meta.env.PUBLIC_PRIVACY_URL as string | undefined)?.trim();
+const legal = [
+  ...(termsUrl ? [{ label: 'Términos y condiciones', href: termsUrl }] : []),
+  ...(privacyUrl ? [{ label: 'Política de privacidad', href: privacyUrl }] : []),
+];
+---
+
+<footer class="footer" data-footer>
+  <div class="container footer__top">
+    <div class="footer__brand">
+      <a href="#inicio" class="footer__logo" aria-label="Trust, ir al inicio">
+        <Logo width={88} />
+      </a>
+      <p class="footer__tagline">Crédito que se paga con tus ventas.</p>
+    </div>
+
+    <nav class="footer__nav" aria-label="Enlaces del pie de página">
+      {
+        groups.map((g) => (
+          <div class="footer__group">
+            <p class="footer__title" id={g.id}>{g.title}</p>
+            <ul role="list" aria-labelledby={g.id}>
+              {g.links.map((l) => (
+                <li>
+                  <a href={l.href} class="footer__link">{l.label}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </nav>
+  </div>
+
+  <div class="container footer__bottom">
+    {
+      legal.length > 0 && (
+        <nav aria-label="Legal">
+          <ul role="list" class="footer__legal">
+            {legal.map((l) => (
+              <li>
+                <a href={l.href} class="footer__link footer__link--small">
+                  {l.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )
+    }
+    <p class="footer__note">Puntored y Bre-B son marcas de sus respectivos titulares.</p>
+    <p class="footer__copy">© 2026 Trust</p>
+  </div>
+
+  <div class="footer__mark" aria-hidden="true">
+    <div class="footer__glow"></div>
+    <div class="footer__clip">
+      <div class="footer__rise">
+        <Logo mode="mask" width={1040} />
+      </div>
+    </div>
+    <div class="footer__line"></div>
+    <div class="footer__floor"></div>
+  </div>
+</footer>
+
+
+<style>
+  .footer {
+    position: relative;
+    isolation: isolate;
+    overflow-x: clip;
+    padding-block-start: clamp(64px, 8vw, 104px);
+    background: var(--bg);
+    border-block-start: 1px solid var(--border);
+  }
+
+  /* ---------- links ---------- */
+  .footer__top {
+    display: grid;
+    gap: 48px;
+  }
+
+  @media (min-width: 900px) {
+    .footer__top {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr);
+      gap: 64px;
+    }
+  }
+
+  .footer__brand {
+    display: grid;
+    align-content: start;
+    justify-items: start;
+    gap: 20px;
+  }
+
+  .footer__logo {
+    display: inline-flex;
+    min-block-size: 44px;
+    align-items: center;
+    border-radius: 8px;
+  }
+
+  .footer__tagline {
+    max-inline-size: 15ch;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(1.75rem, 1.3rem + 1.4vw, 2.5rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    text-wrap: balance;
+  }
+
+  .footer__nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px 24px;
+  }
+
+  @media (min-width: 640px) {
+    .footer__nav {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .footer__title {
+    margin-block-end: 8px;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    color: var(--text-subtle);
+  }
+
+  .footer__group ul,
+  .footer__legal {
+    margin: 0;
+  }
+
+  .footer__link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 44px;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color var(--dur-2) var(--ease-out);
+  }
+  .footer__link:hover {
+    color: var(--text);
+  }
+  .footer__link--small {
+    font-size: var(--fs-small);
+  }
+
+  .footer__bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 28px;
+    margin-block-start: clamp(48px, 6vw, 80px);
+    padding-block-start: 16px;
+    border-block-start: 1px solid var(--border);
+    font-size: var(--fs-small);
+    color: var(--text-subtle);
+  }
+
+  .footer__legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 24px;
+  }
+
+  .footer__note {
+    flex: 1 1 260px;
+  }
+
+  @media (max-width: 639px) {
+    .footer__bottom {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .footer__note,
+    .footer__copy {
+      flex: none;
+    }
+  }
+
+  /* ---------- closing wordmark ----------
+     The page's closing bookend to the hero: the wordmark rises from behind a bright horizon line, with a violet
+     atmosphere above and the dark planet catching the light below (client's call: this is the one place besides
+     the hero where the horizon appears). Static gradients only; the rise and the light are tied to scroll. */
+  .footer__mark {
+    --below: clamp(56px, 9vw, 128px); /* space under the horizon line */
+    position: relative;
+    display: grid;
+    justify-items: center;
+    margin-block-start: clamp(56px, 8vw, 104px);
+    padding-block-end: var(--below);
+    view-timeline: --mark block;
+  }
+
+  .footer__clip {
+    position: relative;
+    z-index: 1;
+    inline-size: min(100% - 2 * var(--gutter), 1040px);
+    overflow: clip; /* the mask: the wordmark rises from behind the horizon line */
+  }
+
+  .footer__rise :global(.logo-mask) {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+    aspect-ratio: 1170 / 367;
+    background: linear-gradient(
+      180deg,
+      var(--trust-lilac) 0%,
+      var(--trust-lilac) 30%,
+      var(--trust-lavender) 70%,
+      rgb(157 103 251 / 0.7) 100%
+    );
+  }
+
+  /* horizon: a bright line at the clip edge */
+  .footer__line {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: calc(var(--below) - 1px);
+    z-index: 2;
+    block-size: 1.5px;
+    background: linear-gradient(
+      90deg,
+      rgb(180 153 254 / 0) 6%,
+      rgb(180 153 254 / 0.45) 26%,
+      rgb(241 233 253 / 0.9) 42%,
+      #fff 50%,
+      rgb(241 233 253 / 0.9) 58%,
+      rgb(180 153 254 / 0.45) 74%,
+      rgb(180 153 254 / 0) 94%
+    );
+  }
+  /* bloom around the brightest part of the line (pre-blurred gradient, no filter) */
+  .footer__line::after {
+    content: '';
+    position: absolute;
+    inset: -14px 28%;
+    background: radial-gradient(50% 50% at 50% 50%, rgb(241 233 253 / 0.45), rgb(180 153 254 / 0.12) 55%, rgb(180 153 254 / 0) 80%);
+  }
+
+  /* violet atmosphere above the line */
+  .footer__glow {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    transform-origin: 50% calc(100% - var(--below));
+    background:
+      radial-gradient(54% 46% at 50% calc(100% - var(--below)), rgb(105 48 249 / 0.5), rgb(105 48 249 / 0.14) 55%, rgb(105 48 249 / 0) 80%),
+      radial-gradient(26% 14% at 50% calc(100% - var(--below)), rgb(241 233 253 / 0.4), rgb(241 233 253 / 0) 80%);
+  }
+
+  /* below the horizon: the dark planet catching the light, fading out toward the sides and the bottom */
+  .footer__floor {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 0;
+    block-size: var(--below);
+    background: radial-gradient(58% 130% at 50% 0%, rgb(84 32 224 / 0.42), rgb(28 10 82 / 0.32) 45%, rgb(28 10 82 / 0) 78%);
+  }
+
+  /* timed so the rise happens while the horizon line itself is on screen, finishing just before the end */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .footer__rise {
+        animation: mark-rise linear both;
+        animation-timeline: --mark;
+        animation-range: entry 58% entry 94%;
+      }
+      .footer__glow {
+        animation: mark-glow linear both;
+        animation-timeline: --mark;
+        animation-range: entry 40% entry 94%;
+      }
+      .footer__line {
+        animation: mark-line linear both;
+        animation-timeline: --mark;
+        animation-range: entry 60% entry 86%;
+      }
+      .footer__floor {
+        animation: mark-fade linear both;
+        animation-timeline: --mark;
+        animation-range: entry 70% entry 100%;
+      }
+    }
+  }
+
+  @keyframes mark-rise {
+    from {
+      transform: translate3d(0, 92%, 0);
+    }
+  }
+  @keyframes mark-glow {
+    from {
+      opacity: 0.15;
+      transform: scaleY(0.6);
+    }
+  }
+  @keyframes mark-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes mark-line {
+    from {
+      opacity: 0;
+      transform: scaleX(0.2);
+    }
+  }
+</style>

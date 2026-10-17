@@ -1,0 +1,145 @@
+---
+// The hero's single glass element (docs/DESIGN.md): one Bre-B sale from the page's example data, split
+// 85/15 in front of the phone. Entrance only (CSS, once): the card settles, the bar splits, the two parts
+// land. No loop. Exposed to assistive tech as one labelled example (role=img).
+import { NBSP, formatCOP } from '../../scripts/format';
+---
+
+<div class="rc" role="img" aria-label="Ejemplo: una venta de $48.000 con Bre-B se divide en $40.800 para ti y $7.200 para tu crédito (85 % y 15 %).">
+  <div class="rc__top">
+    <span class="rc__title">Venta con Bre-B</span>
+    <span class="rc__time tnum">10:42 a.{NBSP}m.</span>
+  </div>
+  <span class="rc__amount tnum">{formatCOP(48000)}</span>
+  <span class="rc__bar">
+    <span class="rc__bar-a"></span>
+    <span class="rc__bar-b"></span>
+  </span>
+  <dl class="rc__parts">
+    <div class="rc__part">
+      <dt>Para ti</dt>
+      <dd class="tnum">{formatCOP(40800)}</dd>
+    </div>
+    <div class="rc__part rc__part--lender">
+      <dt>A tu crédito</dt>
+      <dd class="tnum">{formatCOP(7200)}</dd>
+    </div>
+  </dl>
+  <span class="rc__note">85{NBSP}% / 15{NBSP}%, ejemplo</span>
+</div>
+
+<style>
+  .rc {
+    position: relative;
+    display: grid;
+    gap: 10px;
+    inline-size: clamp(232px, 19vw, 268px);
+    padding: 18px 18px 14px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgb(241 233 253 / 0.1), rgb(241 233 253 / 0.04));
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.12),
+      0 0 0 1px rgb(180 153 254 / 0.22),
+      0 30px 60px -30px rgb(0 0 0 / 0.9);
+    color: var(--trust-lilac);
+  }
+  .rc__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .rc__title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  .rc__time {
+    font-size: 0.75rem;
+    color: var(--dark-text-muted);
+  }
+  .rc__amount {
+    font-family: var(--font-display);
+    font-size: 2.25rem;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .rc__bar {
+    display: flex;
+    gap: 3px;
+    block-size: 6px;
+    margin-block: 4px 2px;
+  }
+  .rc__bar-a,
+  .rc__bar-b {
+    border-radius: 2px;
+    transform-origin: left center;
+  }
+  .rc__bar-a {
+    flex: 85;
+    background: var(--trust-lilac);
+  }
+  .rc__bar-b {
+    flex: 15;
+    background: var(--trust-violet);
+    box-shadow: 0 0 12px rgb(105 48 249 / 0.6);
+  }
+  .rc__parts {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+  }
+  .rc__part {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.875rem;
+  }
+  .rc__part dt {
+    color: var(--dark-text-muted);
+  }
+  .rc__part dd {
+    margin: 0;
+    font-weight: 600;
+  }
+  .rc__part--lender dd {
+    color: var(--trust-lavender);
+  }
+  .rc__note {
+    padding-block-start: 8px;
+    border-block-start: 1px solid rgb(180 153 254 / 0.16);
+    font-size: 0.6875rem;
+    color: var(--dark-text-subtle);
+  }
+
+  /* entrance only: the bar splits, then the parts land */
+  @media (prefers-reduced-motion: no-preference) {
+    .rc__bar-a {
+      animation: rc-grow 900ms var(--ease-brand) 1250ms both;
+    }
+    .rc__bar-b {
+      animation: rc-grow 700ms var(--ease-brand) 1650ms both;
+    }
+    .rc__part {
+      animation: rc-land 600ms var(--ease-out) both;
+    }
+    .rc__part:first-child {
+      animation-delay: 1900ms;
+    }
+    .rc__part--lender {
+      animation-delay: 2050ms;
+    }
+  }
+  @keyframes rc-grow {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  @keyframes rc-land {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 6px, 0);
+    }
+  }
+</style>

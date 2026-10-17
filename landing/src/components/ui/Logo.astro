@@ -1,0 +1,52 @@
+---
+import { Image, getImage } from 'astro:assets';
+import wordmarkLight from '../../assets/brand/trust-wordmark-light.png';
+import wordmarkDark from '../../assets/brand/trust-wordmark-dark.png';
+
+interface Props {
+  /** light = lilac wordmark for dark backgrounds · dark = black wordmark for light sections */
+  tone?: 'light' | 'dark';
+  /** rendered width in px; height follows the wordmark ratio */
+  width?: number;
+  /** image = optimized <img> · mask = the wordmark as a mask over a CSS fill (set `background` on .logo-mask) */
+  mode?: 'image' | 'mask';
+  priority?: boolean;
+  class?: string;
+}
+
+const { tone = 'light', width = 104, mode = 'image', priority = false, class: className } = Astro.props;
+const src = tone === 'light' ? wordmarkLight : wordmarkDark;
+const height = Math.round((width * src.height) / src.width);
+const mask = mode === 'mask' ? await getImage({ src: wordmarkLight, width: Math.min(src.width, width * 3), format: 'webp' }) : null;
+---
+
+{
+  mode === 'image' ? (
+    <Image src={src} alt="Trust" width={width} height={height} densities={[1, 2, 3]} priority={priority} class:list={['logo', className]} />
+  ) : (
+    <span
+      role="img"
+      aria-label="Trust"
+      class:list={['logo-mask', `logo-mask--${tone}`, className]}
+      style={`--w: ${width}px; --h: ${height}px; --mask: url(${mask?.src});`}
+    />
+  )
+}
+
+<style>
+  .logo {
+    inline-size: auto;
+    block-size: auto;
+  }
+  .logo-mask {
+    display: inline-block;
+    inline-size: var(--w);
+    block-size: var(--h);
+    -webkit-mask: var(--mask) center / contain no-repeat;
+    mask: var(--mask) center / contain no-repeat;
+    background: var(--trust-lilac);
+  }
+  .logo-mask--dark {
+    background: var(--trust-black);
+  }
+</style>

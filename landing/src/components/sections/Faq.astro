@@ -1,0 +1,255 @@
+---
+// FAQ (COPY.md §10). Exclusive native accordion (<details name="faq">), sticky heading on desktop,
+// smooth open/close where `interpolate-size` + `::details-content` exist (instant elsewhere), FAQPage JSON-LD.
+import Section from '../ui/Section.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import { nowrapParts } from '../../scripts/nowrap';
+
+const faqs = [
+  {
+    q: '¿Qué es Trust?',
+    a: 'Una plataforma que conecta comercios que necesitan crédito con prestamistas que quieren prestar de forma lícita. El crédito se paga con un porcentaje de las ventas que el comercio cobra con Bre-B a través de Puntored.',
+  },
+  {
+    q: '¿Cómo pago mi crédito?',
+    a: 'Con tus ventas. Cuando un cliente te paga con Bre-B, el dinero llega a tu wallet de Puntored y se divide automáticamente: una parte para ti y otra para tu prestamista, según el porcentaje acordado. No tienes que transferir nada aparte.',
+  },
+  {
+    q: 'Si presto, ¿cómo recibo mi dinero?',
+    a: 'Tu parte se separa automáticamente de cada pago que el comercio recibe con Bre-B en su wallet de Puntored. Te llega venta a venta, según el porcentaje acordado. Tú decides entre qué montos quieres prestar.',
+  },
+  {
+    q: '¿Qué es el cupo y cómo se calcula?',
+    a: 'Es el monto máximo que puedes pedir. Trust lo calcula para cada comercio y lo ves en la app antes de solicitar. Los criterios de cálculo se publicarán en el lanzamiento; únete a la lista para conocerlos primero.',
+  },
+  {
+    q: '¿Qué pasa si un día vendo menos?',
+    a: 'Ese día abonas menos, porque el abono es un porcentaje de cada venta. Los demás términos de cada crédito, como el plazo, se darán a conocer en el lanzamiento.',
+  },
+  {
+    q: '¿Cuánto cuesta un crédito? ¿Cuál es la tasa?',
+    a: 'Todavía no está definido. Las tasas y los costos se publicarán en el lanzamiento, y verás las condiciones de cada crédito antes de aceptarlo. Trust no promete rentabilidades a los prestamistas.',
+  },
+  {
+    q: '¿Qué necesito para empezar y dónde estará disponible?',
+    a: 'Empezamos en Colombia. Como comercio, cobrarás tus ventas con Bre-B a través de Puntored. Como prestamista, puedes ser una entidad financiera, un banco o una persona. Los requisitos completos y los próximos países se anunciarán más adelante.',
+  },
+];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  inLanguage: 'es-CO',
+  mainEntity: faqs.map(({ q, a }) => ({
+    '@type': 'Question',
+    name: q,
+    acceptedAnswer: { '@type': 'Answer', text: a },
+  })),
+};
+---
+
+<Section id="preguntas" theme="dark" aria-labelledby="preguntas-title" class="faq">
+  <div class="container faq__grid">
+    <div class="faq__aside">
+      <div class="faq__sticky">
+        <SectionHeading id="preguntas-title" title="Preguntas frecuentes" />
+      </div>
+    </div>
+
+    <div class="faq__list">
+      {
+        faqs.map((item, i) => (
+          <div class="faq__reveal" data-reveal style={`--i: ${i % 2}`}>
+            <details class="faq__item" name="faq" open={i === 0}>
+              <summary class="faq__q">
+                <span class="faq__q-text">{item.q}</span>
+                <span class="faq__icon" aria-hidden="true">
+                </span>
+              </summary>
+              <div class="faq__a">
+                <p>{nowrapParts(item.a).map((p) => (p.nowrap ? <span class="nw">{p.text}</span> : p.text))}</p>
+              </div>
+            </details>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+</Section>
+
+<style>
+  .faq__glow {
+    position: absolute;
+    z-index: -1;
+    inset-block-start: -10%;
+    inset-inline-start: -25%;
+    inline-size: 70%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(105 48 249 / 0.13), rgb(105 48 249 / 0) 100%);
+    pointer-events: none;
+  }
+
+  .faq__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(40px, 6vw, 64px);
+  }
+  @media (min-width: 1024px) {
+    .faq__grid {
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+      column-gap: clamp(56px, 7vw, 120px);
+    }
+    .faq__sticky {
+      position: sticky;
+      inset-block-start: 120px;
+    }
+    .faq__aside :global(.h2) {
+      font-size: clamp(2.5rem, 1.4rem + 2.8vw, 4.25rem);
+    }
+  }
+
+  .faq__list {
+    border-block-start: 1px solid var(--border);
+  }
+  .faq__reveal {
+    border-block-end: 1px solid var(--border);
+  }
+
+  .faq__q {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    min-block-size: 76px;
+    padding-block: 22px;
+    padding-inline: 4px;
+    list-style: none;
+    cursor: pointer;
+    border-radius: 12px;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-synthesis: none;
+    font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.5625rem);
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+    color: var(--text);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .faq__q::-webkit-details-marker {
+    display: none;
+  }
+  .faq__q::marker {
+    content: '';
+  }
+  .faq__q:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  .faq__q-text {
+    text-wrap: balance;
+  }
+
+  /* plus → minus: both bars spin half a turn; the vertical one lands on the horizontal one */
+  .faq__icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: none;
+    inline-size: 40px;
+    block-size: 40px;
+    border-radius: 50%;
+    color: var(--trust-lilac);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+  .faq__icon-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(120% 120% at 30% 10%, var(--trust-violet-400), var(--trust-violet) 60%);
+    box-shadow: 0 8px 24px -8px rgb(105 48 249 / 0.9);
+    opacity: 0;
+    transform: scale(0.6);
+    transition:
+      opacity var(--dur-2) var(--ease-out),
+      transform var(--dur-3) var(--ease-out);
+  }
+  .faq__icon::before,
+  .faq__icon::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: 14px;
+    block-size: 1.5px;
+    margin: -0.75px 0 0 -7px;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform var(--dur-3) var(--ease-out);
+  }
+  .faq__icon::after {
+    transform: rotate(90deg);
+  }
+  .faq__item[open] .faq__icon-fill {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .faq__item[open] .faq__icon::before {
+    transform: rotate(180deg);
+  }
+  .faq__item[open] .faq__icon::after {
+    transform: rotate(180deg);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .faq__q:hover .faq__icon {
+      transform: scale(1.06);
+    }
+  }
+
+  .faq__a {
+    padding: 0 clamp(8px, 6vw, 72px) 28px 4px;
+    color: var(--text-muted);
+    max-inline-size: 66ch;
+    text-wrap: pretty;
+  }
+  .nw {
+    white-space: nowrap;
+  }
+
+  /* smooth open/close where supported; instant elsewhere (and under reduced motion via global CSS) */
+  @supports (interpolate-size: allow-keywords) {
+    .faq__list {
+      interpolate-size: allow-keywords;
+    }
+    .faq__item::details-content {
+      block-size: 0;
+      overflow-y: clip;
+      transition:
+        block-size var(--dur-3) var(--ease-out),
+        content-visibility var(--dur-3) allow-discrete;
+    }
+    .faq__item[open]::details-content {
+      block-size: auto;
+    }
+    .faq__a {
+      opacity: 0;
+      transform: translate3d(0, -8px, 0);
+      transition:
+        opacity var(--dur-2) var(--ease-out),
+        transform var(--dur-3) var(--ease-out);
+    }
+    .faq__item[open] .faq__a {
+      opacity: 1;
+      transform: none;
+      transition-delay: 80ms;
+    }
+    @starting-style {
+      .faq__item[open] .faq__a {
+        opacity: 0;
+        transform: translate3d(0, -8px, 0);
+      }
+    }
+  }
+</style>

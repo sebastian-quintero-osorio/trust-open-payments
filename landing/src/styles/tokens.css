@@ -1,0 +1,116 @@
+/*
+ * Trust design tokens.
+ * Brand palette (branding/trust.md): #191919 · #6930F9 · #9D67FB · #B499FE · #F1E9FD
+ * Contrast rules (verified by scripts/check-contrast.mjs):
+ *  - On dark, #6930F9 never carries text: it is for fills, glow and borders.
+ *    Accent text uses lavender (#B499FE, 7.5:1) or #9D67FB at large sizes (4.8:1).
+ *  - On light (#F1E9FD) sections, the electric violet works as text (5.2:1).
+ *  - Violet fills carry white / lilac text (>= 5.2:1).
+ */
+:root {
+  /* brand */
+  --trust-black: #191919;
+  --trust-violet: #6930f9;
+  --trust-violet-400: #9d67fb;
+  --trust-lavender: #b499fe;
+  --trust-lilac: #f1e9fd;
+
+  /* derived depth tones (same hue family, used for gradients and hover) */
+  --ink-950: #0e0d12;
+  --ink-900: #141317;
+  --ink-800: #1f1d25;
+  --ink-700: #2a2733;
+  --violet-600: #5420e0;
+  --violet-700: #3f14b8;
+  --violet-900: #1c0a52;
+  --ink-violet: #1b1530;
+  /* device frame metal */
+  --frame-hi: #2c2935;
+  --frame-lo: #1d1b22;
+
+  /* surfaces on dark */
+  --bg: var(--trust-black);
+  --bg-deep: var(--ink-950);
+  --surface: rgb(241 233 253 / 0.04);
+  --surface-2: rgb(241 233 253 / 0.07);
+  --surface-solid: var(--ink-800);
+  --border: rgb(180 153 254 / 0.16);
+  --border-strong: rgb(180 153 254 / 0.34);
+  --border-input: #74698c;
+
+  /* text on dark */
+  --text: var(--trust-lilac);
+  --text-muted: #bdb3cf;
+  --text-subtle: #9a90ae;
+  --text-accent: var(--trust-lavender);
+  --text-accent-strong: var(--trust-violet-400);
+
+  /* fixed dark-UI text: same as --text-muted / --text-subtle, but never remapped by light sections
+     (app mocks stay dark inside the lilac Prestamistas section) */
+  --dark-text-muted: #bdb3cf;
+  --dark-text-subtle: #9a90ae;
+
+  /* text on light sections */
+  --light-bg: var(--trust-lilac);
+  --light-surface: #e6dafb;
+  --light-text: var(--trust-black);
+  --light-muted: #4a4458;
+  --light-accent: var(--trust-violet);
+  --light-accent-strong: var(--violet-600);
+  --light-border: rgb(105 48 249 / 0.18);
+
+  /* actions */
+  --btn-primary-bg: var(--trust-lilac);
+  --btn-primary-bg-hover: #ffffff;
+  --btn-primary-text: var(--trust-black);
+  --btn-violet-bg: var(--trust-violet);
+  --btn-violet-bg-hover: var(--violet-600);
+  --btn-violet-text: #ffffff;
+  --focus-ring: var(--trust-lavender);
+  --focus-ring-light: var(--trust-violet);
+
+  /* gradients & glow */
+  --grad-text: linear-gradient(180deg, #ffffff 0%, var(--trust-lilac) 35%, var(--trust-lavender) 75%, var(--trust-violet-400) 100%);
+  --grad-violet: linear-gradient(135deg, var(--trust-violet) 0%, var(--trust-violet-400) 55%, var(--trust-lavender) 100%);
+  --grad-horizon: radial-gradient(120% 80% at 50% 100%, rgb(241 233 253 / 0.9) 0%, rgb(180 153 254 / 0.75) 12%, rgb(105 48 249 / 0.65) 30%, rgb(63 20 184 / 0.35) 48%, transparent 70%);
+  --glow-violet: 0 0 0 1px rgb(180 153 254 / 0.25), 0 10px 40px -10px rgb(105 48 249 / 0.7), 0 0 80px -20px rgb(157 103 251 / 0.6);
+  --glow-soft: 0 20px 80px -30px rgb(105 48 249 / 0.55);
+  --inner-highlight: inset 0 1px 0 rgb(255 255 255 / 0.08);
+
+  /* type */
+  --font-display: var(--font-qontra, "Qontra Trust"), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-barlow, "Barlow"), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fs-display: clamp(3rem, 1.6rem + 6.2vw, 7.75rem);
+  --fs-h2: clamp(2.375rem, 1.5rem + 3.6vw, 5rem);
+  --fs-h3: clamp(1.5rem, 1.2rem + 1.1vw, 2.125rem);
+  --fs-lead: clamp(1.0625rem, 0.98rem + 0.4vw, 1.3125rem);
+  --fs-body: clamp(1rem, 0.96rem + 0.18vw, 1.0625rem);
+  --fs-small: 0.875rem;
+  --fs-eyebrow: 0.8125rem;
+  --lh-tight: 0.98;
+  --lh-snug: 1.15;
+  --lh-body: 1.6;
+  --tracking-eyebrow: 0.16em;
+
+  /* layout */
+  --container: 1200px;
+  --container-wide: 1360px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --section-y: clamp(88px, 12vw, 168px);
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 24px;
+  --r-xl: 32px;
+  --r-pill: 999px;
+
+  /* motion: slow start, progressive acceleration, elegant deceleration */
+  --ease-brand: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.83, 0, 0.17, 1);
+  --dur-1: 180ms;
+  --dur-2: 420ms;
+  --dur-3: 800ms;
+  --dur-4: 1400ms;
+
+  color-scheme: dark;
+}

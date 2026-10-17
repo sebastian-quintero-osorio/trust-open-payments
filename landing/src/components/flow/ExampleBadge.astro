@@ -1,0 +1,18 @@
+---
+/** "Ejemplo" marker (COPY.md conv.ejemplo) for illustrative split percentages: plain, quiet text. No pill, no dot. */
+interface Props {
+  label?: string;
+  class?: string;
+}
+const { label = 'Ejemplo', class: className } = Astro.props;
+---
+
+<span class:list={['ex-badge', className]}>{label}</span>
+
+<style>
+  .ex-badge {
+    font: 400 0.8125rem/1.2 var(--font-body);
+    color: var(--text-subtle);
+    white-space: nowrap;
+  }
+</style>

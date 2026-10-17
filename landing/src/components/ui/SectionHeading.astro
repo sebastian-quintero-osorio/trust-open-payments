@@ -1,0 +1,45 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+// Headings are static: scroll reveals are reserved for each section's visual protagonist (docs/DESIGN.md).
+// Extra attributes (data-*, aria-*, the parent's scoped-style attribute) pass through to the <header>.
+// `id` and `title` are this component's own props: they go to the <h2>, never onto the <header>.
+interface Props extends Omit<HTMLAttributes<'header'>, 'id' | 'title' | 'class'> {
+  /** id for the heading, referenced by the section's aria-labelledby */
+  id: string;
+  eyebrow?: string;
+  /** plain title; use the "title" slot instead for rich markup (e.g. a forced line break) */
+  title?: string;
+  lead?: string;
+  align?: 'start' | 'center';
+  class?: string;
+}
+
+const { id, eyebrow, title, lead, align = 'start', class: className, ...rest } = Astro.props;
+const hasTitleSlot = Astro.slots.has('title');
+---
+
+<header {...rest} class:list={['sh', `sh--${align}`, className]}>
+  {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+  <h2 id={id} class="h2">
+    {hasTitleSlot ? <slot name="title" /> : title}
+  </h2>
+  {lead && <p class="lead">{lead}</p>}
+  <slot />
+</header>
+
+<style>
+  .sh {
+    display: grid;
+    gap: clamp(16px, 2vw, 24px);
+    max-inline-size: 820px;
+  }
+  .sh--center {
+    justify-items: center;
+    text-align: center;
+    margin-inline: auto;
+  }
+  .sh--center .lead {
+    margin-inline: auto;
+  }
+</style>

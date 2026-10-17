@@ -1,0 +1,86 @@
+---
+// CTA final + waitlist (COPY.md §11). Protagonist: the form. Two columns on desktop (statement left, form
+// right), a solid card with a subtly lit top edge, and a single soft light from above. No horizon here:
+// the orbital arc belongs to the hero (docs/DESIGN.md).
+import Section from '../ui/Section.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import WaitlistForm from '../waitlist/WaitlistForm.astro';
+---
+
+<Section id="lista-de-espera" theme="deep" aria-labelledby="lista-de-espera-title" class="cta">
+  <div class="container cta__grid">
+    <SectionHeading
+      id="lista-de-espera-title"
+      title="Crédito con la frente en alto."
+      lead="Únete a la lista de espera como comercio o como prestamista. Te avisaremos cuando abramos el acceso."
+      class="cta__head"
+    />
+    <div class="cta__card" data-reveal="fade">
+      <WaitlistForm />
+    </div>
+  </div>
+</Section>
+
+<style>
+  .cta {
+    overflow: clip;
+  }
+  /* one soft light from above, static */
+  .cta__light {
+    position: absolute;
+    z-index: -1;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: min(80vw, 720px);
+    background: radial-gradient(50% 60% at 70% 0%, rgb(105 48 249 / 0.16), rgb(105 48 249 / 0) 70%);
+    pointer-events: none;
+  }
+
+  .cta__grid {
+    display: grid;
+    gap: clamp(48px, 7vw, 72px);
+    align-items: start;
+  }
+  .cta :global(.cta__head .h2) {
+    font-size: clamp(2.75rem, 1.6rem + 4.2vw, 5.75rem);
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+    max-inline-size: 11ch;
+  }
+  @media (min-width: 1040px) {
+    .cta__grid {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+      gap: clamp(56px, 6vw, 104px);
+    }
+    .cta :global(.cta__head) {
+      position: sticky;
+      inset-block-start: 140px;
+    }
+  }
+
+  .cta__card {
+    position: relative;
+    padding: clamp(22px, 3.4vw, 40px);
+    border-radius: 20px;
+    background: var(--surface-solid);
+    box-shadow:
+      inset 0 1px 0 rgb(241 233 253 / 0.07),
+      0 0 0 1px var(--border),
+      0 40px 100px -48px rgb(0 0 0 / 0.9);
+  }
+  /* lit edge: a little light catches the card's top border */
+  .cta__card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgb(241 233 253 / 0.4), rgb(180 153 254 / 0.12) 30%, transparent 55%);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+</style>

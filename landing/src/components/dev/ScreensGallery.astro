@@ -1,0 +1,27 @@
+---
+// Dev-only gallery of the five app screen mocks (/preview/screens). Not used on the landing.
+import DeviceFrame from '../ui/DeviceFrame.astro';
+import CupoScreen from '../screens/CupoScreen.astro';
+import SolicitudScreen from '../screens/SolicitudScreen.astro';
+import SplitFeedScreen from '../screens/SplitFeedScreen.astro';
+import PortafolioScreen from '../screens/PortafolioScreen.astro';
+import MatchScreen from '../screens/MatchScreen.astro';
+---
+
+<section class="gallery container-wide" aria-label="Pantallas de la app (mocks)">
+  <DeviceFrame screenId="cupo-dashboard" alt="cupo-dashboard" width="300px"><CupoScreen /></DeviceFrame>
+  <DeviceFrame screenId="solicitud-credito" alt="solicitud-credito" width="300px"><SolicitudScreen /></DeviceFrame>
+  <DeviceFrame screenId="division-en-vivo" alt="division-en-vivo" width="300px"><SplitFeedScreen /></DeviceFrame>
+  <DeviceFrame screenId="portafolio-prestamista" alt="portafolio-prestamista" width="300px"><PortafolioScreen /></DeviceFrame>
+  <DeviceFrame screenId="detalle-match" alt="detalle-match" width="300px"><MatchScreen /></DeviceFrame>
+</section>
+
+<style>
+  .gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 56px 40px;
+    justify-content: center;
+    padding-block: 64px;
+  }
+</style>

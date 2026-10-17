@@ -1,0 +1,177 @@
+---
+/**
+ * Hero background: a luminous "planet horizon".
+ * Layer 1 (always, LCP-safe, also the reduced-motion state): pure CSS gradients, no images.
+ * Layer 2 (progressive enhancement): WebGL aurora ribbons (./aurora.ts), statically imported and initialised
+ * Clipped with `overflow: clip` (not hidden) so the hero's view() timeline keeps working.
+ */
+---
+
+<div class="hero-bg" aria-hidden="true">
+  <div class="hz">
+    <div class="hz__ambient"></div>
+    <div class="hz__planet"></div>
+    <div class="hz__bright"></div>
+    <canvas class="hz__aurora" data-aurora></canvas>
+    <span class="hz__probe" data-aurora-probe></span>
+  </div>
+</div>
+
+<script>
+  // Static import on purpose: a dynamic import() pulls in Vite's ~1.7 KB preload helper, more than the shader itself.
+  // The module is tiny; it only *runs* after load + idle.
+  import { prefersReducedMotion } from '../../scripts/motion';
+  import { initAurora } from './aurora';
+
+  const cv = document.querySelector<HTMLCanvasElement>('[data-aurora]');
+  const probe = document.querySelector<HTMLElement>('[data-aurora-probe]');
+  const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+
+  if (cv && probe && !prefersReducedMotion() && !conn?.saveData) {
+    const start = () => initAurora(cv, probe);
+    const idle = () =>
+      'requestIdleCallback' in window ? requestIdleCallback(start, { timeout: 3000 }) : setTimeout(start, 1200);
+    if (document.readyState === 'complete') idle();
+    else addEventListener('load', idle, { once: true });
+  }
+</script>
+
+<style>
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: clip;
+    pointer-events: none;
+    background: var(--bg-deep);
+  }
+
+  /* fades the planet body into the next section's background */
+  .hero-bg::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    block-size: clamp(140px, 22vh, 260px);
+    background: linear-gradient(
+      180deg,
+      rgb(25 25 25 / 0) 0%,
+      rgb(25 25 25 / 0.28) 30%,
+      rgb(25 25 25 / 0.64) 60%,
+      rgb(25 25 25 / 0.9) 82%,
+      var(--bg) 100%
+    );
+  }
+
+  .hz {
+    /* geometry shared by the gradient, the brightening layer and the shader probe */
+    --ext: 120px; /* extends below the hero so the scroll-out rise never shows an edge */
+    --R: max(560px, 128vw); /* planet radius */
+    --cx: 50%; /* apex x */
+    --rim: calc(100% - var(--ext) - clamp(200px, 30vw, 260px)); /* apex y (from the top of .hz) */
+    position: absolute;
+    inset: 0 0 calc(var(--ext) * -1) 0;
+  }
+
+  /* same em breakpoint as the hero's two-column layout: the planet sits behind the phone column */
+  @media (min-width: 60em) {
+    .hz {
+      --R: clamp(820px, 68vw, 1320px);
+      --cx: 76%;
+      --rim: calc((100% - var(--ext)) * 0.79);
+    }
+  }
+
+  .hz__ambient,
+  .hz__planet,
+  .hz__bright {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* soft ambient violet glows (pre-blurred gradients, no filter) */
+  .hz__ambient {
+    background:
+      radial-gradient(42% 38% at 14% 8%, rgb(105 48 249 / 0.16), rgb(105 48 249 / 0) 70%),
+      radial-gradient(30% 36% at var(--cx) 34%, rgb(105 48 249 / 0.18), rgb(105 48 249 / 0) 72%);
+  }
+
+  /* the planet: dark body, violet inner band, white rim, lavender haze, violet atmosphere */
+  .hz__planet {
+    background:
+      radial-gradient(min(26vw, 340px) 22px at var(--cx) var(--rim), rgb(255 255 255 / 0.8), rgb(241 233 253 / 0.28) 38%, rgb(241 233 253 / 0) 72%),
+      radial-gradient(calc(var(--R) * 0.85) calc(var(--R) * 0.36) at var(--cx) var(--rim), rgb(105 48 249 / 0.34), rgb(105 48 249 / 0.12) 45%, rgb(105 48 249 / 0) 78%),
+      radial-gradient(
+        circle var(--R) at var(--cx) calc(var(--rim) + var(--R)),
+        var(--ink-950) 0,
+        var(--ink-950) calc(var(--R) - 380px),
+        rgb(28 10 82 / 0.42) calc(var(--R) - 200px),
+        rgb(63 20 184 / 0.5) calc(var(--R) - 90px),
+        rgb(105 48 249 / 0.78) calc(var(--R) - 28px),
+        rgb(157 103 251) calc(var(--R) - 9px),
+        rgb(180 153 254) calc(var(--R) - 4px),
+        rgb(241 233 253) calc(var(--R) - 1.5px),
+        #fff var(--R),
+        rgb(241 233 253 / 0.5) calc(var(--R) + 2.5px),
+        rgb(180 153 254 / 0.26) calc(var(--R) + 14px),
+        rgb(105 48 249 / 0.16) calc(var(--R) + 60px),
+        rgb(105 48 249 / 0.06) calc(var(--R) + 170px),
+        rgb(105 48 249 / 0) calc(var(--R) + 340px)
+      );
+  }
+
+  /* extra light at the apex, revealed as the hero scrolls out ("the horizon brightens") */
+  .hz__bright {
+    opacity: 0;
+    background:
+      radial-gradient(calc(var(--R) * 0.5) calc(var(--R) * 0.2) at var(--cx) var(--rim), rgb(180 153 254 / 0.32), rgb(105 48 249 / 0.14) 50%, rgb(105 48 249 / 0) 80%);
+  }
+
+  .hz__aurora {
+    position: absolute;
+    inset: 18% 0 0;
+    inline-size: 100%;
+    block-size: 82%;
+    opacity: 0;
+    transition: opacity 2.4s var(--ease-out);
+  }
+  .hz__aurora:global(.is-on) {
+    opacity: 1;
+  }
+
+  /* invisible geometry probe read by the shader: width = planet diameter, top = rim apex */
+  .hz__probe {
+    position: absolute;
+    inset: var(--rim) auto auto calc(var(--cx) - var(--R));
+    inline-size: calc(var(--R) * 2);
+    block-size: 1px;
+    visibility: hidden;
+  }
+
+  /* scroll-out: as the hero leaves, the horizon rises a touch and brightens (CSS only) */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .hz {
+        animation: hz-rise linear both;
+        animation-timeline: --hero;
+        animation-range: exit 0% exit 100%;
+      }
+      .hz__bright {
+        animation: hz-bright linear both;
+        animation-timeline: --hero;
+        animation-range: exit 0% exit 70%;
+      }
+    }
+  }
+
+  @keyframes hz-rise {
+    to {
+      transform: translate3d(0, -64px, 0);
+    }
+  }
+
+  @keyframes hz-bright {
+    to {
+      opacity: 1;
+    }
+  }
+</style>

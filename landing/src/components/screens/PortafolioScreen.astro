@@ -1,0 +1,341 @@
+---
+// Mock of the app screen "Mi portafolio" (screenId portafolio-prestamista), COPY.md §13d. Section Prestamistas.
+// Rendered inside <DeviceFrame> (390×844pt canvas, sizes in var(--pt)). Decorative: no focusable elements.
+import './screen-kit.css';
+import StatusBar from './StatusBar.astro';
+import Num from './Num.astro';
+import { NBSP, formatCOP, pct } from '../../scripts/format';
+import Pencil from '@lucide/astro/icons/pencil';
+import Bell from '@lucide/astro/icons/bell';
+import Plus from '@lucide/astro/icons/plus';
+import Link2 from '@lucide/astro/icons/link-2';
+
+const nb = (s: string) => s.replaceAll(' ', NBSP);
+const plus = (n: number) => formatCOP(n, '+$');
+
+// COPY.md 13d: hourly payments (sum $186.400)
+const hourly = [
+  { h: '8:00 a. m.', v: 38100 },
+  { h: '9:00 a. m.', v: 71500 },
+  { h: '10:00 a. m.', v: 76800 },
+];
+const peak = Math.max(...hourly.map((r) => r.v));
+const hours = hourly.map((r) => ({ h: nb(r.h), v: formatCOP(r.v), p: r.v / peak }));
+
+const credits = [
+  { name: 'Tienda La Esquina', amount: 2000000, pct: 15, paid: 32, today: 91800 },
+  { name: 'Panadería El Trigal', amount: 1500000, pct: 12, paid: 58, today: 58200 },
+  { name: 'Papelería Nova', amount: 2000000, pct: 10, paid: 12, today: 36400 },
+];
+
+const latest = [
+  { t: '10:42 a. m.', who: 'Tienda La Esquina', v: 7200 },
+  { t: '10:31 a. m.', who: 'Tienda La Esquina', v: 3900 },
+  { t: '10:15 a. m.', who: 'Panadería El Trigal', v: 4500 },
+];
+---
+
+<div class="sk-screen port" data-screen="portafolio-prestamista">
+  <StatusBar />
+
+  <div class="sk-body port__body">
+    <div class="sk-row port__head">
+      <div class="sk-avatar">CP</div>
+      <div class="sk-stack sk-grow">
+        <span class="port__hello">Hola, Camilo</span>
+        <span class="sk-cap">3 créditos activos</span>
+      </div>
+      <div class="sk-iconbtn"><span class="sk-ico" style="--s: 20"><Bell stroke-width={1.75} /></span></div>
+    </div>
+
+    <span class="sk-title port__title">Mi portafolio</span>
+
+    <div class="sk-card sk-card--hero port__hero">
+      <span class="sk-sheen sk-loop"></span>
+      <div class="port__kpis">
+        <div class="sk-stack port__kpi">
+          <span class="sk-label">Total prestado</span>
+          <Num value={5500000} class="sk-amt sk-amt--md" />
+        </div>
+        <div class="sk-stack port__kpi">
+          <span class="sk-label port__live">Abonos de hoy</span>
+          <Num value={186400} prefix="+$" delay={200} live class="sk-amt sk-amt--md sk-accent" />
+        </div>
+      </div>
+      <div class="port__range">
+        <span class="sk-cap">Mi rango: <span class="sk-money">$1.000.000 – $2.500.000</span></span>
+        <span class="port__edit"><span class="sk-ico" style="--s: 13"><Pencil stroke-width={2} /></span></span>
+      </div>
+    </div>
+
+    <div class="sk-card port__chart">
+      <span class="sk-label">Abonos de hoy por hora</span>
+      <div class="port__bars">
+        {
+          hours.map((r, i) => (
+            <div class="port__bar-row">
+              <span class="sk-micro">{r.h}</span>
+              <span class="port__bar-track">
+                <span class="port__bar" data-anim="fill-x" style={`--p: ${(r.p * 100).toFixed(1)}%; --d: ${300 + i * 160}ms`}></span>
+              </span>
+              <span class="sk-money port__bar-val">{r.v}</span>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+
+    <div class="sk-card port__credits">
+      {
+        credits.map((c, i) => (
+          <div class="port__credit">
+            <div class="sk-row">
+              <span class="port__name">{c.name}</span>
+              <span class="port__today-row">
+                hoy <span class="sk-money sk-accent">{plus(c.today)}</span>
+              </span>
+            </div>
+            <div class="sk-row port__meta">
+              <span>
+                {formatCOP(c.amount)} · {pct(c.pct)} de cada venta
+              </span>
+              <span>Pagado {pct(c.paid)}</span>
+            </div>
+            <div class="sk-bar port__paid">
+              <span class="sk-bar__fill" data-anim="fill-x" style={`--p: ${c.paid}%; --d: ${500 + i * 140}ms`}></span>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+
+    <div class="port__latest">
+      <span class="sk-overline">Últimos abonos</span>
+      {
+        latest.map((a, i) => (
+          <div class:list={['port__abono', i === 0 && 'port__abono--new']} data-anim={i === 0 ? 'rise' : undefined} style={i === 0 ? '--d: 1200ms; --t: 800ms' : undefined}>
+            <span class="sk-micro port__abono-t">{nb(a.t)}</span>
+            <span class="port__abono-who">{a.who}</span>
+            <span class="sk-money sk-accent">{plus(a.v)}</span>
+          </div>
+        ))
+      }
+      <span class="port__trace">
+        <span class="sk-ico" style="--s: 12"><Link2 stroke-width={2} /></span>
+        Cada abono es trazable hasta la venta que lo originó.
+      </span>
+    </div>
+
+    <div class="sk-bottom port__actions">
+      <div class="sk-btn sk-btn--sm">
+        <span class="sk-ico" style="--s: 17"><Plus stroke-width={2.25} /></span>
+        Publicar oferta
+      </div>
+      <div class="sk-btn sk-btn--sm sk-btn--ghost">Ver solicitudes</div>
+    </div>
+  </div>
+  <span class="sk-home"></span>
+</div>
+
+<style>
+  .port__body {
+    padding-block: calc(var(--pt) * 6) calc(var(--pt) * 34);
+  }
+
+  .port__head {
+    gap: calc(var(--pt) * 12);
+  }
+
+  .port__hello {
+    font-size: calc(var(--pt) * 19);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+
+  .port__title {
+    margin-block: calc(var(--pt) * 14) calc(var(--pt) * 8);
+  }
+
+  .port__hero {
+    display: flex;
+    flex-direction: column;
+    padding: calc(var(--pt) * 16) calc(var(--pt) * 18);
+  }
+
+  .port__kpis {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: calc(var(--pt) * 12);
+  }
+
+  .port__kpi {
+    gap: calc(var(--pt) * 6);
+  }
+
+  .port__kpi + .port__kpi {
+    padding-inline-start: calc(var(--pt) * 14);
+    border-inline-start: 1px solid var(--sk-line);
+  }
+
+  .port__live {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--pt) * 7);
+  }
+
+
+  .port__range {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-block-start: calc(var(--pt) * 14);
+    padding: calc(var(--pt) * 7) calc(var(--pt) * 7) calc(var(--pt) * 7) calc(var(--pt) * 12);
+    border-radius: 999px;
+    background: rgb(25 25 25 / 0.45);
+    border: 1px solid var(--sk-line);
+  }
+
+  .port__edit {
+    display: grid;
+    place-items: center;
+    inline-size: calc(var(--pt) * 24);
+    block-size: calc(var(--pt) * 24);
+    border-radius: 50%;
+    background: rgb(105 48 249 / 0.4);
+    color: #fff;
+  }
+
+  .port__chart,
+  .port__credits {
+    margin-block-start: calc(var(--pt) * 8);
+    padding: calc(var(--pt) * 14) calc(var(--pt) * 16);
+  }
+
+  .port__bars {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--pt) * 7);
+    margin-block-start: calc(var(--pt) * 10);
+  }
+
+  .port__bar-row {
+    display: grid;
+    grid-template-columns: calc(var(--pt) * 68) 1fr calc(var(--pt) * 58);
+    align-items: center;
+    gap: calc(var(--pt) * 10);
+    block-size: calc(var(--pt) * 15);
+  }
+
+  .port__bar-track {
+    display: block;
+    block-size: calc(var(--pt) * 8);
+    border-radius: 999px;
+    background: var(--sk-track);
+  }
+
+  .port__bar {
+    display: block;
+    block-size: 100%;
+    inline-size: var(--p);
+    border-radius: inherit;
+    background: linear-gradient(90deg, rgb(105 48 249 / 0.7), var(--trust-violet-400));
+    box-shadow: 0 0 calc(var(--pt) * 10) rgb(105 48 249 / 0.6);
+  }
+
+  .port__bar-row:last-child .port__bar {
+    background: linear-gradient(90deg, var(--trust-violet), var(--trust-lavender));
+  }
+
+  .port__bar-val {
+    font-size: calc(var(--pt) * 12);
+    text-align: end;
+  }
+
+  .port__credits {
+    padding-block: calc(var(--pt) * 2);
+  }
+
+  .port__credit {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--pt) * 3);
+    padding-block: calc(var(--pt) * 9);
+  }
+
+  .port__credit + .port__credit {
+    border-block-start: 1px solid var(--sk-line);
+  }
+
+  .port__name {
+    font-size: calc(var(--pt) * 13.5);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .port__today-row {
+    font-size: calc(var(--pt) * 12);
+    color: var(--sk-subtle);
+    white-space: nowrap;
+  }
+
+  .port__meta {
+    font-size: calc(var(--pt) * 11.5);
+    color: var(--sk-muted);
+    white-space: nowrap;
+  }
+
+  .port__meta > span:last-child {
+    color: var(--sk-subtle);
+  }
+
+  .port__paid {
+    block-size: calc(var(--pt) * 4);
+    margin-block-start: calc(var(--pt) * 5);
+  }
+
+  .port__latest {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--pt) * 6);
+    margin-block-start: calc(var(--pt) * 12);
+    padding-inline: calc(var(--pt) * 4);
+  }
+
+  .port__latest .sk-overline {
+    margin-block-end: calc(var(--pt) * 2);
+  }
+
+  .port__abono {
+    display: grid;
+    grid-template-columns: calc(var(--pt) * 66) 1fr auto;
+    align-items: center;
+    gap: calc(var(--pt) * 8);
+    font-size: calc(var(--pt) * 12.5);
+  }
+
+  .port__abono-who {
+    color: var(--sk-muted);
+    white-space: nowrap;
+  }
+
+  .port__abono--new .port__abono-who {
+    color: var(--sk-text);
+  }
+
+  .port__trace {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--pt) * 6);
+    margin-block-start: calc(var(--pt) * 6);
+    font-size: calc(var(--pt) * 11);
+    color: var(--sk-subtle);
+  }
+
+  .port__actions {
+    padding-block-start: calc(var(--pt) * 12);
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: calc(var(--pt) * 10);
+  }
+</style>

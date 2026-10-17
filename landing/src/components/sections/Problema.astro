@@ -1,0 +1,292 @@
+---
+// El problema (COPY.md §4). Editorial: the two sides of the problem as plain text, then one sourced figure
+// as the protagonist (666,5 %) with the other two as supporting data. Static numbers, solid colour, sources
+// beside them (docs/DESIGN.md: no stat banner, no count-up, no icon bullets, no gradient text).
+import Section from '../ui/Section.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import ArrowUpRight from '@lucide/astro/icons/arrow-up-right';
+import { formatDecimalCO, pct } from '../../scripts/format';
+
+const columns = [
+  {
+    title: 'Si tienes un comercio',
+    items: [
+      'Vendes todos los días, pero el crédito formal no llega.',
+      'El préstamo informal cobra intereses de usura, por fuera de la ley.',
+      'Y cuando el cobro llega a tu puerta, está en juego tu seguridad.',
+    ],
+  },
+  {
+    title: 'Si prestas dinero',
+    items: [
+      'No sabes a quién prestarle con confianza.',
+      'Quieres que tu dinero trabaje, pero de forma lícita.',
+      'Bancos, entidades financieras y personas enfrentan la misma duda.',
+    ],
+  },
+];
+
+const lead = {
+  value: pct(formatDecimalCO(666.5)),
+  label: 'es la tasa anual estimada del gota a gota para las empresas: más de 30 veces la de un banco.',
+  ref: 3,
+};
+const support = [
+  {
+    value: pct(formatDecimalCO(15.3)),
+    label: `de las microempresas registradas tiene un crédito vigente. En las grandes empresas, el ${pct(formatDecimalCO(82.1))}.`,
+    ref: 1,
+  },
+  {
+    value: pct(formatDecimalCO(22.9)),
+    label: 'de los micronegocios que pidieron crédito acudió al gota a gota. Casi 1 de cada 4.',
+    ref: 2,
+  },
+];
+
+const sources = [
+  {
+    text: '[1] Banca de las Oportunidades y Superintendencia Financiera de Colombia, Reporte de Inclusión Financiera 2024 (publicado en 2025).',
+    href: 'https://www.bancadelasoportunidades.gov.co/sites/default/files/2025-05/BDO_RIF%202024_COMPLETO%201.pdf',
+  },
+  {
+    text: '[2] DANE, Encuesta de Micronegocios (EMICRON) 2024, anexo cuadro H.4.',
+    href: 'https://www.dane.gov.co/files/operaciones/EMICRON/anex-EMICRON-2024.xlsx',
+  },
+  {
+    text: '[3] ANIF y Colombia Fintech, Encuesta de Endeudamiento, enero de 2025.',
+    href: 'https://anif.com.co/wp-content/uploads/encuesta-de-endeudamiento-una-nueva-perspectiva-de-la-exclusion-financiera-liderada-por-anif-y-colombia-fintech-2.pdf',
+  },
+];
+---
+
+<Section id="problema" theme="dark" aria-labelledby="problema-title" class="pb">
+  <div class="container">
+    <SectionHeading id="problema-title">
+      <Fragment slot="title">
+        <span class="pb__h-no">Cuando el banco dice no,</span>
+        <span class="pb__h-si">el gota a gota dice sí.</span>
+      </Fragment>
+    </SectionHeading>
+
+    <div class="pb__cols">
+      {
+        columns.map((col) => (
+          <div class="pb-col">
+            <h3 class="pb-col__title">{col.title}</h3>
+            <ul class="pb-col__list" role="list">
+              {col.items.map((text) => (
+                <li>{text}</li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+
+    <div class="pb__data">
+      <figure class="fig fig--lead" data-reveal="fade">
+        <p class="fig__value tnum">
+          {lead.value}
+          <a class="fig__ref" href={`#problema-fuente-${lead.ref}`} aria-label={`Fuente ${lead.ref}`}>[{lead.ref}]</a>
+        </p>
+        <figcaption class="fig__label">{lead.label}</figcaption>
+      </figure>
+
+      <div class="pb__support">
+        {
+          support.map((s) => (
+            <figure class="fig">
+              <p class="fig__value tnum">
+                {s.value}
+                <a class="fig__ref" href={`#problema-fuente-${s.ref}`} aria-label={`Fuente ${s.ref}`}>[{s.ref}]</a>
+              </p>
+              <figcaption class="fig__label">{s.label}</figcaption>
+            </figure>
+          ))
+        }
+      </div>
+    </div>
+
+    <footer class="pb__sources">
+      <p class="pb__note">Cifras de Colombia.</p>
+      <ol class="pb__fns" role="list">
+        {
+          sources.map((src, i) => (
+            <li id={`problema-fuente-${i + 1}`}>
+              <a href={src.href} target="_blank" rel="noopener noreferrer">
+                {src.text}
+                <ArrowUpRight class="pb__ext" size={13} stroke-width={1.75} aria-hidden="true" />
+                <span class="sr-only"> (se abre en una pestaña nueva)</span>
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+    </footer>
+  </div>
+</Section>
+
+<style>
+  .pb__h-no,
+  .pb__h-si {
+    display: block;
+  }
+
+
+  /* ---------- the two sides, as text ---------- */
+  .pb__cols {
+    display: grid;
+    gap: 40px clamp(32px, 5vw, 80px);
+    margin-block-start: clamp(56px, 7vw, 88px);
+  }
+  @media (min-width: 800px) {
+    .pb__cols {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .pb-col {
+    padding-block-start: 22px;
+    border-block-start: 1px solid var(--border);
+  }
+  .pb-col__title {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .pb-col__list {
+    display: grid;
+    gap: 10px;
+    margin: 16px 0 0;
+    padding: 0;
+    color: var(--text-muted);
+    max-inline-size: 46ch;
+  }
+
+  /* ---------- the data ---------- */
+  .pb__data {
+    display: grid;
+    gap: clamp(40px, 5vw, 56px);
+    margin-block-start: clamp(80px, 10vw, 136px);
+    align-items: end;
+  }
+  @media (min-width: 1000px) {
+    .pb__data {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      gap: clamp(48px, 6vw, 96px);
+    }
+  }
+  .fig {
+    margin: 0;
+  }
+  .fig__value {
+    position: relative;
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.25em;
+    font-family: var(--font-display);
+    font-size: clamp(2.75rem, 1.9rem + 2.6vw, 4.25rem);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .fig--lead .fig__value {
+    font-size: clamp(5rem, 2rem + 12vw, 13.5rem);
+    line-height: 0.86;
+    letter-spacing: -0.035em;
+  }
+  .fig__label {
+    margin-block-start: 14px;
+    max-inline-size: 40ch;
+    color: var(--text-muted);
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+  .fig--lead .fig__label {
+    margin-block-start: 22px;
+    max-inline-size: 44ch;
+    font-size: var(--fs-lead);
+    color: var(--text);
+  }
+  .pb__support {
+    display: grid;
+    gap: 32px;
+  }
+  .pb__support .fig {
+    padding-block-start: 22px;
+    border-block-start: 1px solid var(--border);
+  }
+
+  /* source markers: small, but a 44px target */
+  .fig__ref {
+    position: relative;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1;
+    color: var(--text-accent);
+    text-decoration: none;
+  }
+  .fig--lead .fig__ref {
+    font-size: 0.9375rem;
+    margin-block-start: 0.4em;
+  }
+  .fig__ref::after {
+    content: '';
+    position: absolute;
+    inset: -16px -15px;
+  }
+  .fig__ref:hover {
+    text-decoration: underline;
+  }
+
+  /* ---------- sources ---------- */
+  .pb__sources {
+    display: grid;
+    gap: 10px;
+    margin-block-start: clamp(56px, 7vw, 80px);
+    padding-block-start: 22px;
+    border-block-start: 1px solid var(--border);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--text-subtle);
+  }
+  .pb__fns {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+  }
+  /* each footnote is one block-level target: its whole text box plus half of the gap on each side */
+  .pb__fns a {
+    position: relative;
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    transition: color var(--dur-1) var(--ease-out);
+  }
+  .pb__fns a::after {
+    content: '';
+    position: absolute;
+    inset: -3px 0;
+  }
+  /* touch: a footnote that fits on one line (tablets) still gets 38 + 2 × 3 = 44px */
+  @media (pointer: coarse) {
+    .pb__fns a {
+      min-block-size: 38px;
+    }
+  }
+  .pb__fns a:hover {
+    color: var(--text-muted);
+    text-decoration: underline;
+  }
+  .pb__fns :global(.pb__ext) {
+    display: inline-block;
+    margin-inline-start: 4px;
+    vertical-align: -1px;
+  }
+  .pb__fns li:target a {
+    color: var(--text-accent);
+  }
+</style>

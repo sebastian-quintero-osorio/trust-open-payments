@@ -1,0 +1,707 @@
+---
+import Section from '../ui/Section.astro';
+import SectionHeading from '../ui/SectionHeading.astro';
+import ExampleBadge from '../flow/ExampleBadge.astro';
+import { formatCOP, pct } from '../../scripts/format';
+
+// shared scale for both range bars: $500.000 – $6.000.000
+const MIN = 500_000;
+const MAX = 6_000_000;
+const pos = (v: number) => `${(((v - MIN) / (MAX - MIN)) * 100).toFixed(3)}%`;
+const range = (a: number, b: number) => `--a: ${pos(a)}; --b: ${pos(b)};`;
+
+// the one example match (COPY.md match.*): every label below is formatted from these numbers
+const REQ: [number, number] = [1_500_000, 3_000_000];
+const OFFER: [number, number] = [1_000_000, 2_500_000];
+const CUPO = 6_000_000;
+const AMOUNT = 2_000_000;
+const SHARE = 15;
+const OVERLAP: [number, number] = [Math.max(REQ[0], OFFER[0]), Math.min(REQ[1], OFFER[1])];
+const span = ([a, b]: [number, number]) => `${formatCOP(a)} – ${formatCOP(b)}`;
+const perSale = `${pct(SHARE)} de cada venta`;
+
+const request = range(...REQ);
+const offer = range(...OFFER);
+const overlap = `--oa: ${pos(OVERLAP[0])}; --ob: ${pos(OVERLAP[1])};`;
+const point = `--p: ${pos(AMOUNT)};`;
+const ticks = Array.from({ length: 12 }, (_, i) => `${((i / 11) * 100).toFixed(3)}%`);
+
+---
+
+<Section id="match" theme="deep" aria-labelledby="match-title" class="mt">
+  <div class="container">
+    <SectionHeading
+      id="match-title"
+      title="Cuando los rangos coinciden, hay match."
+      lead="Los comercios piden crédito según su cupo y los prestamistas publican ofertas. Cada uno define su rango; Trust cruza ambos y propone el match. Funciona en las dos direcciones."
+    />
+
+    <div class="mt__grid">
+      <div class="mt-stage" data-match-stage style={overlap}>
+        <div class="mt-stage__badge"><ExampleBadge /></div>
+
+        <div class="mt-card mt-card--req">
+          <span class="mt-chip">Solicitud</span>
+          <p class="mt-card__name">Tienda La Esquina</p>
+          <p class="mt-card__meta">
+            <span class="nowrap">{`Rango ${span(REQ)}`}</span>
+            <span class="mt-sep">·</span>
+            <span class="nowrap">{`Cupo ${formatCOP(CUPO)}`}</span>
+          </p>
+          <div class="mt-range mt-range--req" style={request} aria-hidden="true">
+            <span class="mt-range__fill"></span>
+            <span class="mt-range__hit"></span>
+          </div>
+        </div>
+
+        <div class="mt-axis">
+          <div class="mt-axis__deco" aria-hidden="true">
+            <span class="mt-axis__line"></span>
+            {ticks.map((t) => <span class="mt-axis__tick" style={`--t: ${t}`} />)}
+            <span class="mt-axis__end mt-axis__end--min">{formatCOP(MIN)}</span>
+            <span class="mt-axis__end mt-axis__end--max">{formatCOP(MAX)}</span>
+          </div>
+          <span class="mt-band" aria-hidden="true"></span>
+          <p class="mt-overlap">
+            <span class="mt-overlap__k">Rangos que se cruzan:</span>
+            <span class="nowrap">{span(OVERLAP)}</span>
+          </p>
+        </div>
+
+        <div class="mt-card mt-card--offer">
+          <div class="mt-range mt-range--offer" style={offer} aria-hidden="true">
+            <span class="mt-range__fill"></span>
+            <span class="mt-range__hit"></span>
+          </div>
+          <span class="mt-chip">Oferta</span>
+          <p class="mt-card__name">Camilo P.</p>
+          <p class="mt-card__meta">
+            <span class="nowrap">{`Rango ${span(OFFER)}`}</span>
+            <span class="mt-sep">·</span>
+            <span class="nowrap">{perSale}</span>
+          </p>
+        </div>
+
+        <span class="mt-link" aria-hidden="true"></span>
+
+        <div class="mt-result">
+          <span class="mt-burst" aria-hidden="true"></span>
+          <div class="mt-result__card">
+            <span class="mt-seal">Match</span>
+            <p class="mt-result__amount">{formatCOP(AMOUNT)}</p>
+            <p class="mt-result__meta">
+              <span class="nowrap">{perSale}</span>
+              <span class="mt-sep">·</span>
+              <span class="mt-ready">Listo para aceptar</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</Section>
+
+<script>
+  import { onceVisible, prefersReducedMotion } from '../../scripts/motion';
+
+  // Scroll-driven browsers scrub the match in CSS; others get a one-shot transition when the stage is in view.
+  if (!CSS.supports('animation-timeline: view()') && !prefersReducedMotion()) {
+    const stage = document.querySelector<HTMLElement>('[data-match-stage]');
+    if (stage) onceVisible(stage, () => stage.classList.add('is-matched'), 0.35);
+  }
+</script>
+
+<style>
+  .mt {
+    overflow: clip;
+  }
+  .mt__ambient {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    /* soft fade from the page black at the top (no hard seam) + a low violet glow behind the stage */
+    background:
+      radial-gradient(45% 30% at 30% 62%, rgb(105 48 249 / 0.14), rgb(105 48 249 / 0) 70%),
+      linear-gradient(180deg, var(--bg), rgb(14 13 18 / 0) 240px);
+    pointer-events: none;
+  }
+  .nowrap {
+    white-space: nowrap;
+  }
+
+  .mt__grid {
+    display: grid;
+    gap: clamp(64px, 8vw, 96px);
+    margin-block-start: clamp(56px, 7vw, 88px);
+  }
+  @media (min-width: 1100px) {
+    .mt__grid {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: clamp(56px, 6vw, 112px);
+    }
+  }
+
+  /* ---------- stage ---------- */
+  .mt-stage {
+    --in: clamp(18px, 2.4vw, 24px);
+    --reach: calc(var(--in) + 12px);
+    position: relative;
+    display: grid;
+    inline-size: 100%;
+    max-inline-size: 600px;
+    justify-self: center;
+    padding-block-start: 44px;
+    container: mt-stage / inline-size;
+  }
+  .mt-stage__badge {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+  }
+
+  .mt-card {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 8px;
+    padding: var(--in);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgb(31 29 37 / 0.96), rgb(20 19 23 / 0.96));
+    box-shadow:
+      inset 0 0 0 1px var(--border),
+      var(--inner-highlight),
+      0 30px 60px -30px rgb(0 0 0 / 0.85);
+  }
+  .mt-card--req {
+    box-shadow:
+      inset 0 0 0 1px var(--border-strong),
+      var(--inner-highlight),
+      0 30px 60px -30px rgb(0 0 0 / 0.85);
+  }
+  .mt-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    justify-self: start;
+    margin-block-end: 4px;
+    font: 600 0.875rem/1.2 var(--font-body);
+    color: var(--text-accent);
+  }
+  .mt-card__name {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(1.375rem, 1.2rem + 0.6vw, 1.75rem);
+    line-height: 1.1;
+    color: var(--text);
+  }
+  .mt-card__meta {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .mt-sep {
+    color: var(--text-subtle);
+    margin-inline: 2px;
+  }
+
+  /* range bars on the shared scale */
+  .mt-range {
+    position: relative;
+    block-size: 8px;
+    margin-block: 14px 2px;
+    border-radius: 8px;
+    background: rgb(180 153 254 / 0.1);
+  }
+  .mt-range--offer {
+    margin-block: 2px 14px;
+  }
+  .mt-range__fill,
+  .mt-range__hit {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--a);
+    inline-size: calc(var(--b) - var(--a));
+    border-radius: inherit;
+  }
+  .mt-range--req .mt-range__fill {
+    background: linear-gradient(90deg, var(--trust-violet), var(--trust-violet-400));
+  }
+  .mt-range--offer .mt-range__fill {
+    background: linear-gradient(90deg, var(--violet-600), var(--trust-violet));
+  }
+  /* range handles */
+  .mt-range__fill::before,
+  .mt-range__fill::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inline-size: 14px;
+    block-size: 14px;
+    border-radius: 50%;
+    background: var(--trust-lilac);
+    box-shadow:
+      0 0 0 3px var(--ink-900),
+      0 0 0 4px rgb(180 153 254 / 0.5);
+    translate: -50% -50%;
+  }
+  .mt-range__fill::before {
+    inset-inline-start: 0;
+  }
+  .mt-range__fill::after {
+    inset-inline-start: 100%;
+  }
+  /* the overlapping stretch, lit when the ranges align (inherits --a/--b of the overlap from the stage) */
+  .mt-range__hit {
+    inset-inline-start: var(--oa);
+    inline-size: calc(var(--ob) - var(--oa));
+    background: linear-gradient(90deg, var(--trust-lavender), var(--trust-lilac));
+    box-shadow: 0 0 18px 2px rgb(180 153 254 / 0.55);
+  }
+
+  /* ---------- shared axis ---------- */
+  .mt-axis {
+    position: relative;
+    z-index: 2;
+    block-size: 84px;
+    margin-inline: calc(var(--in) + 1px);
+  }
+  .mt-axis__deco {
+    position: absolute;
+    inset: 0;
+  }
+  .mt-axis__line {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 50px;
+    block-size: 1px;
+    background: linear-gradient(90deg, rgb(180 153 254 / 0.15), rgb(180 153 254 / 0.45), rgb(180 153 254 / 0.15));
+  }
+  .mt-axis__tick {
+    position: absolute;
+    inset-block-start: 46px;
+    inset-inline-start: var(--t);
+    inline-size: 1px;
+    block-size: 9px;
+    background: rgb(180 153 254 / 0.35);
+  }
+  .mt-axis__end {
+    position: absolute;
+    inset-block-start: 22px;
+    font: 500 0.75rem/1 var(--font-body);
+    font-variant-numeric: tabular-nums;
+    color: var(--text-subtle);
+  }
+  .mt-axis__end--min {
+    inset-inline-start: 0;
+  }
+  .mt-axis__end--max {
+    inset-inline-end: 0;
+  }
+  /* luminous column through both bars */
+  .mt-band {
+    position: absolute;
+    inset-block: calc(-1 * var(--reach));
+    inset-inline-start: var(--oa);
+    inline-size: calc(var(--ob) - var(--oa));
+    border-radius: 6px;
+    background: linear-gradient(180deg, rgb(180 153 254 / 0.05), rgb(180 153 254 / 0.2) 50%, rgb(180 153 254 / 0.05));
+    box-shadow:
+      inset 1px 0 0 rgb(180 153 254 / 0.6),
+      inset -1px 0 0 rgb(180 153 254 / 0.6);
+    pointer-events: none;
+  }
+  .mt-point {
+    position: absolute;
+    inset-block-start: 50px;
+    inset-inline-start: var(--p);
+    inline-size: 12px;
+    block-size: 12px;
+    border-radius: 3px;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgb(180 153 254 / 0.35), 0 0 18px 4px rgb(105 48 249 / 0.9);
+    translate: -50% -50%;
+    rotate: 45deg;
+  }
+  .mt-overlap {
+    position: absolute;
+    inset-block-start: 50px;
+    inset-inline-start: calc(var(--ob) + 14px);
+    max-inline-size: calc(100% - var(--ob) - 14px);
+    translate: 0 -50%;
+    padding: 6px 12px;
+    border-radius: 12px;
+    background: var(--ink-900);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    font: 500 0.8125rem/1.35 var(--font-body);
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    text-wrap: balance;
+  }
+  .mt-overlap__k {
+    color: var(--text-muted);
+  }
+  /* narrow stage: scale labels stay on top, the overlap label sits under the axis line */
+  @container mt-stage (max-width: 520px) {
+    .mt-axis {
+      block-size: 104px;
+    }
+    .mt-axis__end {
+      inset-block-start: 14px;
+    }
+    .mt-axis__line,
+    .mt-point {
+      inset-block-start: 40px;
+    }
+    .mt-axis__tick {
+      inset-block-start: 36px;
+    }
+    .mt-overlap {
+      inset-block-start: 54px;
+      translate: none;
+    }
+    .mt-card__meta {
+      display: flex;
+      flex-direction: column;
+    }
+    .mt-card__meta .mt-sep {
+      display: none;
+    }
+  }
+
+  /* ---------- result ---------- */
+  .mt-link {
+    justify-self: center;
+    inline-size: 1px;
+    block-size: 44px;
+    background: linear-gradient(180deg, rgb(180 153 254 / 0), rgb(180 153 254 / 0.8));
+    transform-origin: 50% 0;
+  }
+  .mt-result {
+    position: relative;
+    justify-self: center;
+    inline-size: min(100%, 420px);
+  }
+  .mt-burst {
+    position: absolute;
+    inset: -45% -25%;
+    z-index: 0;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(180 153 254 / 0.5), rgb(105 48 249 / 0.32) 45%, rgb(105 48 249 / 0) 100%);
+    opacity: 0.75;
+    pointer-events: none;
+  }
+  .mt-result__card {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    padding: 24px 24px 22px;
+    border-radius: 24px;
+    background:
+      radial-gradient(100% 80% at 50% 0%, rgb(105 48 249 / 0.35), rgb(105 48 249 / 0) 70%),
+      linear-gradient(180deg, rgb(31 29 37 / 0.98), rgb(20 19 23 / 0.98));
+    box-shadow:
+      inset 0 0 0 1px rgb(180 153 254 / 0.5),
+      inset 0 1px 0 rgb(255 255 255 / 0.12),
+      0 30px 80px -30px rgb(105 48 249 / 0.8);
+    text-align: center;
+  }
+  .mt-seal {
+    font: 600 0.875rem/1.2 var(--font-body);
+    color: var(--text-accent);
+  }
+  .mt-result__amount {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(2.5rem, 2rem + 2vw, 3.25rem);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .mt-result__meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 4px 8px;
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+  }
+  .mt-ready {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-accent);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* ---------- phone ---------- */
+  .mt__phone {
+    display: grid;
+    justify-items: center;
+    gap: 28px;
+    justify-self: center;
+  }
+  .mt__caption {
+    font-size: 0.8125rem;
+    color: var(--text-subtle);
+  }
+
+  /* ---------- steps: plain text, hairline above each (no numbered circles) ---------- */
+  .mt-steps {
+    display: grid;
+    gap: 0;
+    margin: clamp(64px, 8vw, 104px) 0 0;
+    padding: 0;
+  }
+  @media (min-width: 760px) {
+    .mt-steps {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 32px;
+    }
+  }
+  .mt-step {
+    padding-block: 20px;
+    border-block-start: 1px solid var(--border);
+  }
+  .mt-step__text {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--text);
+    text-wrap: pretty;
+  }
+
+  /* ---------- motion: scrubbed to scroll where supported ---------- */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .mt-stage {
+        view-timeline: --mt-stage block;
+      }
+      .mt-card--req,
+      .mt-card--offer,
+      .mt-axis__deco,
+      .mt-band,
+      .mt-range__hit,
+      .mt-point,
+      .mt-overlap,
+      .mt-link,
+      .mt-result__card,
+      .mt-burst {
+        animation-duration: 1ms;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: --mt-stage;
+      }
+      .mt-card--req {
+        animation-name: mt-req;
+        animation-range: cover 12% cover 40%;
+        animation-timing-function: cubic-bezier(0.22, 0.7, 0.3, 1);
+      }
+      .mt-card--offer {
+        animation-name: mt-offer;
+        animation-range: cover 12% cover 40%;
+        animation-timing-function: cubic-bezier(0.22, 0.7, 0.3, 1);
+      }
+      .mt-axis__deco {
+        animation-name: mt-axis;
+        animation-range: cover 22% cover 40%;
+      }
+      .mt-band,
+      .mt-range__hit {
+        animation-name: mt-band;
+        animation-range: cover 39% cover 47%;
+      }
+      .mt-point {
+        animation-name: mt-point;
+        animation-range: cover 44% cover 50%;
+      }
+      .mt-overlap {
+        animation-name: mt-pill;
+        animation-range: cover 42% cover 49%;
+      }
+      .mt-link {
+        animation-name: mt-link;
+        animation-range: cover 46% cover 51%;
+      }
+      .mt-result__card {
+        animation-name: mt-result;
+        animation-range: cover 48% cover 55%;
+        animation-timing-function: cubic-bezier(0.22, 0.7, 0.3, 1);
+      }
+      .mt-burst {
+        animation-name: mt-burst;
+        animation-range: cover 48% cover 60%;
+      }
+    }
+
+    /* fallback: IntersectionObserver adds .is-matched once (see script) */
+    @supports not (animation-timeline: view()) {
+      :global(.js) .mt-card--req,
+      :global(.js) .mt-card--offer {
+        transition:
+          transform 1.1s cubic-bezier(0.22, 0.7, 0.3, 1),
+          opacity 0.9s var(--ease-out);
+      }
+      :global(.js) .mt-axis__deco {
+        transition:
+          transform 0.8s var(--ease-out) 0.3s,
+          opacity 0.8s var(--ease-out) 0.3s;
+      }
+      :global(.js) .mt-band,
+      :global(.js) .mt-range__hit {
+        transition:
+          transform 0.6s var(--ease-out) 1s,
+          opacity 0.6s var(--ease-out) 1s;
+      }
+      :global(.js) .mt-overlap {
+        transition:
+          transform 0.6s var(--ease-out) 1.1s,
+          opacity 0.6s var(--ease-out) 1.1s;
+      }
+      :global(.js) .mt-point {
+        transition:
+          scale 0.5s var(--ease-out) 1.25s,
+          opacity 0.5s var(--ease-out) 1.25s;
+      }
+      :global(.js) .mt-link {
+        transition: transform 0.5s var(--ease-out) 1.35s;
+      }
+      :global(.js) .mt-result__card {
+        transition:
+          transform 0.8s cubic-bezier(0.22, 0.7, 0.3, 1) 1.5s,
+          opacity 0.6s var(--ease-out) 1.5s;
+      }
+      :global(.js) .mt-stage:not(.is-matched) .mt-card--req {
+        transform: translate3d(-14%, -12px, 0) rotate(-2deg);
+        opacity: 0.35;
+      }
+      :global(.js) .mt-stage:not(.is-matched) .mt-card--offer {
+        transform: translate3d(14%, 12px, 0) rotate(2deg);
+        opacity: 0.35;
+      }
+      :global(.js) .mt-stage:not(.is-matched) .mt-axis__deco {
+        transform: scaleX(0.6);
+        opacity: 0;
+      }
+      :global(.js) .mt-stage:not(.is-matched) .mt-band {
+        transform: scaleY(0.2);
+        opacity: 0;
+      }
+      :global(.js) .mt-stage:not(.is-matched) .mt-range__hit {
+        opacity: 0;
+      }
+      :global(.js) .mt-stage:not(.is-matched) .mt-overlap {
+        transform: translateX(-10px);
+        opacity: 0;
+      }
+      :global(.js) .mt-stage:not(.is-matched) .mt-point {
+        scale: 0;
+        opacity: 0;
+      }
+      :global(.js) .mt-stage:not(.is-matched) .mt-link {
+        transform: scaleY(0);
+      }
+      :global(.js) .mt-stage:not(.is-matched) .mt-result__card {
+        transform: translateY(20px) scale(0.94);
+        opacity: 0;
+      }
+      :global(.js) .mt-stage:not(.is-matched) .mt-burst {
+        opacity: 0;
+      }
+      :global(.js) .mt-stage.is-matched .mt-burst {
+        animation: mt-burst 1.3s var(--ease-out) 1.5s both;
+      }
+    }
+  }
+
+  @keyframes mt-req {
+    from {
+      transform: translate3d(-14%, -12px, 0) rotate(-2deg);
+      opacity: 0.35;
+    }
+  }
+  @keyframes mt-offer {
+    from {
+      transform: translate3d(14%, 12px, 0) rotate(2deg);
+      opacity: 0.35;
+    }
+  }
+  @keyframes mt-axis {
+    from {
+      transform: scaleX(0.6);
+      opacity: 0;
+    }
+  }
+  @keyframes mt-band {
+    from {
+      transform: scaleY(0.2);
+      opacity: 0;
+    }
+  }
+  @keyframes mt-point {
+    from {
+      scale: 0;
+      opacity: 0;
+    }
+  }
+  @keyframes mt-pill {
+    from {
+      transform: translateX(-10px);
+      opacity: 0;
+    }
+  }
+  @keyframes mt-link {
+    from {
+      transform: scaleY(0);
+    }
+  }
+  @keyframes mt-result {
+    from {
+      transform: translateY(20px) scale(0.94);
+      opacity: 0;
+    }
+  }
+  @keyframes mt-burst {
+    0% {
+      transform: scale(0.5);
+      opacity: 0;
+    }
+    55% {
+      transform: scale(1.12);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 0.75;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mt-stage *,
+    .mt-stage *::before,
+    .mt-stage *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  /* the result is focal by size, not by a violet burst (glow lives in the hero only) */
+  .mt-burst {
+    display: none;
+  }
+
+  /* one protagonist: the range stage, centred and wider (no duplicate phone) */
+  .mt__grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-items: center;
+  }
+  .mt-stage {
+    inline-size: min(100%, 760px);
+  }
+</style>
