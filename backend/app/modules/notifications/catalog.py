@@ -133,6 +133,15 @@ def _format(key: str, value: Any) -> str:
     return str(value)
 
 
+def _fill(template: str, formatted: Mapping[str, str]) -> str:
+    """`format_map` sin doble punto: si un valor termina en "." (`10:42 a. m.`), se omite el "." que le sigue en el
+    texto (14: "Venta de $48.000 a las 10:42 a. m. Parte Trust …")."""
+    for key, value in formatted.items():
+        if value.endswith("."):
+            template = template.replace("{" + key + "}.", "{" + key + "}")
+    return template.format_map(formatted)
+
+
 def render(type: str, audience: str, **vars: Any) -> tuple[str, str]:
     """(título, cuerpo) del catálogo para `type` y `audience` (`merchant` | `lender` | `admin`).
 
@@ -146,5 +155,5 @@ def render(type: str, audience: str, **vars: Any) -> tuple[str, str]:
         raise ValueError(f"El aviso {type!r} no tiene textos para {audience!r}")
     title, body = texts
     formatted = {key: _format(key, value) for key, value in vars.items()}
-    body_text = body(vars) if callable(body) else body.format_map(formatted)
-    return title.format_map(formatted), body_text
+    body_text = body(vars) if callable(body) else _fill(body, formatted)
+    return _fill(title, formatted), body_text

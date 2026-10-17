@@ -9,11 +9,11 @@ from app.integrations.op.fake import FakeOpClient
 from app.modules.recaudo.models import CollectionAccount
 from app.modules.sales.models import Sale
 from app.modules.users.models import User
-from app.modules.worker.models import OpCursor
+from app.modules.worker.models import SIM_QR_CURSOR, OpCursor
 
 logger = logging.getLogger(__name__)
 
-SIM_CURSOR = "sim_qr_payments"
+SIM_CURSOR = SIM_QR_CURSOR
 
 
 def adopt_collection_accounts(db: Session, fake: FakeOpClient) -> int:

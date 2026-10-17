@@ -25,7 +25,7 @@ Avisos dentro de la app (web y móvil, por polling) para comercio, prestamista y
 ## Reglas
 
 ### Catálogo (los textos de esta tabla mandan; la spec emisora solo decide cuándo)
-Variables: `{negocio}` = business_name · `{prestamista}` = LenderRef.public_name · montos con `format_es` · `{pct}` como `15 %` · `{hora}` con `format_hora`. Si hay dos textos, el primero es para el comercio y el segundo para el prestamista. `data` lleva siempre `loan_id` cuando hay crédito, más lo indicado.
+Variables: `{negocio}` = business_name · `{prestamista}` = LenderRef.public_name · montos con `format_es` · `{pct}` como `15 %` · `{hora}` con `format_hora`. Si hay dos textos, el primero es para el comercio y el segundo para el prestamista. `data` lleva siempre `loan_id` cuando hay crédito, más lo indicado. Si un valor termina en `.` (p. ej. `{hora}` = `10:42 a. m.`), se omite el `.` del texto que le sigue.
 
 | type | Recibe | Emite | Cuándo | Título | Cuerpo | data extra |
 |---|---|---|---|---|---|---|

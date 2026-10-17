@@ -38,8 +38,9 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 | 05-policies | ☑ | ver log |
 | 06-recaudo | ☑ | ver log |
 | 07-sales | ☑ | ver log |
-| 08-worker | ◐ | — |
-| 09 → 16 | ☐ | — |
+| 08-worker | ◐ (faltan AC-9, AC-10) | ver log |
+| 09-scoring | ◐ | — |
+| 10 → 16 | ☐ | — |
 
 ## Decisiones
 
@@ -74,6 +75,11 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - (07) sale_split solo para ventas processed (no held), como dice 14.
 - (07) Webhook: JSON con NaN/Infinity, \u0000 o montos fuera de bigint → 400 (antes daban 500 y Go reintentaría para siempre). bre_b_reference vacío u occurred_at sin zona → unmatched (invalid_payload).
 
+- (08) Reintento con la misma clave ante cualquier OpError `retryable` o 401 (como Go caído). `get_transfer` con 404 → pata `failed_final` (`not_found`) + `payout_failed`; 401/retryable → siguiente tick. Reintento sobre cuenta revocada → pata `held`.
+- (08) Contabilidad de entrega: lo entregado por intento se acota a [0, current_debit_amount]; `receive_*` acumula si el asset no cambia; fallo sin resto → `completed` (y `abono_received`).
+- (08) Eventos de patas: `processing`, `completed`, `retry_scheduled`, `held`, `failed_final`; cuenta revocada por el worker: `revoked` con `{reason, source: "worker"}`.
+- (14) `render()` omite el `.` del texto que sigue a un valor que ya termina en `.` (p. ej. "10:42 a. m.").
+
 ## Cambios de contrato
 
 (ninguno)
@@ -88,6 +94,7 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
   - `SplitLoanState(pct_bps, total_repayable, allocated_total, fee_amount, trust_share_bps)` posicional y `split_sale(amount, state, policy=...)`;
   - `modules.loans.service.close_period(db, loan_id, now)`.
 - **11**: al armar el snapshot `loans.terms`, envolver los montos de `Terms.to_dict()` en Money (asset del crédito) como en el Preview, y alinear `_seed_loan` (seed.py:400) para que escriba la misma forma.
+- **08 AC-9 y AC-10** → al terminar 11 (skipif automático: se activan solos cuando existan `expire_pending` y `on_disbursement_update`; el crédito de prueba no tiene request_id/offer_id).
 - 00-core `test_ac6_all_contract_routes_implemented` → fase final.
 
 ## Bloqueos
@@ -103,3 +110,4 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - 2026-10-17 03:57 · Spec 05-policies ☑: división (prorrateada y literal), términos, match, recálculo y scoring v1 como funciones puras.
 - 2026-10-17 03:57 · Spec 06-recaudo ☑: GET/POST /me/collection-account y ensure_collection_account (commit antes de Go, reintento tras revocación o pool agotado). Se activó 03 AC-6. 127 tests pasan, 3 skips (03 AC-8 → 07, 03 AC-11 → 09/11, rutas completas → final).
 - 2026-10-17 04:30 · Spec 07-sales ☑: webhook de Puntored (HMAC sobre el cuerpo crudo, dedup, división en 3 patas, parte Trust con mínimo y barrido al pagar), ventas de hoy con cursor, historial y detalle. Catálogo de notificaciones y notify() creados (14 completa endpoints). Se activó 03 AC-8. 150 tests, 2 skips (03 AC-11, rutas completas). Revisor: 7 fallas corregidas (cursor que perdía ventas, created_at tras el lock, payloads con NaN/\u0000/montos fuera de bigint).
+- 2026-10-17 05:05 · Spec 08-worker ◐ (código completo; AC-9/AC-10 se activan con 11): run_once con J1–J6, envío y consulta de transferencias con reintentos y backoff, reconciliación del simulador, cierre diario. 182 tests, 4 skips. Revisor: 5 fallas corregidas (404 de Go dejaba la pata en processing para siempre, reintento sobre cuenta revocada).
