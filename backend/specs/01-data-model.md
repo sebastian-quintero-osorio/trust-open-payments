@@ -1,6 +1,6 @@
 # 01 · Modelo de datos (todas las tablas)
 
-Estado: ☐ pendiente · Fase: 0 · Dueño: — · Carpeta: `app/modules/<dueño>/models.py`
+Estado: ☑ hecho · Fase: 0 · Dueño: Claude · Carpeta: `app/modules/<dueño>/models.py`
 
 Fuente única de tablas, columnas y enums. Las specs de módulo **no** las redefinen. Si hace falta una columna, se agrega aquí primero.
 
@@ -147,7 +147,7 @@ Al pasar a `cancelled`, `rejected` o `expired`, la solicitud vuelve a `open` y l
 `entity_type` text · `entity_id` uuid · `type` text · `actor_id` fk null · `data jsonb`. Índice: (`entity_type`, `entity_id`, `created_at`).
 
 ## Criterios de aceptación
-- [ ] **AC-1.** `create_all` crea todas las tablas con sus `CHECK`, índices y únicos parciales en Postgres (→ `test_ac1_schema_creates`).
-- [ ] **AC-2.** Un segundo crédito no terminado para el mismo negocio falla por el índice único parcial (→ `test_ac2_one_open_loan_per_merchant`).
-- [ ] **AC-3.** Una segunda solicitud `open` del mismo negocio falla; una `cancelled` más una `open` sí se permite (→ `test_ac3_one_open_request`).
-- [ ] **AC-4.** Insertar dos `payouts` con el mismo (`sale_id`, `leg`) falla (→ `test_ac4_payout_unique_leg`).
+- [x] **AC-1.** `create_all` crea todas las tablas con sus `CHECK`, índices y únicos parciales en Postgres (→ `test_ac1_schema_creates`).
+- [x] **AC-2.** Un segundo crédito no terminado para el mismo negocio falla por el índice único parcial (→ `test_ac2_one_open_loan_per_merchant`).
+- [x] **AC-3.** Una segunda solicitud `open` del mismo negocio falla; una `cancelled` más una `open` sí se permite (→ `test_ac3_one_open_request`).
+- [x] **AC-4.** Insertar dos `payouts` con el mismo (`sale_id`, `leg`) falla (→ `test_ac4_payout_unique_leg`).

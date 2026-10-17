@@ -1,6 +1,6 @@
 # 00 · Core: convenciones que todos respetan
 
-Estado: ☐ pendiente · Fase: 0 · Dueño: — · Carpeta: `app/core/`
+Estado: ☑ hecho · Fase: 0 · Dueño: Claude · Carpeta: `app/core/`
 
 ## Stack
 Python 3.12 · FastAPI · SQLAlchemy 2.0 **sync** · Pydantic v2 (`pydantic[email]`, para `EmailStr`) + pydantic-settings · httpx · PyJWT · bcrypt · psycopg 3 · pytest. Dependencias con `uv` (`backend/pyproject.toml`). Base de datos **Postgres** también en tests (nada de SQLite: usamos índices parciales, `FOR UPDATE SKIP LOCKED` y JSONB). Tablas con `Base.metadata.create_all()` al arrancar; Alembic queda para después.
@@ -135,9 +135,9 @@ Las specs de módulo usan exactamente estas funciones. Si una firma cambia, se c
 - Los jobs del worker son funciones (`run_once(db, op, now, reconcile=True)`, spec 08) que los tests llaman directo.
 
 ## Criterios de aceptación
-- [ ] **AC-1.** `GET /api/v1/health` responde 200 con la app arrancada contra Postgres y las tablas creadas (→ `test_ac1_app_boots`).
-- [ ] **AC-2.** Un error de validación de FastAPI sale con el formato `{"error": {"code": "validation_error", ...}}` y HTTP 422 (→ `test_ac2_validation_error_format`).
-- [ ] **AC-3.** Sin token, un endpoint protegido da 401 `unauthorized`; con rol incorrecto, 403 `forbidden` (→ `test_ac3_auth_roles`).
-- [ ] **AC-4.** `Money.from_api` rechaza floats, negativos y strings no numéricos; `bps_of(4_800_000, 1500) == 720_000` (→ `test_ac4_money`).
-- [ ] **AC-5.** `clock.local_day_bounds` usa el día de Bogotá (una venta del 17 oct a las 03:00 UTC cuenta como del 16 oct, porque en Bogotá son las 22:00 del 16) (→ `test_ac5_local_day`).
-- [ ] **AC-6.** Test de contrato: el conjunto (método, ruta) de `app.openapi()` es igual al de `contracts/trust-api.openapi.yaml` (comparando también los nombres de los parámetros de ruta), y `conftest` expone `assert_contract(response, operation_id)`, que valida status y body contra el schema del YAML (`jsonschema`, resolviendo `$ref`). Cada test de endpoint de las specs lo llama al menos una vez (→ `test_ac6_contract_routes`).
+- [x] **AC-1.** `GET /api/v1/health` responde 200 con la app arrancada contra Postgres y las tablas creadas (→ `test_ac1_app_boots`).
+- [x] **AC-2.** Un error de validación de FastAPI sale con el formato `{"error": {"code": "validation_error", ...}}` y HTTP 422 (→ `test_ac2_validation_error_format`).
+- [x] **AC-3.** Sin token, un endpoint protegido da 401 `unauthorized`; con rol incorrecto, 403 `forbidden` (→ `test_ac3_auth_roles`).
+- [x] **AC-4.** `Money.from_api` rechaza floats, negativos y strings no numéricos; `bps_of(4_800_000, 1500) == 720_000` (→ `test_ac4_money`).
+- [x] **AC-5.** `clock.local_day_bounds` usa el día de Bogotá (una venta del 17 oct a las 03:00 UTC cuenta como del 16 oct, porque en Bogotá son las 22:00 del 16) (→ `test_ac5_local_day`).
+- [x] **AC-6.** Test de contrato: el conjunto (método, ruta) de `app.openapi()` es igual al de `contracts/trust-api.openapi.yaml` (comparando también los nombres de los parámetros de ruta), y `conftest` expone `assert_contract(response, operation_id)`, que valida status y body contra el schema del YAML (`jsonschema`, resolviendo `$ref`). Cada test de endpoint de las specs lo llama al menos una vez (→ `test_ac6_contract_routes`).
