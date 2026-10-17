@@ -35,8 +35,10 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 | 02-op-client | ☑ | ver log |
 | 03-platform-dev | ◐ (faltan AC-6, AC-8, AC-11) | ver log |
 | 04-users | ☑ | ver log |
-| 05-policies | ◐ | — |
-| 06 → 16 | ☐ | — |
+| 05-policies | ☑ | ver log |
+| 06-recaudo | ☑ | ver log |
+| 07-sales | ◐ | — |
+| 08 → 16 | ☐ | — |
 
 ## Decisiones
 
@@ -62,6 +64,9 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - (03) `POST /dev/seed` con cuerpo malformado da 422 `validation_error` (regla general de 00-core AC-2); el YAML no lo lista por endpoint, no se cambió.
 - (04) PATCH /me ignora `business_name` y `email`; `lender_range` de un no prestamista → 422 (aunque sea null). Cambio de wallet deja evento `payout_wallet_set`. Login con email inexistente corre bcrypt sobre un hash dummy (mismo tiempo que contraseña errada).
 - (00) El fixture `client` limpia `fake_op.calls` después del arranque, porque el arranque ahora llama `resolve_wallet_address` para verificar el asset.
+- (06) Un `409 pool_exhausted` de Go deja un evento `user` `collection_account_pool_exhausted` (`{"idempotency_key"}`) y el siguiente intento usa la clave `merchant:{id}:recaudo:{n+1}` con `n` = revocadas + esos eventos, porque op-service guarda 72 h la 409 definitiva por clave (si no, el negocio no conseguiría cuenta aunque el pool se rellene).
+
+- (05) Terms.to_dict() devuelve montos enteros (centavos); convertir a Money es de 11. features/unlocks_at en la zona de cfg.timezone; razones en singular cuando aplica.
 
 ## Cambios de contrato
 
@@ -76,6 +81,7 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
   - `get_credit_profile(db, merchant_id).assessment.id`;
   - `SplitLoanState(pct_bps, total_repayable, allocated_total, fee_amount, trust_share_bps)` posicional y `split_sale(amount, state, policy=...)`;
   - `modules.loans.service.close_period(db, loan_id, now)`.
+- **11**: al armar el snapshot `loans.terms`, envolver los montos de `Terms.to_dict()` en Money (asset del crédito) como en el Preview, y alinear `_seed_loan` (seed.py:400) para que escriba la misma forma.
 - 00-core `test_ac6_all_contract_routes_implemented` → fase final.
 
 ## Bloqueos
@@ -88,3 +94,5 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - 2026-10-17 02:40 · Specs 00-core y 01-data-model ☑: proyecto uv, core, 15 tablas, arnés de tests con `assert_contract`. 14 tests pasan, 1 skip planificado (rutas completas, fase final). Revisor encontró 8 fallas; todas corregidas.
 - 2026-10-17 02:47 · Spec 02-op-client ☑: OpClient Protocol, HttpOpClient (según op-service.openapi.yaml) y FakeOpClient con controles. 48 tests pasan. El revisor encontró 3 fallas; corregidas.
 - 2026-10-17 03:32 · Spec 04-users ☑ y spec 03-platform-dev parcial (health completo con verificación del asset de mercado, config, guardas dev, wallet falsa, seed de usuarios/ofertas/historial, simulador cableado). 94 tests pasan, 4 skips por dependencia. El revisor encontró 4 fallas; corregidas (incl. seed sin floats).
+- 2026-10-17 03:57 · Spec 05-policies ☑: división (prorrateada y literal), términos, match, recálculo y scoring v1 como funciones puras.
+- 2026-10-17 03:57 · Spec 06-recaudo ☑: GET/POST /me/collection-account y ensure_collection_account (commit antes de Go, reintento tras revocación o pool agotado). Se activó 03 AC-6. 127 tests pasan, 3 skips (03 AC-8 → 07, 03 AC-11 → 09/11, rutas completas → final).

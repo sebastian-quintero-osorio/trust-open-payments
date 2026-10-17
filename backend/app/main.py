@@ -17,6 +17,7 @@ from app.models import Base
 from app.modules.platform.router import dev_router
 from app.modules.platform.router import router as platform_router
 from app.modules.platform.service import log_market_asset_warnings
+from app.modules.recaudo.router import router as recaudo_router
 from app.modules.users.router import router as users_router
 from app.worker import start_worker
 
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(users_router, prefix=API_PREFIX)
+    app.include_router(recaudo_router, prefix=API_PREFIX)
     app.include_router(platform_router, prefix=API_PREFIX)
     app.include_router(dev_router, prefix=API_PREFIX)
     return app

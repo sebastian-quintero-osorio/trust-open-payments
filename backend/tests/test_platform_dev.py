@@ -196,7 +196,6 @@ def test_ac5_seed_idempotent(client, db, dev, settings):
     assert response.json()["user"]["id"] == first["users"][0]["id"]
 
 
-@pytest.mark.skip(reason="depende de spec 06")
 def test_ac6_seed_history(client, db, dev, settings):
     _seed(client)
 
@@ -230,7 +229,7 @@ def test_ac7_seed_offers_no_marta_loan(client, db, dev):
     assert db.scalar(select(func.count()).select_from(Loan).where(Loan.merchant_id == marta.id)) == 0
 
 
-@pytest.mark.skip(reason="depende de specs 06 y 07")
+@pytest.mark.skip(reason="depende de spec 07")
 def test_ac8_simulate_sale_fake(client, db, dev, fake_op):
     result = _seed(client)
     marta_id = result["users"][0]["id"]
@@ -281,7 +280,7 @@ def test_ac10_fake_wallet_authorize(client, dev, fake_op):
     assert fake_op.calls_to("get_payment") == []  # sin efectos laterales (auto-completar)
 
 
-@pytest.mark.skip(reason="depende de specs 05, 09 y 11")
+@pytest.mark.skip(reason="depende de specs 09 y 11")
 def test_ac11_dev_close_period(client, db, dev):
     result = _seed(client, with_active_loan_for_marta=True)
     assert result["loans"] == 3
@@ -428,17 +427,31 @@ def test_seed_users_and_wallets(client, db, dev, settings):
         assert login.status_code == 200, email
 
 
-def test_seed_history_with_existing_accounts(client, db, dev, fake_op, settings, freeze):
-    """R7 con cuentas de recaudo que ya existen (lo que hará `ensure_collection_account` cuando exista 06)."""
+def test_seed_assigns_accounts_and_history_idempotent(client, db, dev, fake_op, settings, freeze):
+    """R6 + R7: el seed asigna las cuentas con `ensure_collection_account` (06) y siembra el historial; reejecutarlo
+    con las cuentas ya existentes no vuelve a llamar a Go ni duplica ventas."""
     freeze(NOW)
-    users = {u["email"].split("@")[0]: uuid.UUID(u["id"]) for u in _seed(client)["users"]}
-    accounts = {slug: _account(db, fake_op, db.get(User, users[slug])) for slug in ("marta", "trigal", "nova")}
-
     result = _seed(client)
+    users = {u["email"].split("@")[0]: uuid.UUID(u["id"]) for u in result["users"]}
+    accounts = {
+        slug: db.scalar(
+            select(CollectionAccount).where(
+                CollectionAccount.merchant_id == users[slug], CollectionAccount.status == "active"
+            )
+        )
+        for slug in ("marta", "trigal", "nova")
+    }
+    assert all(accounts.values())
+    assert sorted(c.idempotency_key for c in fake_op.calls_to("create_collection_account")) == sorted(
+        f"merchant:{users[slug]}:recaudo" for slug in accounts
+    )
+
     counts = _counts(db)
     assert result["seed_sales"] == counts["sales"] > 1000
+    fake_op.calls.clear()
     assert _seed(client)["seed_sales"] == result["seed_sales"]  # idempotente también con historial
     assert _counts(db) == counts
+    assert fake_op.calls_to("create_collection_account") == []
 
     marta = db.get(User, users["marta"])
     _assert_history(db, marta, accounts["marta"], settings)

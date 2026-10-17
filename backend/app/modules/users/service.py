@@ -15,7 +15,7 @@ from app.core.money import MoneySchema, market_money
 from app.integrations.op.client import OpClient, OpError, OpUnavailable
 from app.modules.loans.models import NON_TERMINAL_LOAN_STATUSES, Loan
 from app.modules.notifications.models import Notification
-from app.modules.recaudo.models import CollectionAccount, CollectionAccountStatus
+from app.modules.recaudo.service import current_account
 from app.modules.users.models import User, UserRole
 from app.modules.users.schemas import (
     PASSWORD_MAX_BYTES,
@@ -116,16 +116,7 @@ def build_me(db: Session, user: User) -> Me:
         )
     collection_account = None
     if is_merchant:
-        account = db.scalar(
-            select(CollectionAccount)
-            .where(CollectionAccount.merchant_id == user.id)
-            .order_by(
-                (CollectionAccount.status == CollectionAccountStatus.ACTIVE).desc(),
-                CollectionAccount.created_at.desc(),
-                CollectionAccount.id.desc(),
-            )
-            .limit(1)
-        )
+        account = current_account(db, user.id)  # la `active`; si no hay, la más reciente (06 R1)
         if account is not None:
             collection_account = CollectionAccountSummary(
                 id=account.id, status=account.status, qr_payload=account.qr_payload
