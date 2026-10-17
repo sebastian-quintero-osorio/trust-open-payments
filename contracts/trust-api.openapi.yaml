@@ -216,7 +216,7 @@ paths:
       tags: [scoring]
       operationId: getMyCreditProfile
       summary: Score, grado, elegibilidad y cupo del comercio
-      description: Siempre 200. Un comercio sin historial sale `eligible=false`, cupo 0 y `unlocks_at` con la fecha estimada.
+      description: 'Siempre 200. Un comercio sin ventas sale `eligible=false`, cupo 0, `unlocks_at: null` y la razón "Empieza a cobrar con tu QR de Trust…". Con ventas pero sin los meses mínimos de historial, `unlocks_at` trae la fecha estimada.'
       responses:
         '200':
           description: OK
@@ -362,9 +362,12 @@ paths:
       operationId: listLoanOffers
       summary: Mis ofertas (prestamista) u ofertas abiertas del mercado (comercio), con "N ofertas encajan"
       description: |
-        En `market`, si hay una solicitud (la `open` del comercio, o una hipotética con `fit_min` + `fit_max` + `pct_bps`),
-        cada oferta trae `proposal` (o `null` si no encaja) y `count` = cuántas encajan en total. Sin solicitud, `proposal`
-        es null y `count` = total. `fit_min`, `fit_max` y `pct_bps` van los tres juntos o ninguno (422).
+        En `market`, cada oferta trae `proposal` (o `null` si no encaja) y `count` = cuántas encajan en total (todas las
+        páginas). La solicitud contra la que se compara es, en orden: la hipotética de `fit_min` + `fit_max` + `pct_bps`
+        (los tres juntos o ninguno, si no 422); la solicitud `open` del comercio; o una virtual
+        `{min_loan_amount, cupo disponible, el mayor de pct_options_bps}`. Así `count` coincide con `offers_fit_count`
+        del dashboard. Si el comercio no es elegible o su cupo disponible es menor que `min_loan_amount`, ninguna encaja.
+        En `mine`, `proposal` es null y `count` = total de mis ofertas con el filtro `status`.
       parameters:
         - name: scope
           in: query
@@ -406,7 +409,7 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/LoanOffer' }
                   next_offset: { $ref: '#/components/schemas/NextOffset' }
-                  count: { type: integer, description: 'Ofertas que encajan (o total, si no hay solicitud). Alimenta "3 ofertas encajan con tu rango"' }
+                  count: { type: integer, description: 'market: ofertas que encajan ("3 ofertas encajan con tu rango"); mine: total de mis ofertas con ese filtro' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/Unprocessable' }
@@ -496,7 +499,8 @@ paths:
       description: |
         Comercio: `offer_id` obligatorio (si tiene solicitud `open`, se vincula sola) → `pending_disbursement`.
         Prestamista: `request_id` obligatorio; sin `offer_id` debe mandar `fee_bps` (y `term_months` opcional) → `pending_acceptance`.
-        Sin `amount`, con solicitud y oferta se usa el monto propuesto por el match.
+        `amount` es obligatorio si solo hay un lado (ver `LoanDraft.amount`); con solicitud y oferta, sin `amount` se usa
+        el monto propuesto por el match.
       requestBody:
         required: true
         content:
@@ -675,7 +679,7 @@ paths:
         - name: since
           in: query
           required: false
-          description: El `next_since` de la respuesta anterior; `rows` trae solo las ventas nuevas (el `summary` es siempre del día completo)
+          description: 'El `next_since` de la respuesta anterior, tal cual (incluye microsegundos; nunca re-serializarlo con Date). `rows` trae solo las ventas nuevas; el `summary` es siempre del día completo'
           schema: { type: string, format: date-time }
       responses:
         '200':
@@ -691,6 +695,7 @@ paths:
       tags: [sales]
       operationId: listSales
       summary: Historial de ventas del comercio
+      description: 'Orden `paid_at` desc, luego `id`. Sin `from`/`to`, todo el historial (todas las fuentes).'
       parameters:
         - $ref: '#/components/parameters/FromDate'
         - $ref: '#/components/parameters/ToDate'
@@ -737,9 +742,11 @@ paths:
       operationId: puntoredPaymentWebhook
       summary: Pago Bre-B recibido en el QR de un negocio (lo llama Puntored / op-service, no el frontend)
       description: |
-        Firma `X-Puntored-Signature: t=<unix>,v1=<hex(HMAC-SHA256(secreto, t + "." + raw_body))>`. Siempre 200 si la firma
-        es válida (también para duplicados o cuentas desconocidas). El cuerpo es `PuntoredPaymentEvent` de
-        `contracts/op-service.openapi.yaml`.
+        Firma `X-Puntored-Signature: t=<unix>,v1=<hex(HMAC-SHA256(secreto, t + "." + raw_body))>`. 200 si la firma es
+        válida y el JSON trae `event_id` y `type`: también para duplicados, cuentas desconocidas o `data` inválida
+        (`unmatched`) y tipos distintos de `qr_payment.received` (`ignored`). 400 `bad_request` si el JSON es ilegible o
+        falta `event_id` o `type`. 401 `invalid_signature` (header ausente, mal formado o sin coincidencia) o
+        `signature_expired` (|ahora − t| > 300 s); con 401 no se guarda nada. Nunca responde 422.
       security: []
       parameters:
         - name: X-Puntored-Signature
@@ -869,6 +876,7 @@ paths:
                     items: { $ref: '#/components/schemas/Notification' }
                   next_offset: { $ref: '#/components/schemas/NextOffset' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
   /api/v1/notifications/read-all:
     post:
       tags: [notifications]
@@ -944,7 +952,7 @@ paths:
                 properties:
                   status: { type: string, const: exists }
         '303':
-          description: Envío por formulario (sin JS)
+          description: 'Envío por formulario (sin JS): `?lista=ok`, o `?lista=error` si hay datos inválidos o se superó el límite de envíos'
           headers:
             Location:
               schema: { type: string, format: uri }
@@ -1069,6 +1077,7 @@ paths:
               schema: { $ref: '#/components/schemas/SeedResult' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '502': { $ref: '#/components/responses/OpUnavailable' }
         '503': { $ref: '#/components/responses/OpUnavailable' }
   /api/v1/dev/sales/simulate:
     post:
@@ -1091,6 +1100,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
+        '502': { $ref: '#/components/responses/OpUnavailable' }
         '503': { $ref: '#/components/responses/OpUnavailable' }
   /api/v1/dev/loans/{loan_id}/close-period:
     post:
@@ -1136,6 +1146,7 @@ paths:
             Location:
               schema: { type: string, format: uri }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
 
 components:
   securitySchemes:
@@ -1210,14 +1221,15 @@ components:
     Conflict:
       description: |
         `invalid_state`, `already_exists`, `active_loan_exists`, `open_request_exists`, `pool_exhausted`,
-        `collection_account_not_active`, `sim_disabled`
+        `collection_account_not_active`, `sim_disabled`, `sim_payer_not_authorized`
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Unprocessable:
       description: |
         `validation_error`, `asset_mismatch`, `exceeds_cupo`, `not_eligible`, `wallet_required`, `no_overlap`,
-        `pct_not_allowed`, `wallet_not_found`, `invalid_url`, `collection_account_required`, `disbursement_rejected`
+        `pct_not_allowed`, `wallet_not_found`, `invalid_url`, `collection_account_required`, `disbursement_rejected`,
+        `invalid_amount`
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -1242,6 +1254,13 @@ components:
         asset_scale: { type: integer, minimum: 0, maximum: 255 }
       examples:
         - { value: '4800', asset_code: USD, asset_scale: 2 }
+    PositiveMoney:
+      description: Money con valor mayor que 0
+      allOf:
+        - $ref: '#/components/schemas/Money'
+        - type: object
+          properties:
+            value: { type: string, pattern: '^[1-9][0-9]*$' }
     Asset:
       type: object
       required: [asset_code, asset_scale]
@@ -1265,9 +1284,9 @@ components:
               description: |
                 bad_request, unauthorized, invalid_credentials, invalid_signature, signature_expired, forbidden, not_found,
                 invalid_state, already_exists, active_loan_exists, open_request_exists, pool_exhausted,
-                collection_account_not_active, sim_disabled, validation_error, asset_mismatch, exceeds_cupo, not_eligible,
-                wallet_required, no_overlap, pct_not_allowed, wallet_not_found, invalid_url, collection_account_required,
-                disbursement_rejected, rate_limited, op_unavailable
+                collection_account_not_active, sim_disabled, sim_payer_not_authorized, validation_error, asset_mismatch,
+                exceeds_cupo, not_eligible, wallet_required, no_overlap, pct_not_allowed, wallet_not_found, invalid_url,
+                collection_account_required, disbursement_rejected, invalid_amount, rate_limited, op_unavailable
             message: { type: string, description: Texto en español para mostrar }
             details: { type: object, description: 'Datos extra; con `validation_error`, la lista de campos; con `disbursement_rejected`, `op_code`' }
     MerchantRef:
@@ -1318,7 +1337,7 @@ components:
       required: [email, password, role, first_name, last_name, city]
       properties:
         email: { type: string, format: email }
-        password: { type: string, minLength: 8 }
+        password: { type: string, minLength: 8, maxLength: 72, description: '8 a 72 bytes en UTF-8' }
         role: { type: string, enum: [merchant, lender] }
         first_name: { type: string, minLength: 1 }
         last_name: { type: string, minLength: 1 }
@@ -1413,7 +1432,7 @@ components:
         score: { type: integer, minimum: 0, maximum: 1000 }
         grade: { $ref: '#/components/schemas/Grade' }
         eligible: { type: boolean }
-        unlocks_at: { type: [string, 'null'], format: date-time, description: 'Si no es elegible: fecha estimada en que se desbloquea el crédito' }
+        unlocks_at: { type: [string, 'null'], format: date-time, description: 'Fecha estimada de desbloqueo (00:00 hora local del día 1 del mes, en UTC). null si es elegible o si nunca ha vendido' }
         active_months: { type: integer }
         cupo_total: { $ref: '#/components/schemas/Money' }
         cupo_usado: { $ref: '#/components/schemas/Money' }
@@ -1460,7 +1479,7 @@ components:
         max_amount: { $ref: '#/components/schemas/Money' }
         pct_bps: { type: integer }
         fee_bps: { type: integer, minimum: 0, maximum: 10000, description: Cargo fijo sobre el principal (500 = 5 %) }
-        term_months: { type: integer, minimum: 1, maximum: 24, default: 3, description: Plazo esperado; define el mínimo mensual }
+        term_months: { type: integer, minimum: 1, maximum: 24, description: 'Plazo esperado; define el mínimo mensual. Opcional; si falta se usa default_term_months de GET /config' }
     CreditSummary:
       type: object
       required: [score, grade, cupo_total, cupo_disponible]
@@ -1549,9 +1568,15 @@ components:
       properties:
         request_id: { type: string, format: uuid }
         offer_id: { type: string, format: uuid }
-        amount: { $ref: '#/components/schemas/Money' }
+        amount:
+          $ref: '#/components/schemas/Money'
+          description: |
+            Obligatorio si solo hay un lado: comercio sin solicitud `open` (`offer_taken`) o prestamista sin `offer_id`
+            (`request_funded`); si falta, 422 `validation_error`. Opcional con solicitud y oferta: se usa `proposal.amount`.
+            Múltiplo de `amount_step` y ≥ `min_loan_amount` (422 `validation_error`), dentro del rango de cada lado
+            (422 `no_overlap`) y ≤ cupo disponible (422 `exceeds_cupo`).
         fee_bps: { type: integer, minimum: 0, maximum: 10000, description: Solo prestamista fondeando una solicitud sin oferta (obligatorio en ese caso) }
-        term_months: { type: integer, minimum: 1, maximum: 24, description: Solo en ese mismo caso; por defecto 3 }
+        term_months: { type: integer, minimum: 1, maximum: 24, description: 'Solo en ese mismo caso. Opcional; si falta se usa default_term_months de GET /config' }
     Terms:
       type: object
       required: [principal, fee_bps, fee_amount, total_repayable, trust_share_bps, term_months, monthly_minimum, pct_initial_bps, pct_min_bps, pct_max_bps]
@@ -1586,7 +1611,7 @@ components:
         lender: { $ref: '#/components/schemas/LenderRef' }
         terms: { $ref: '#/components/schemas/Terms' }
         example: { $ref: '#/components/schemas/SplitExample' }
-        expires_in_hours: { type: integer, description: Horas que tendrá el crédito para desembolsarse antes de vencer }
+        expires_in_hours: { type: integer, description: 'Horas que el crédito puede quedar pendiente antes de vencer: para que el comercio acepte (si lo crea el prestamista) o para que el prestamista desembolse; al aceptar se reinicia el plazo' }
     NextAction:
       type: object
       required: [type, actor]
@@ -1631,10 +1656,10 @@ components:
           required: [status, authorization_url, authorization_expires_at, attempt]
           properties:
             status: { type: string, enum: [not_started, in_progress, completed] }
-            authorization_url: { type: [string, 'null'], format: uri, description: 'Solo para el prestamista, mientras está `disbursing`' }
+            authorization_url: { type: [string, 'null'], format: uri, description: 'Solo para el prestamista, mientras el pago espera su autorización; null después de autorizar' }
             authorization_expires_at: { type: [string, 'null'], format: date-time }
             attempt: { type: integer }
-        expires_at: { type: [string, 'null'], format: date-time, description: Vencimiento de los estados pendientes }
+        expires_at: { type: [string, 'null'], format: date-time, description: 'Solo en pending_acceptance y pending_disbursement; null en otros estados' }
         created_at: { type: string, format: date-time }
         accepted_at: { type: [string, 'null'], format: date-time }
         activated_at: { type: [string, 'null'], format: date-time, description: '"Desde 2 oct 2026"' }
@@ -1660,7 +1685,7 @@ components:
       type: object
       required: [status, authorization_url, authorization_expires_at]
       properties:
-        status: { $ref: '#/components/schemas/LoanStatus' }
+        status: { type: string, const: disbursing, description: Estado del crédito tras iniciar el desembolso }
         authorization_url: { type: string, format: uri, description: Abrir en primer plano para que el prestamista autorice en su wallet }
         authorization_expires_at: { type: string, format: date-time }
     LoanPctChange:
@@ -1712,9 +1737,9 @@ components:
         wallet_today: { $ref: '#/components/schemas/Money', description: '"En tu wallet Puntored hoy" (= merchant_total)' }
         rows:
           type: array
-          description: Orden paid_at desc. Con `since`, solo las ventas nuevas
+          description: 'Orden paid_at desc. Con `since`, solo las ventas nuevas. Deduplicar por `sale_id` en el cliente'
           items: { $ref: '#/components/schemas/SaleRow' }
-        next_since: { type: [string, 'null'], format: date-time, description: Mandarlo como `since` en el siguiente polling }
+        next_since: { type: [string, 'null'], format: date-time, description: 'Cursor opaco con microsegundos: mandarlo sin modificar como `since` en el siguiente polling' }
     PayoutView:
       type: object
       required: [id, leg, amount, sent_total, status, attempt, receive, incoming_payment_url, outgoing_payment_url, completed_at, failure_code]
@@ -1767,10 +1792,10 @@ components:
           items: { $ref: '#/components/schemas/PayoutView' }
     PuntoredPaymentEvent:
       type: object
-      description: Igual a `PuntoredPaymentEvent` de contracts/op-service.openapi.yaml
+      description: Compatible con `PuntoredPaymentEvent` de contracts/op-service.openapi.yaml. `type` es string abierto porque Trust responde `ignored` a tipos distintos de `qr_payment.received`; un monto no positivo da `unmatched`.
       required: [event_id, type, occurred_at, data]
       properties:
-        event_id: { type: string }
+        event_id: { type: string, format: uuid }
         type: { type: string, examples: [qr_payment.received] }
         occurred_at: { type: string, format: date-time }
         data:
@@ -1779,7 +1804,7 @@ components:
           properties:
             collection_account_id: { type: string, format: uuid }
             collection_wallet_address: { type: string, format: uri }
-            amount: { $ref: '#/components/schemas/Money' }
+            amount: { $ref: '#/components/schemas/PositiveMoney' }
             bre_b_reference: { type: string }
             payer_bank: { type: [string, 'null'] }
             incoming_payment_url: { type: [string, 'null'], format: uri }
@@ -1889,7 +1914,7 @@ components:
                 is_late: { type: boolean }
             - type: 'null'
         today: { $ref: '#/components/schemas/TodaySummary' }
-        offers_fit_count: { type: integer, description: '"Ofertas para ti (3)"' }
+        offers_fit_count: { type: integer, description: '"Ofertas para ti (N)". 0 si no es elegible o su cupo disponible es menor que min_loan_amount. Es el mismo `count` de GET /loan-offers?scope=market' }
         collection_account:
           oneOf:
             - type: object
@@ -1916,7 +1941,8 @@ components:
         active_loans_count: { type: integer }
         totals:
           type: array
-          description: Una entrada por asset de crédito
+          minItems: 1
+          description: Una entrada por asset de crédito; siempre incluye el asset de mercado (en 0 si no hay datos)
           items:
             type: object
             required: [asset_code, asset_scale, total_prestado, abonos_hoy, recibido_hoy]
@@ -1938,7 +1964,7 @@ components:
             - type: 'null'
         abonos_por_hora:
           type: array
-          description: Bruto por hora local de hoy, de la primera a la última hora con abonos (0 en las vacías)
+          description: 'Bruto por hora local de hoy, de la primera a la última hora con abonos (0 en las vacías); `[]` si no hay abonos hoy'
           items:
             type: object
             required: [hour, amount]
@@ -1982,11 +2008,45 @@ components:
         type: { $ref: '#/components/schemas/NotificationType' }
         title: { type: string, examples: ['Abono recibido · +$7,20 · Tienda La Esquina'] }
         body: { type: string }
-        data:
-          type: object
-          description: Ids para enlazar (`loan_id`, `sale_id`, `repayment_id`, …) y montos Money crudos; las claves dependen del `type` (catálogo en la spec 14)
+        data: { $ref: '#/components/schemas/NotificationData' }
         read_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }
+    NotificationData:
+      type: object
+      description: |
+        Ids para enlazar y montos crudos (para re-formatear). Claves por `type`:
+        offer_received {loan_id, principal, pct_bps} · loan_accepted {loan_id, principal} ·
+        action_required {loan_id, failure_code} · loan_active {loan_id, principal, pct_bps} ·
+        loan_rejected / loan_cancelled {loan_id, principal} · loan_expired {loan_id} · loan_paid {loan_id, total_repayable} ·
+        loan_late {loan_id, missed_periods} · pct_changed {loan_id, old_pct_bps, new_pct_bps, reason} ·
+        abono_received {loan_id, repayment_id, sale_id, payout_id, gross, trust_cut, net, received} ·
+        sale_split {sale_id, amount, merchant_amount, abono, + loan_id si hay crédito activo} ·
+        payout_failed {payout_id, sale_id, leg, failure_code, + loan_id si la pata tiene crédito}
+      properties:
+        loan_id: { type: string, format: uuid }
+        sale_id: { type: string, format: uuid }
+        repayment_id: { type: string, format: uuid }
+        payout_id: { type: string, format: uuid }
+        principal: { $ref: '#/components/schemas/Money' }
+        total_repayable: { $ref: '#/components/schemas/Money' }
+        gross: { $ref: '#/components/schemas/Money' }
+        trust_cut: { $ref: '#/components/schemas/Money' }
+        net: { $ref: '#/components/schemas/Money' }
+        amount: { $ref: '#/components/schemas/Money' }
+        merchant_amount: { $ref: '#/components/schemas/Money' }
+        abono: { $ref: '#/components/schemas/Money' }
+        received:
+          description: Lo que recibió el prestamista, en el asset de su wallet
+          oneOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+        pct_bps: { type: integer }
+        old_pct_bps: { type: integer }
+        new_pct_bps: { type: integer }
+        missed_periods: { type: integer }
+        reason: { $ref: '#/components/schemas/PctChangeReason' }
+        leg: { $ref: '#/components/schemas/PayoutLeg' }
+        failure_code: { type: [string, 'null'] }
     # ── waitlist ──
     WaitlistRequest:
       type: object
@@ -2004,16 +2064,23 @@ components:
       properties:
         trust_revenue:
           type: array
-          description: Una entrada por asset
+          minItems: 1
+          description: 'Una entrada por asset; nunca vacía ("0" en el asset de mercado si no hay datos)'
           items: { $ref: '#/components/schemas/Money' }
         trust_pending:
           type: array
+          minItems: 1
+          description: 'Una entrada por asset; nunca vacía'
           items: { $ref: '#/components/schemas/Money' }
         retained_funds:
           type: array
+          minItems: 1
+          description: 'Una entrada por asset; nunca vacía'
           items: { $ref: '#/components/schemas/Money' }
         in_flight:
           type: array
+          minItems: 1
+          description: 'Una entrada por asset; nunca vacía'
           items: { $ref: '#/components/schemas/Money' }
         payouts_by_status:
           type: object
@@ -2079,7 +2146,7 @@ components:
       properties:
         status: { type: string, enum: [ok, degraded, down] }
         db: { type: string, enum: [ok, down] }
-        op: { type: string, enum: [ok, down] }
+        op: { type: string, enum: [ok, degraded, down], description: 'degraded si op-service responde pero reporta un estado distinto de ok' }
         op_client: { type: string, enum: [fake, http] }
         version: { type: string }
         time: { type: string, format: date-time }
@@ -2134,8 +2201,8 @@ components:
       properties:
         merchant_id: { type: string, format: uuid }
         collection_account_id: { type: string, format: uuid, description: Id de Trust de la cuenta de recaudo }
-        amount: { $ref: '#/components/schemas/Money' }
-        payer_bank: { type: string, examples: [Bancolombia] }
+        amount: { $ref: '#/components/schemas/PositiveMoney' }
+        payer_bank: { type: string, maxLength: 60, examples: [Bancolombia] }
     SimulateSaleResponse:
       type: object
       required: [sim_payment_id, bre_b_reference, status, processed, sale_id]
