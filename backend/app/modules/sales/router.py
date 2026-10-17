@@ -1,10 +1,10 @@
-from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Query, Request
 from pydantic import AwareDatetime
 from starlette.concurrency import run_in_threadpool
 
+from app.core.clock import LocalDate
 from app.core.db import DbSession
 from app.core.deps import Pagination, require_role
 from app.core.errors import error_body
@@ -40,8 +40,10 @@ def list_sales(
     user: Merchant,
     db: DbSession,
     page: Pagination,
-    from_: Annotated[date | None, Query(alias="from", description="Fecha local (America/Bogota), inclusiva")] = None,
-    to: Annotated[date | None, Query(description="Fecha local (America/Bogota), inclusiva")] = None,
+    from_: Annotated[
+        LocalDate | None, Query(alias="from", description="Fecha local (America/Bogota), inclusiva")
+    ] = None,
+    to: Annotated[LocalDate | None, Query(description="Fecha local (America/Bogota), inclusiva")] = None,
 ) -> SalesPage:
     return service.list_sales(db, user, from_, to, page)
 

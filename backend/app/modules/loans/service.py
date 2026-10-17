@@ -216,7 +216,8 @@ def next_action(loan: Loan) -> NextActionOut:
     return NextActionOut(type="none", actor=None)
 
 
-def _pct_paid_bps(loan: Loan) -> int:
+def pct_paid_bps(loan: Loan) -> int:
+    """R13: `allocated_total × 10000 // total_repayable` (también lo usa 13-dashboard)."""
     return loan.allocated_total * 10_000 // loan.total_repayable if loan.total_repayable > 0 else 0
 
 
@@ -268,7 +269,7 @@ def loan_out(
         allocated=MoneySchema.of(_loan_money(loan, loan.allocated_total)),
         delivered=MoneySchema.of(_loan_money(loan, loan.delivered_total)),
         outstanding=MoneySchema.of(_loan_money(loan, loan.total_repayable - loan.allocated_total)),
-        pct_paid_bps=_pct_paid_bps(loan),
+        pct_paid_bps=pct_paid_bps(loan),
         period=_period(db, loan),
         is_late=loan.is_late,
         missed_periods=loan.missed_periods,
@@ -292,7 +293,7 @@ def loan_summary(loan: Loan, merchant: User, lender: User) -> LoanSummaryOut:
         principal=MoneySchema.of(_loan_money(loan, loan.principal)),
         pct_bps=loan.pct_bps,
         allocated=MoneySchema.of(_loan_money(loan, loan.allocated_total)),
-        pct_paid_bps=_pct_paid_bps(loan),
+        pct_paid_bps=pct_paid_bps(loan),
         is_late=loan.is_late,
         next_action=next_action(loan),
         created_at=loan.created_at,

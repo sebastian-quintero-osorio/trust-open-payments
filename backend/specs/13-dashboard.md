@@ -1,6 +1,6 @@
 # 13 · Dashboards: comercio y prestamista
 
-Estado: ☐ pendiente · Fase: 3 · Dueño: — · Carpeta: `app/modules/dashboard/`
+Estado: ☑ hecho · Fase: 3 · Dueño: Claude · Carpeta: `app/modules/dashboard/`
 
 ## Objetivo
 Una sola llamada por pantalla de inicio: `cupo-dashboard` del comercio (COPY 13a) y `portafolio-prestamista` (COPY 13d). Solo lectura, sin llamar a Go.
@@ -74,14 +74,14 @@ Una sola llamada por pantalla de inicio: `cupo-dashboard` del comercio (COPY 13a
 - `09-scoring` (`get_credit_profile`) · `05-policies` (`fits`) · `07-sales` (`today_summary`) · `14-notifications` (conteo de no leídas) · `00-core` (MerchantRef, LenderRef, `clock`).
 
 ## Criterios de aceptación
-- [ ] **AC-1.** Dado un `credit_assessment` de hoy (cupo_total $6.000.000, score 780, A, elegible), un crédito `active` de $2.000.000 con `fee_bps` 0 (total $2.000.000), `allocated_total` $640.000, `activated_at` 2 oct, prestamista Camilo P. y cuenta `active`, cuando Marta pide su dashboard, entonces `cupo_disponible` $4.000.000, `pct_paid_bps` 3200, `lender.public_name` "Camilo P.", `initials` "TL" y `next_action` `view_loan` (→ `test_ac1_merchant_dashboard_copy_numbers`)
-- [ ] **AC-2.** Dadas hoy ventas de $48.000, $26.000, $12.500 y $85.000 al 15 %, `today` da $171.500 / 4 / $145.775 / $25.725 (abonos $7.200, $3.900, $1.875 y $12.750, como COPY 13c), igual que `summary` de `GET /sales/today` (07 AC-13) (→ `test_ac2_today_matches_sales_feed`)
-- [ ] **AC-3.** Dadas ofertas `open` A $1.000.000–$2.500.000 al 15 %, B $3.500.000–$5.000.000 al 15 % y C $1.000.000–$2.000.000 al 20 % y `cupo_disponible` $4.000.000: con la solicitud $1.500.000–$3.000.000 al 15 % el conteo es 1; sin solicitud es 3; si no es elegible, 0 (→ `test_ac3_offers_fit_count`)
-- [ ] **AC-4.** Dado un negocio sin payout wallet, sin cuenta ni crédito, entonces `active_loan` null, `collection_account` null, `today` en 0 con `sales_count` 0 y `next_action` `link_wallet` (→ `test_ac4_merchant_empty_state`)
-- [ ] **AC-5.** Dado un prestamista con 2 créditos `active` ($2.000.000 y $1.500.000), 1 `disbursing` ($2.000.000) y 1 `pending_disbursement` ($1.000.000), entonces `active_loans_count` 2, `total_prestado` $5.500.000 y `loans` con 4 items, los `active` primero (→ `test_ac5_lender_totals`)
-- [ ] **AC-6.** Dados abonos de hoy a las 08:15 (bruto $7.200, trust $130,90, neto $7.069,10) y 10:05 (bruto $3.900) y uno de ayer, entonces `abonos_hoy.gross` $11.100, `net` = Σ lender_net de los dos, `abonos_por_hora` [08:00 → $7.200, 09:00 → $0, 10:00 → $3.900], `today_gross` por crédito y `last_repayments` con 3 items, el de 10:05 primero (→ `test_ac6_lender_hourly_and_last`)
-- [ ] **AC-7.** Dada una pata lender `completed` hoy con `sent_total` $7.069,10 y otra `completed` ayer, `recibido_hoy` es $7.069,10 (→ `test_ac7_received_today`)
-- [ ] **AC-8.** Un merchant en `/dashboard/lender` → 403, y un lender en `/dashboard/merchant` → 403 (→ `test_ac8_roles`)
+- [x] **AC-1.** Dado un `credit_assessment` de hoy (cupo_total $6.000.000, score 780, A, elegible), un crédito `active` de $2.000.000 con `fee_bps` 0 (total $2.000.000), `allocated_total` $640.000, `activated_at` 2 oct, prestamista Camilo P. y cuenta `active`, cuando Marta pide su dashboard, entonces `cupo_disponible` $4.000.000, `pct_paid_bps` 3200, `lender.public_name` "Camilo P.", `initials` "TL" y `next_action` `view_loan` (→ `test_ac1_merchant_dashboard_copy_numbers`)
+- [x] **AC-2.** Dadas hoy ventas de $48.000, $26.000, $12.500 y $85.000 al 15 %, `today` da $171.500 / 4 / $145.775 / $25.725 (abonos $7.200, $3.900, $1.875 y $12.750, como COPY 13c), igual que `summary` de `GET /sales/today` (07 AC-13) (→ `test_ac2_today_matches_sales_feed`)
+- [x] **AC-3.** Dadas ofertas `open` A $1.000.000–$2.500.000 al 15 %, B $3.500.000–$5.000.000 al 15 % y C $1.000.000–$2.000.000 al 20 % y `cupo_disponible` $4.000.000: con la solicitud $1.500.000–$3.000.000 al 15 % el conteo es 1; sin solicitud es 3; si no es elegible, 0 (→ `test_ac3_offers_fit_count`)
+- [x] **AC-4.** Dado un negocio sin payout wallet, sin cuenta ni crédito, entonces `active_loan` null, `collection_account` null, `today` en 0 con `sales_count` 0 y `next_action` `link_wallet` (→ `test_ac4_merchant_empty_state`)
+- [x] **AC-5.** Dado un prestamista con 2 créditos `active` ($2.000.000 y $1.500.000), 1 `disbursing` ($2.000.000) y 1 `pending_disbursement` ($1.000.000), entonces `active_loans_count` 2, `total_prestado` $5.500.000 y `loans` con 4 items, los `active` primero (→ `test_ac5_lender_totals`)
+- [x] **AC-6.** Dados abonos de hoy a las 08:15 (bruto $7.200, trust $130,90, neto $7.069,10) y 10:05 (bruto $3.900) y uno de ayer, entonces `abonos_hoy.gross` $11.100, `net` = Σ lender_net de los dos, `abonos_por_hora` [08:00 → $7.200, 09:00 → $0, 10:00 → $3.900], `today_gross` por crédito y `last_repayments` con 3 items, el de 10:05 primero (→ `test_ac6_lender_hourly_and_last`)
+- [x] **AC-7.** Dada una pata lender `completed` hoy con `sent_total` $7.069,10 y otra `completed` ayer, `recibido_hoy` es $7.069,10 (→ `test_ac7_received_today`)
+- [x] **AC-8.** Un merchant en `/dashboard/lender` → 403, y un lender en `/dashboard/merchant` → 403 (→ `test_ac8_roles`)
 
 ## Fuera de alcance
 - Dashboard de admin (16) · gráficos de días anteriores · caché.

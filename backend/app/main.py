@@ -14,12 +14,14 @@ from app.integrations.op.boot import adopt_collection_accounts
 from app.integrations.op.client import OpClient, get_op_client
 from app.integrations.op.fake import FakeOpClient
 from app.models import Base
+from app.modules.dashboard.router import router as dashboard_router
 from app.modules.loans.router import router as loans_router
 from app.modules.marketplace.router import router as marketplace_router
 from app.modules.platform.router import dev_router
 from app.modules.platform.router import router as platform_router
 from app.modules.platform.service import log_market_asset_warnings
 from app.modules.recaudo.router import router as recaudo_router
+from app.modules.repayments.router import router as repayments_router
 from app.modules.sales.router import router as sales_router
 from app.modules.sales.router import webhooks_router
 from app.modules.scoring.router import router as scoring_router
@@ -67,6 +69,8 @@ def create_app() -> FastAPI:
     app.include_router(loans_router, prefix=API_PREFIX)
     app.include_router(sales_router, prefix=API_PREFIX)
     app.include_router(webhooks_router, prefix=API_PREFIX)
+    app.include_router(repayments_router, prefix=API_PREFIX)
+    app.include_router(dashboard_router, prefix=API_PREFIX)
     app.include_router(platform_router, prefix=API_PREFIX)
     app.include_router(dev_router, prefix=API_PREFIX)
     return app

@@ -367,6 +367,35 @@ def market_request(db: Session, merchant_id: uuid.UUID, profile: CreditProfile) 
     return AmountRange(cfg.min_loan_amount, profile.cupo_disponible.value, max(cfg.pct_options_bps))
 
 
+def score_market_offers(
+    db: Session, merchant_id: uuid.UUID, profile: CreditProfile, request: AmountRange | LoanRequest
+) -> list[tuple[LoanOffer, User, Proposal | None]]:
+    """R7/R8: las ofertas `open` del mercado (más recientes primero) con su `proposal` contra `request`.
+
+    `proposal` es `None` si no encaja o si el negocio no puede tomar ninguna (`can_fit`). Una sola consulta; la usan
+    `GET /loan-offers?scope=market` y el dashboard del comercio (13 R4), así `count` y `offers_fit_count` coinciden.
+    """
+    step = get_settings().amount_step
+    cupo = profile.cupo_disponible.value
+    fit_allowed = can_fit(profile)
+    rows = db.execute(
+        select(LoanOffer, User)
+        .join(User, User.id == LoanOffer.lender_id)
+        .where(LoanOffer.status == OfferStatus.OPEN, LoanOffer.lender_id != merchant_id)
+        .order_by(LoanOffer.created_at.desc(), LoanOffer.id.desc())
+    ).all()
+    return [(offer, lender, fits(request, offer, cupo, step) if fit_allowed else None) for offer, lender in rows]
+
+
+def market_fit_count(db: Session, merchant_id: uuid.UUID, profile: CreditProfile) -> int:
+    """13 R4: cuántas ofertas `open` encajan con la solicitud `open` del negocio (o la virtual); 0 si no puede tomar
+    ninguna. Es el `count` de `GET /loan-offers?scope=market` sin `fit_*`."""
+    if not can_fit(profile):
+        return 0
+    request = market_request(db, merchant_id, profile)
+    return sum(1 for _, _, proposal in score_market_offers(db, merchant_id, profile, request) if proposal is not None)
+
+
 def list_offers(
     db: Session,
     user: User,
@@ -392,23 +421,10 @@ def list_offers(
         items = [offer_out(offer, user) for offer in rows]
         return LoanOfferPage(items=items, next_offset=next_offset(page.offset, page.limit, len(items)), count=count)
 
-    cfg = get_settings()
     profile = get_credit_profile(db, user.id)
     request = hypothetical or market_request(db, user.id, profile)
-    cupo = profile.cupo_disponible.value
-    fit_allowed = can_fit(profile)
-
-    query = (
-        select(LoanOffer, User)
-        .join(User, User.id == LoanOffer.lender_id)
-        .where(LoanOffer.status == OfferStatus.OPEN, LoanOffer.lender_id != user.id)
-    )
-    if status is not None and status != OfferStatus.OPEN:
-        query = query.where(false())  # market solo tiene ofertas `open`
-    rows = db.execute(query.order_by(*order)).all()
-    scored = [
-        (offer, lender, fits(request, offer, cupo, cfg.amount_step) if fit_allowed else None) for offer, lender in rows
-    ]
+    market_status = status is None or status == OfferStatus.OPEN  # market solo tiene ofertas `open`
+    scored = score_market_offers(db, user.id, profile, request) if market_status else []
     count = sum(1 for _, _, proposal in scored if proposal is not None)  # R8: todas las páginas
     if fits_only:
         scored = [row for row in scored if row[2] is not None]

@@ -658,8 +658,12 @@ def test_list_sales_history(client, db, auth, make_merchant, make_lender):
 
     _error(client.get("/api/v1/sales", params={"from": "2026-10-17", "to": "2026-10-16"}, headers=auth(ct.merchant)),
            422, "validation_error", "listSales")
-    _error(client.get("/api/v1/sales", params={"from": "16-10-2026"}, headers=auth(ct.merchant)),
-           422, "validation_error", "listSales")
+    for bad in ("16-10-2026", "1697414400", "2026-10-16T00:00:00"):  # solo YYYY-MM-DD
+        _error(client.get("/api/v1/sales", params={"from": bad}, headers=auth(ct.merchant)),
+               422, "validation_error", "listSales")
+    wide = client.get("/api/v1/sales", params={"to": "9999-12-31"}, headers=auth(ct.merchant))  # date.max, no 500
+    assert_contract(wide, "listSales")
+    assert len(wide.json()["items"]) == 3
     _error(client.get("/api/v1/sales", headers=auth(ct.lender)), 403, "forbidden", "listSales")
 
 

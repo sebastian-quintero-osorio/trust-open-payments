@@ -42,8 +42,10 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 | 09-scoring | ☑ | ver log |
 | 10-marketplace | ☑ | ver log |
 | 11-loans | ☑ | ver log |
-| 12-repayments | ◐ | — |
-| 13 → 16 | ☐ | — |
+| 12-repayments | ☑ | ver log |
+| 13-dashboard | ☑ | ver log |
+| 14-notifications | ◐ | — |
+| 15 → 16 | ☐ | — |
 
 ## Decisiones
 
@@ -92,6 +94,13 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - (11) Desembolso: OpError retryable o 401 → 503 op_unavailable con el mismo intento; 201 sin authorization_url → queda disbursing y la API responde 409 invalid_state. authorization_url/expires_at solo para el prestamista. Aceptar con expires_at vencido → 409 invalid_state.
 - (11) close_period lanza ValueError si el crédito no existe o no está active (dev → 404/409). Id no UUID en el body → 422; status desconocido en GET /loans → 422.
 
+- (12) `clock.local_day_bounds(date.max)` termina en `datetime.max` UTC: `to=9999-12-31` (fecha válida) ya no da 500; arregla también `GET /sales` (07).
+- (07/12) `from`/`to` de `GET /sales` y `GET /repayments` solo aceptan `YYYY-MM-DD` (`clock.LocalDate`): timestamps Unix o fechas con hora → 422 `validation_error` (el modo laxo de Pydantic los aceptaba).
+
+- (12) Filtro loan_id no UUID → 422 (las ids de ruta dan 404); empates de paid_at por id asc; delivery.received sale de receive_* de la pata lender aunque no esté completed; traza en orden lender, merchant, trust.
+
+- (13) offers_fit_count y el count de GET /loan-offers?scope=market salen de la misma función; totals pone primero el asset de mercado y otros assets solo con datos; abonos_por_hora es GROUP BY de la hora local de la venta.
+
 ## Cambios de contrato
 
 (ninguno)
@@ -123,3 +132,5 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - 2026-10-17 06:19 · Spec 03-platform-dev ☑: AC-11 activo (cierre de periodo desde /dev y seed de créditos El Trigal 58 %, Nova 12 %, Marta 32 % con snapshot de términos en Money).
 - 2026-10-17 06:19 · Spec 08-worker ☑: AC-9 y AC-10 activos con las funciones de la spec 11.
 - 2026-10-17 06:19 · Spec 11-loans ☑: preview, crear (3 orígenes), aceptar/rechazar/cancelar con reapertura, desembolso con link de autorización y clave por intento, on_disbursement_update, expire_pending, close_period, listas y detalle. 232 tests, 1 skip (rutas completas, fase final). Revisor: 2 fallas corregidas (aceptar un crédito vencido lo revivía).
+- 2026-10-17 06:47 · Spec 12-repayments ☑: lista de abonos por rol con filtros locales y entrega, y traza venta → abono → pagos → crédito.
+- 2026-10-17 06:47 · Spec 13-dashboard ☑: dashboards de comercio y prestamista; con el seed dan cupo $4.000.000 de $6.000.000, 32 % pagado, 3 ofertas para ti, Camilo con 3 créditos y $5.500.000 prestados. 250+ tests, 1 skip (final). Revisor: fecha 9999-12-31 daba 500 en filtros locales, corregido.

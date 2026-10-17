@@ -1,10 +1,11 @@
 """Reloj de la app: `now()` en UTC (congelable en tests) y cálculos de día local en `TIMEZONE`."""
 
+import re
 from datetime import UTC, date, datetime, time, timedelta
-from typing import Annotated
+from typing import Annotated, Any
 from zoneinfo import ZoneInfo
 
-from pydantic import AfterValidator
+from pydantic import AfterValidator, BeforeValidator
 
 from app.core.config import get_settings
 
@@ -45,11 +46,17 @@ def today_local() -> date:
 
 
 def local_day_bounds(day: date) -> tuple[datetime, datetime]:
-    """Inicio (inclusivo) y fin (exclusivo) del día local `day`, en UTC."""
+    """Inicio (inclusivo) y fin (exclusivo) del día local `day`, en UTC.
+
+    Para `date.max` (`9999-12-31`, fecha válida en un filtro `to=`) el día siguiente no existe: el fin es
+    `datetime.max` en UTC en vez de desbordar con un 500.
+    """
     tz = local_tz()
-    start = datetime.combine(day, time.min, tzinfo=tz)
-    end = datetime.combine(day + timedelta(days=1), time.min, tzinfo=tz)
-    return start.astimezone(UTC), end.astimezone(UTC)
+    start = datetime.combine(day, time.min, tzinfo=tz).astimezone(UTC)
+    if day == date.max:
+        return start, datetime.max.replace(tzinfo=UTC)
+    end = datetime.combine(day + timedelta(days=1), time.min, tzinfo=tz).astimezone(UTC)
+    return start, end
 
 
 def format_hora(dt: datetime) -> str:
@@ -68,3 +75,16 @@ def _as_utc(dt: datetime) -> datetime:
 
 UtcDateTime = Annotated[datetime, AfterValidator(_as_utc)]
 """Tipo para schemas de respuesta: se normaliza a UTC y Pydantic lo serializa con `Z`."""
+
+
+_ISO_DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")  # `\d` aceptaría dígitos no ASCII
+
+
+def _iso_date_only(value: Any) -> Any:
+    if isinstance(value, str) and not _ISO_DATE.fullmatch(value):
+        raise ValueError("La fecha debe tener el formato AAAA-MM-DD.")
+    return value
+
+
+LocalDate = Annotated[date, BeforeValidator(_iso_date_only)]
+"""Fecha local `YYYY-MM-DD` de los filtros `from`/`to`: sin timestamps ni fechas con hora (las acepta el modo laxo)."""

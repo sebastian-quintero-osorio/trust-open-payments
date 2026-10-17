@@ -3,6 +3,7 @@
 import uuid
 from typing import Any
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.modules.notifications.catalog import NOTIFICATION_TYPES
@@ -18,3 +19,13 @@ def notify(
     notification = Notification(user_id=user_id, type=type, title=title, body=body, data=data or {})
     db.add(notification)
     return notification
+
+
+def unread_count(db: Session, user_id: uuid.UUID) -> int:
+    """14 R5: avisos del usuario con `read_at` null (lo usan `GET /me` y los dashboards de 13)."""
+    count = db.scalar(
+        select(func.count()).select_from(Notification).where(
+            Notification.user_id == user_id, Notification.read_at.is_(None)
+        )
+    )
+    return count or 0

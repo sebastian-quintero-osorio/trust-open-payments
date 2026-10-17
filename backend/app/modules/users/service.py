@@ -3,7 +3,7 @@
 import logging
 import uuid
 
-from sqlalchemy import exists, func, or_, select
+from sqlalchemy import exists, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -14,7 +14,7 @@ from app.core.events import record_event
 from app.core.money import BIGINT_MAX, MoneySchema, market_money
 from app.integrations.op.client import OpClient, OpError, OpUnavailable
 from app.modules.loans.models import NON_TERMINAL_LOAN_STATUSES, Loan
-from app.modules.notifications.models import Notification
+from app.modules.notifications.service import unread_count
 from app.modules.recaudo.service import current_account
 from app.modules.users.models import User, UserRole
 from app.modules.users.schemas import (
@@ -121,11 +121,6 @@ def build_me(db: Session, user: User) -> Me:
             collection_account = CollectionAccountSummary(
                 id=account.id, status=account.status, qr_payload=account.qr_payload
             )
-    unread = db.scalar(
-        select(func.count()).select_from(Notification).where(
-            Notification.user_id == user.id, Notification.read_at.is_(None)
-        )
-    )
     return Me(
         id=user.id,
         email=user.email,
@@ -141,7 +136,7 @@ def build_me(db: Session, user: User) -> Me:
         payout_wallet=payout_wallet,
         lender_range=lender_range,
         collection_account=collection_account,
-        unread_notifications=unread or 0,
+        unread_notifications=unread_count(db, user.id),
     )
 
 
