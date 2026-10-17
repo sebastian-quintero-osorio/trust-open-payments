@@ -532,6 +532,9 @@ func (s *Service) failFlow(ctx context.Context, j workflow.Job, f *Flow, code st
 	if f.Kind == "payment" && code != "insufficient_balance" && code != "quote_expired" && code != "receiver_unreachable" && code != "upstream_error" {
 		code = "internal"
 	}
+	if f.Kind == "sim_payment" {
+		v["failure_code"] = code
+	}
 	if f.Kind == "transfer" {
 		v["failure_code"] = code
 		v["retryable"] = code == "insufficient_balance" || code == "receiver_unreachable" || code == "upstream_error" || code == "internal"

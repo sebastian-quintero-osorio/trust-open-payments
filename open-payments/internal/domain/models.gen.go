@@ -120,6 +120,7 @@ type SimQrPayment struct {
 	BreBReference       string                `json:"bre_b_reference"`
 	CollectionAccountID string                `json:"collection_account_id"`
 	CreatedAt           string                `json:"created_at"`
+	FailureCode         *string               `json:"failure_code,omitempty"`
 	ID                  string                `json:"id"`
 	IncomingPaymentURL  *string               `json:"incoming_payment_url,omitempty"`
 	PayerBank           *string               `json:"payer_bank,omitempty"`

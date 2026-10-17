@@ -538,6 +538,11 @@ paths:
       security: []
       parameters:
         - $ref: '#/components/parameters/CollectionAccountId'
+        - name: receipt
+          in: query
+          required: false
+          description: Token privado del formulario enviado. Consulta el estado sin crear otro pago, incluso si el canal está desactivado.
+          schema: { type: string, format: uuid }
       responses:
         '200':
           description: Página HTML
@@ -580,7 +585,7 @@ paths:
                 form_token: { type: string, description: Token de un solo uso que sirve de Idempotency-Key }
       responses:
         '200':
-          description: Página HTML con el resultado ("Pago enviado")
+          description: Página HTML con estado real y actualización automática mediante GET mientras el pago o su confirmación están en proceso
           content:
             text/html:
               schema: { type: string }
@@ -882,6 +887,7 @@ components:
           type: string
           enum: [processing, completed, failed]
           description: completed = la plata llegó a la cuenta de recaudo y se intentó enviar el webhook
+        failure_code: { type: [string, 'null'], description: Motivo del fallo si está disponible; insufficient_balance indica saldo insuficiente del comprador }
         incoming_payment_url: { type: [string, 'null'], format: uri }
         webhook_event:
           description: Solo si status=completed. Es exactamente el body del webhook, con el mismo event_id en cada reintento

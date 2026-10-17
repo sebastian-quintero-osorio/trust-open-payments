@@ -28,6 +28,10 @@ func (s *Service) qrPage(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	if r.URL.Query().Has("receipt") {
+		s.qrReceipt(w, r, id, r.URL.Query().Get("receipt"))
+		return
+	}
 	v, e := read(r.Context(), s.DB.Pool, id, "collection_account", false)
 	if e != nil || status(v) != "active" {
 		http.NotFound(w, r)
@@ -182,7 +186,53 @@ func (s *Service) qrPay(w http.ResponseWriter, r *http.Request) {
 	if reply.Replayed {
 		w.Header().Set("Idempotent-Replayed", "true")
 	}
-	_, _ = w.Write([]byte(`<!doctype html><html lang="es"><meta charset="utf-8"><title>Trust</title><h1>Pago enviado</h1><p>La confirmación del recaudo está en proceso.</p></html>`))
+	s.qrReceipt(w, r, id, token)
+}
+
+var qrReceiptTemplate = template.Must(template.New("receipt").Parse(`<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Estado del pago · Trust</title>{{if .Refresh}}<meta http-equiv="refresh" content="3;url={{.URL}}">{{end}}<h1>{{.Title}}</h1><p>{{.Message}}</p><p>Referencia: {{.Reference}}</p><p><a href="{{.URL}}">Consultar estado</a></p>{{if .Failed}}<p><a href="https://wallet.interledger-test.dev/" target="_blank" rel="noopener noreferrer">Abrir wallet de prueba</a></p><p><a href="{{.PayURL}}">Volver al formulario</a></p>{{end}}</html>`))
+
+// The original random form token is a receipt capability, scoped to its account.
+// Permanent financial receipts keep status lookup available after cache expiry.
+func (s *Service) qrReceipt(w http.ResponseWriter, r *http.Request, accountID, token string) {
+	if _, e := uuid.Parse(token); e != nil {
+		http.NotFound(w, r)
+		return
+	}
+	var raw []byte
+	var delivery string
+	e := s.DB.Pool.QueryRow(r.Context(), `SELECT r.payload, COALESCE(o.status,'')
+		FROM financial_receipts f
+		JOIN resources r ON r.id::text=convert_from(f.response_body,'UTF8')::jsonb->>'id'
+		LEFT JOIN webhook_outbox o ON o.resource_id=r.id
+		WHERE f.scope=$1 AND f.key=$2 AND f.status=201 AND r.kind='sim_payment'
+		AND r.payload->>'collection_account_id'=$3`, "POST /qr/"+accountID+"/pay", token, accountID).Scan(&raw, &delivery)
+	if errors.Is(e, pgx.ErrNoRows) {
+		http.NotFound(w, r)
+		return
+	}
+	var v map[string]any
+	if e != nil || json.Unmarshal(raw, &v) != nil {
+		http.Error(w, "No fue posible consultar el estado. Actualiza esta página; no vuelvas a enviar el pago.", http.StatusServiceUnavailable)
+		return
+	}
+	title, message, refresh := "Pago en proceso", "Estamos consultando el resultado. Esta página se actualiza automáticamente; no vuelvas a enviar el pago.", true
+	failed := status(v) == "failed"
+	switch status(v) {
+	case "failed":
+		title, message, refresh = "Pago no realizado", "El proveedor rechazó el pago. Revisa la wallet del comprador antes de volver a intentarlo.", false
+		if v["failure_code"] == "insufficient_balance" {
+			message = "La wallet del comprador no tiene saldo suficiente. Agrega saldo de prueba y vuelve al formulario para intentar un nuevo pago. Este intento no generó un recaudo."
+		}
+	case "completed":
+		title, message = "Pago recibido", "El dinero llegó a la cuenta de recaudo. La confirmación en Trust sigue pendiente; no vuelvas a pagar."
+		if delivery == "delivered" {
+			title, message, refresh = "Recaudo confirmado", "Trust recibió la confirmación. El comercio puede consultar la venta en su historial; el reparto se procesa por separado.", false
+		} else if delivery == "exhausted" {
+			message, refresh = "El dinero llegó a la cuenta de recaudo, pero no se pudo entregar la confirmación a Trust. Comunica esta referencia al comercio; no vuelvas a pagar.", false
+		}
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = qrReceiptTemplate.Execute(w, map[string]any{"Title": title, "Message": message, "Reference": v["bre_b_reference"], "Refresh": refresh, "Failed": failed, "URL": "/qr/" + accountID + "?receipt=" + token, "PayURL": "/qr/" + accountID})
 }
 
 // clientIP trusts a single forwarded address only from configured private proxies.
