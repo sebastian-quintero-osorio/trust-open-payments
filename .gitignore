@@ -1,2 +1,13 @@
 # Ignorar CLAUDE.md en cualquier nivel del proyecto
 **/CLAUDE.md
+**/AGENTS.md
+**/task[0-9]*.md
+
+# Ignorar carpetas tasks en cualquier nivel del proyecto
+tasks/
+
+# Secretos locales de entorno en cualquier directorio
+.env
+.env.*
+!.env.example
+!.env.*.example
