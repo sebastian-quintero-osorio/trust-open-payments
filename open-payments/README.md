@@ -102,3 +102,20 @@ instrucción del usuario: sus credenciales no son requisito para desarrollar el 
 Referencias consultadas: [grants](https://openpayments.dev/identity/grants/),
 [firmas](https://openpayments.dev/identity/http-signatures/),
 [SDK Go](https://github.com/interledger/open-payments-go).
+
+
+## Autorización y recuperación (fase 3)
+
+Los grants se guardan cifrados mediante AES-256-GCM. HKDF deriva una clave separada
+con contexto `trust/op-service/vault/v1` desde la semilla Ed25519 configurada: no
+se requieren secretos adicionales. El ID del registro se autentica como AAD.
+**Cambiar OP_PRIVATE_KEY requiere migrar los ciphertexts con la clave anterior**;
+conservar esa clave de forma segura junto con los backups.
+
+La rotación se serializa mediante advisory locks de PostgreSQL y guarda primero
+un marcador durable. Si se pierde la respuesta, el grant queda bloqueado para
+nuevas salidas y requiere reautorización; nunca se vuelve a rotar a ciegas. Token
+y management URL se reemplazan juntos. Los callbacks verifican hash/nonce antes
+de consumir el intento, y su consumo comparte transacción con el trabajo pendiente.
+Las colas usan leases, dueños y SKIP LOCKED; un worker antiguo no puede confirmar
+un lease reasignado. Los estados financieros terminales no admiten transiciones.
