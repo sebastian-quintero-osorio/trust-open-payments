@@ -33,16 +33,17 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 | 00-core | ☑ | ver log |
 | 01-data-model | ☑ | ver log |
 | 02-op-client | ☑ | ver log |
-| 03-platform-dev | ◐ (falta AC-11) | ver log |
+| 03-platform-dev | ☑ | ver log |
 | 04-users | ☑ | ver log |
 | 05-policies | ☑ | ver log |
 | 06-recaudo | ☑ | ver log |
 | 07-sales | ☑ | ver log |
-| 08-worker | ◐ (faltan AC-9, AC-10) | ver log |
+| 08-worker | ☑ | ver log |
 | 09-scoring | ☑ | ver log |
 | 10-marketplace | ☑ | ver log |
-| 11-loans | ◐ | — |
-| 12 → 16 | ☐ | — |
+| 11-loans | ☑ | ver log |
+| 12-repayments | ◐ | — |
+| 13 → 16 | ☐ | — |
 
 ## Decisiones
 
@@ -87,6 +88,10 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - (10) scope=market con status distinto de open → lista vacía; admin en /matches → 403; los endpoints rechazan rol incorrecto (403) antes de buscar el id (404).
 - (10) Dinero de entrada por encima de BIGINT_MAX (core/money.py) → 422 validation_error en toda la API; offset de paginación acotado a bigint.
 
+- (11) Orden de validación R4: fee_bps/term_months del prestamista sin oferta se valida tras asset_mismatch y antes de los montos. En match, fits() se revisa aunque venga amount (oferta con % mayor → no_overlap).
+- (11) Desembolso: OpError retryable o 401 → 503 op_unavailable con el mismo intento; 201 sin authorization_url → queda disbursing y la API responde 409 invalid_state. authorization_url/expires_at solo para el prestamista. Aceptar con expires_at vencido → 409 invalid_state.
+- (11) close_period lanza ValueError si el crédito no existe o no está active (dev → 404/409). Id no UUID en el body → 422; status desconocido en GET /loans → 422.
+
 ## Cambios de contrato
 
 (ninguno)
@@ -95,13 +100,8 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 
 - ~~03 AC-6~~ cerrado con la spec 06.
 - ~~03 AC-8~~ cerrado con la spec 07.
-- **03 AC-11** y seed de créditos R9/R10 → al terminar 05, 09 y 11. El seed (`app/modules/platform/seed.py`, `_seed_loan`, `_loan_tools`) asume estas interfaces; 05/09/11 deben cumplirlas o ajustar el seed:
-  - `build_terms(principal, pct, fee_bps, term_months, request_pct_bps, cfg)` con `cfg` = `get_settings()` (campos en minúscula: `trust_share_bps`, `reprice_max_delta_bps`), `Terms` con sus campos y `.to_dict()`;
-  - `get_credit_profile(db, merchant_id).assessment.id`;
-  - `SplitLoanState(pct_bps, total_repayable, allocated_total, fee_amount, trust_share_bps)` posicional y `split_sale(amount, state, policy=...)`;
-  - `modules.loans.service.close_period(db, loan_id, now)`.
-- **11**: al armar el snapshot `loans.terms`, envolver los montos de `Terms.to_dict()` en Money (asset del crédito) como en el Preview, y alinear `_seed_loan` (seed.py:400) para que escriba la misma forma.
-- **08 AC-9 y AC-10** → al terminar 11 (skipif automático: se activan solos cuando existan `expire_pending` y `on_disbursement_update`; el crédito de prueba no tiene request_id/offer_id).
+- ~~03 AC-11 y seed de créditos R9/R10~~ cerrados con la spec 11.
+- ~~08 AC-9 y AC-10~~ cerrados con la spec 11.
 - 00-core `test_ac6_all_contract_routes_implemented` → fase final.
 
 ## Bloqueos
@@ -120,3 +120,6 @@ El texto original del `/loop` llegó con cortes de la terminal; esta es la versi
 - 2026-10-17 05:05 · Spec 08-worker ◐ (código completo; AC-9/AC-10 se activan con 11): run_once con J1–J6, envío y consulta de transferencias con reintentos y backoff, reconciliación del simulador, cierre diario. 182 tests, 4 skips. Revisor: 5 fallas corregidas (404 de Go dejaba la pata en processing para siempre, reintento sobre cuenta revocada).
 - 2026-10-17 05:38 · Spec 09-scoring ☑: features por mes/semana/día local, perfil con caché diaria, cupo usado/disponible, vista del prestamista con franja de ventas. El seed deja a Tienda La Esquina en grado A con cupo $6.000.000.
 - 2026-10-17 05:38 · Spec 10-marketplace ☑: solicitudes, ofertas (count sobre todas las páginas, solicitud virtual), matches y cancelaciones. 209 tests, 4 skips (03 AC-11 y 08 AC-9/10 → 11; rutas completas → final). Revisor: 4 fallas corregidas (montos y offset fuera de bigint daban 500).
+- 2026-10-17 06:19 · Spec 03-platform-dev ☑: AC-11 activo (cierre de periodo desde /dev y seed de créditos El Trigal 58 %, Nova 12 %, Marta 32 % con snapshot de términos en Money).
+- 2026-10-17 06:19 · Spec 08-worker ☑: AC-9 y AC-10 activos con las funciones de la spec 11.
+- 2026-10-17 06:19 · Spec 11-loans ☑: preview, crear (3 orígenes), aceptar/rechazar/cancelar con reapertura, desembolso con link de autorización y clave por intento, on_disbursement_update, expire_pending, close_period, listas y detalle. 232 tests, 1 skip (rutas completas, fase final). Revisor: 2 fallas corregidas (aceptar un crédito vencido lo revivía).

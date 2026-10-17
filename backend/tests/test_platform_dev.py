@@ -212,6 +212,7 @@ def test_ac7_seed_offers_no_marta_loan(client, db, dev):
     result = _seed(client)
 
     assert result["open_offers"] == 4
+    assert result["loans"] == 2  # R9: El Trigal y Nova (cada uno con su oferta `taken`)
     camilo, marta = _user(db, "camilo@demo.trust"), _user(db, "marta@demo.trust")
     offers = db.scalars(
         select(LoanOffer).where(LoanOffer.lender_id == camilo.id, LoanOffer.status == "open")
@@ -281,10 +282,21 @@ def test_ac10_fake_wallet_authorize(client, dev, fake_op):
     assert fake_op.calls_to("get_payment") == []  # sin efectos laterales (auto-completar)
 
 
-@pytest.mark.skip(reason="depende de spec 11")
 def test_ac11_dev_close_period(client, db, dev):
     result = _seed(client, with_active_loan_for_marta=True)
     assert result["loans"] == 3
+    # R9/R10: El Trigal ≈ 58 %, Nova ≈ 12 % y Marta ≈ 32 % abonado; `loans.terms` con la forma del Preview (11 R6).
+    paid = {}
+    for seeded in db.scalars(select(Loan)):
+        assert (seeded.status, seeded.origin) == ("active", "offer_taken")
+        paid[db.get(User, seeded.merchant_id).email] = seeded.allocated_total * 10_000 // seeded.total_repayable
+        assert set(seeded.terms) == {"origin", "request_id", "offer_id", "merchant", "lender", "terms", "example",
+                                     "expires_in_hours"}
+        assert seeded.terms["offer_id"] == str(seeded.offer_id)
+        assert seeded.terms["terms"]["total_repayable"] == Money(seeded.total_repayable, "COP", 2).to_api()
+    targets = {"trigal@demo.trust": 5800, "nova@demo.trust": 1200, "marta@demo.trust": 3200}
+    assert set(paid) == set(targets)
+    assert all(abs(paid[email] - target) <= 5 for email, target in targets.items()), paid
     marta = _user(db, "marta@demo.trust")
     loan = db.scalar(select(Loan).where(Loan.merchant_id == marta.id, Loan.status == "active"))
     before = db.scalar(select(func.count()).select_from(LoanPctChange).where(LoanPctChange.loan_id == loan.id))

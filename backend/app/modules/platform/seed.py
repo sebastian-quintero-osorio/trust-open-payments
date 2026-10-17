@@ -301,6 +301,7 @@ class LoanTools:
     split_sale: Callable[..., Any]
     split_state: Callable[..., Any]
     get_credit_profile: Callable[..., Any]
+    build_preview: Callable[..., Any]  # 11: snapshot `Preview` (Money) que se guarda en `loans.terms`
 
 
 def _loan_tools() -> LoanTools | None:
@@ -309,6 +310,7 @@ def _loan_tools() -> LoanTools | None:
         optional_attr("app.policies.split", "split_sale"),
         optional_attr("app.policies.split", "SplitLoanState"),
         optional_attr("app.modules.scoring.service", "get_credit_profile"),
+        optional_attr("app.modules.loans.service", "build_preview"),
     )
     if None in tools or optional_attr("app.modules.loans.service", "close_period") is None:
         return None
@@ -397,7 +399,11 @@ def _seed_loan(
         pct_initial_bps=terms.pct_initial_bps,
         pct_min_bps=terms.pct_min_bps,
         pct_max_bps=terms.pct_max_bps,
-        terms=terms.to_dict(),
+        # Misma forma que un crédito creado por la API (11 R6): el `Preview` completo con montos en Money.
+        terms=tools.build_preview(
+            LoanOrigin.OFFER_TAKEN, None, offer.id, merchant, lender, terms,
+            settings.market_asset_code, settings.market_asset_scale,
+        ).model_dump(mode="json"),
         status=LoanStatus.ACTIVE,
         pct_bps=terms.pct_initial_bps,
         period_start=activated_at,

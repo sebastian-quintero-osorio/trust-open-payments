@@ -14,6 +14,7 @@ from app.integrations.op.boot import adopt_collection_accounts
 from app.integrations.op.client import OpClient, get_op_client
 from app.integrations.op.fake import FakeOpClient
 from app.models import Base
+from app.modules.loans.router import router as loans_router
 from app.modules.marketplace.router import router as marketplace_router
 from app.modules.platform.router import dev_router
 from app.modules.platform.router import router as platform_router
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(recaudo_router, prefix=API_PREFIX)
     app.include_router(scoring_router, prefix=API_PREFIX)
     app.include_router(marketplace_router, prefix=API_PREFIX)
+    app.include_router(loans_router, prefix=API_PREFIX)
     app.include_router(sales_router, prefix=API_PREFIX)
     app.include_router(webhooks_router, prefix=API_PREFIX)
     app.include_router(platform_router, prefix=API_PREFIX)

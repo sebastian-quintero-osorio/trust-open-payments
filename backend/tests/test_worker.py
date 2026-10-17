@@ -33,9 +33,9 @@ from app.integrations.op.schemas import (
     SimQrPaymentList,
 )
 from app.main import create_app
+from app.modules.loans import service as loans_service
 from app.modules.loans.models import Loan
 from app.modules.notifications.models import Notification
-from app.modules.platform.lazy import optional_attr
 from app.modules.recaudo.models import CollectionAccount
 from app.modules.sales.models import Payout, Sale, WebhookEvent
 from app.modules.sales.service import process_puntored_event
@@ -50,12 +50,6 @@ BOGOTA = ZoneInfo("America/Bogota")
 LEGS = ("lender", "merchant", "trust")
 S = timedelta(seconds=1)
 SALE_AMOUNT = cop(48_000)
-
-
-def _spec11(*names: str) -> pytest.MarkDecorator:
-    """Skip mientras 11-loans no exponga estas funciones (se activa solo cuando existan)."""
-    missing = [n for n in names if optional_attr("app.modules.loans.service", n) is None]
-    return pytest.mark.skipif(bool(missing), reason="depende de spec 11")
 
 
 @pytest.fixture(autouse=True)
@@ -381,7 +375,6 @@ def test_ac9_job_failure_isolated_stub(db, fake_op, base, monkeypatch):
     assert {p.status for p in _legs(db, base.sale_id).values()} == {"processing"}
 
 
-@_spec11("expire_pending")
 def test_ac9_job_failure_isolated(db, fake_op, base, make_merchant, make_lender, monkeypatch):
     run_once(db, fake_op, NOW)  # patas en processing: J2 va a llamar a get_transfer
 
@@ -399,7 +392,6 @@ def test_ac9_job_failure_isolated(db, fake_op, base, make_merchant, make_lender,
     assert _refresh(db, pending.loan).status == "expired"
 
 
-@_spec11("on_disbursement_update")
 def test_ac10_polls_disbursements(db, fake_op, make_merchant, make_lender, monkeypatch):
     s = _loan(db, make_merchant, make_lender, status="disbursing", activated_at=None, disbursement_attempt=1,
               disbursement_started_at=NOW - timedelta(minutes=2))
@@ -418,7 +410,7 @@ def test_ac10_polls_disbursements(db, fake_op, make_merchant, make_lender, monke
     fake_op.complete_payment(payment.id)
     s.loan.op_disbursement_payment_id = payment.id
     db.commit()
-    real = optional_attr("app.modules.loans.service", "on_disbursement_update")
+    real = loans_service.on_disbursement_update
     calls = []
 
     def spy(db_, loan, payment_):
