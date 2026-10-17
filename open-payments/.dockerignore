@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+!.env.example
+**/*.pem
+**/*.key
+**/__pycache__
+**/*.sqlite
+**/*.sqlite3
+**/*_test.go
+tasks
+.validation-venv
+bin
